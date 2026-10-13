@@ -1,4 +1,6 @@
-# Yantra v0.2.3 架构
+# 架构说明
+
+适用版本：0.3.0。文档入口见[索引](README.md)。
 
 `Engine` 保留 v0.1 固定材料执行保障，`RawEngine` 在同一控制器、Pydantic 合约及 ADK 执行路径上增加原始材料研究。`RawBackend` 通过原有 `LiteLlm` 作单次结构化决策；没有共享聊天历史，也没有隐藏工具循环。实际安装 ADK 2.11.0 的 `Runner`、`LlmAgent`、Session、`ToolContext`、原生工具事件及回调用于执行。未升级 ADK 或改用另一套 Agent 平台。
 
@@ -9,7 +11,11 @@ flowchart TD
   Snapshot --> Raw
   ADK[标准 ADK 入口] --> Raw
   Raw --> Ingest[格式解析/表格/OCR 原始定位]
-  Raw --> Search[主动独立检索 + 原响应快照]
+  Raw --> Knowledge[共享知识：权限/截止/适用性/固定引用]
+  Knowledge --> SQLite[正式SQLite修订、核验及关系]
+  Knowledge --> Files[原始字节及完整报告]
+  SQLite --> Index[可重建FTS5及本地向量]
+  Raw --> Search[统一信源发现/获取 + 主动检查新资料]
   Ingest & Search --> Sources[哈希/日期/页码/单元格/图像区域]
   Raw --> Ledger[共享人民币账本 + 持久化墙钟截止]
   Raw --> Main[主 Agent]
@@ -32,6 +38,8 @@ flowchart TD
 - `configuration.py`：项目能力配置、原子写入、环境变量引用与扩展响应脱敏。CLI 提供 `configure`、`models`、`extensions` 的交互及脚本入口。
 - `models.py`：LLM／OCR 配置和选择；兼容 API LLM、Tesseract、视觉 OCR 及 JSON OCR 命令。OCR 在初始解析与后续获取中沿用所选适配器，模型 OCR 共用费用账本。
 - `extensions.py`：技能及资源复制、MCP SDK 连接与工具发现、命令工具执行、参数 schema、角色授权和运行快照。扩展原响应作为来源凭证保存；不是确定性财务计算凭证。
+- `knowledge/`：SQLite正式记录、不可变修订、来源字节、可恢复文件提交、核验内容哈希、基准版本CAS、固定引用、FTS5／本地向量及明确要求。`runtime.py`仅由现有控制器管理归档、独立核验和提交。
+- `sources.py`：发现与获取分离的统一合约；现有web_search使用同一入口，支持不透明cursor／checkpoint存储，无新信源服务或订阅调度。
 - `materials.py`：原始字节、格式解析、来源日期依据、原文 anchors、公开发现与获取；目录自动建立内部 index，不要求用户准备 manifest。
 - `v2_tools.py`：原文数值校验、提取登记、冲突保留、EBIT桥接、单一valuation入口按方法分派、统一凭证及独立程序复核。
 - `valuation/`：PE/PB/EV-EBITDA/单阶段DDM的纯数学、方法输入门槛与结构化基准比较；不批准参数、不改变运行状态、不发布报告。Pydantic契约统一在`schemas.py`。
@@ -43,7 +51,7 @@ flowchart TD
 
 运行、任务、假设、框架与研究标准有独立标识和版本。子任务记录父任务、发起方、执行角色、深度、工具及共享引用、完成条件；费用账本记录任务归属、方法、版本、预留、用量、价格及价格时点。原始资料、提取结果、任务和报告保存在同一运行目录。
 
-`state.capabilities` 固定模型标识、端点、价格、凭据变量名、扩展 schema 与角色。技能资源复制到 `capabilities/skills/` 并记录哈希；恢复不读取新的默认选择。命令程序、远端模型权重和 MCP 服务实现本身不由 Yantra 冻结。v0.1 固定演示沿用原有工具集；详情见 [能力模块说明](CAPABILITIES_V0_2_1.md)。
+`state.capabilities` 固定模型标识、端点、价格、凭据变量名、扩展 schema 与角色。技能资源复制到 `capabilities/skills/` 并记录哈希；恢复不读取新的默认选择。命令程序、远端模型权重和 MCP 服务实现本身不由 Yantra 冻结。v0.1 固定演示沿用原有工具集；详情见 [能力模块说明](CAPABILITIES.md)。
 
 ## 权限与协作
 
@@ -57,7 +65,7 @@ flowchart TD
 
 自主授权独立记录为 `controller`，人工确认为 `user`。授权及工具请求核对方法＋参数＋版本和当前任务快照，按方法核验来源、日期、币种、证券类别、期间及财务口径。整体权益换算每股需要匹配总股数；EPS×PE/BVPS×PB核验每股指标。新原始材料DCF要求EBIT桥接及明确少数股东权益；OCF倒推尚未开放给新研究，旧快照与固定演示保留旧算法。不具备有效方法时保留not_applicable和研究partial。三个研究框架与估值方法分别选择，保持finance→thesis→valuation→verification→report。
 
-新增方法复用calc:<hash>凭证。重放重建输入并数学计算，不读取outputs充当复算，未知类型和数值篡改明确失败。缺市场基准保留unresolved；thesis保留解释，工具与报告使用同一结构化基准。细节与历史映射见[估值运行说明](USAGE_V0_2_3.md)。
+新增方法复用calc:<hash>凭证。重放重建输入并数学计算，不读取outputs充当复算，未知类型和数值篡改明确失败。缺市场基准保留unresolved；thesis保留解释，工具与报告使用同一结构化基准。细节与历史映射见[估值运行说明](USAGE.md)。
 
 程序核验检查原始位置、数值、哈希、计算复现与版本；模型核验另判断经济逻辑、风险、假设和方法。主 Agent 不能将模型否决改成通过。标准修订只增加有版本的研究判断要求，不能移除硬检查；影响的论点、估值和核验失效。用户自定义框架在启动时通过独立核验后用于本次；运行中的调整草稿供以后研究选择，当前基线保持固定。
 
@@ -66,3 +74,15 @@ flowchart TD
 ## 可核查边界
 
 模型原文提取通过程序数值校验不等于财务口径和经济判断已证实。日期从原始 URL 推断时保留依据；未知日期不能用于历史截止。复杂表格、图片图表、Excel 未缓存公式及旧二进制办公格式均保留限制。原始运行的 `completed` 门槛不因采用框架或得到某项格式转换结果而降低。
+
+## v0.3 知识与判断流程
+
+启动读取目标公司资料目录、适用事实、重点历史论点和问题，再按研究问题检索其他公司／行业／主题。来源全文和完整报告按需读取。公司ID与证券ID分别保存；同名不合并，不同证券类别只有明确company ID才归属同一公司。
+
+研究Agent只能搜索、读取和提议。verification任务单独注册，核验逐条原文、口径、推理、假设和反证，绑定提议的语义内容哈希。控制器串行提交并检查公司基准版本；旧基准冲突不会覆盖新修订。归档候选允许pending/rejected，不能继承全报告passed。论点judgment与verification是两个字段，历史论点不能取得本次结论资格。
+
+每次thesis成果保存不可变判断快照，再比较历史重点论点和未关闭问题。比较结果进入后续任务和核验上下文，支持后续补查、提议及新版本。业务／集团scope不匹配不能直接支持或反驳旧论点。完整修订仍由独立核验判断，程序不自行作经济判断。
+
+研究保存采用过的知识修订与证据hash/locator。resume冻结模型配置、预算和截止；replay只读原固定版本，复算原估值和程序核验，不重做远程历史比较。永久删除标记受影响session来源缺失，replay明确拒绝。
+
+正式数据、派生索引、编辑删除与要求优先级详见[知识契约及命令](KNOWLEDGE.md)。

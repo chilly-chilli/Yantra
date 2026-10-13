@@ -18,6 +18,15 @@ async def replay_raw(storage, original):
     if original["status"] in {"running", "waiting"}:
         raise ValueError("活动或等待中的研究不能自动批准复测")
     source = Path(storage).resolve() / original["run_id"]
+    if original.get("knowledge"):
+        from .knowledge.store import KnowledgeStore
+        knowledge = KnowledgeStore(original["knowledge"]["root"])
+        for fixed in original["knowledge"].get("fixed_refs",[]):
+            record = knowledge.read(fixed["entry_id"],fixed["id"])
+            for ref in record["item"]["evidence"]+record["item"]["opposing_evidence"]:
+                knowledge.source(ref["source_id"],allow_deleted=True)
+        for entry in original["input_snapshot"]["manifest"]["materials"]:
+            knowledge.source(entry["id"],allow_deleted=True)
     index = original["input_snapshot"]["manifest"]
     for entry in index["materials"]:
         content = (source / "materials" / entry["file"]).read_bytes()

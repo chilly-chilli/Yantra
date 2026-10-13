@@ -70,6 +70,8 @@ def validate_inputs(model, parameters):
     for r in [p.metric, p.net_debt, p.minority_interest, p.shares]:
         if r is None:
             continue
+        if r.business_scope not in {None,"group"}:
+            raise ValueError("business metric cannot be used as the group valuation input")
         if (r.security_code, r.share_class, r.currency, r.period) != (p.security_code, p.share_class, p.currency, p.period):
             raise ValueError("financial identity, share class, currency or fiscal period mismatch")
         required_scope = "consolidated" if model == "ev_ebitda" else "attributable"

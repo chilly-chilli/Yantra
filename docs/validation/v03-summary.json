@@ -1,0 +1,47 @@
+{
+  "version": "0.3.0",
+  "validated_at": "2026-10-13T11:24:36.810823+00:00",
+  "full_suite": {
+    "tests": 95,
+    "seconds": 59.717,
+    "passed": true
+  },
+  "final_related_suite": {
+    "tests": 30,
+    "seconds": 24.563,
+    "passed": true
+  },
+  "final_retrieval_suite": {
+    "tests": 25,
+    "seconds": 5.495,
+    "passed": true
+  },
+  "retained_regression_tests": 65,
+  "new_tests": 30,
+  "checks": {
+    "compileall": true,
+    "cli_help": true,
+    "explicit_rebuild_budget_smoke": true,
+    "git_diff_check": true
+  },
+  "fixtures": "New explicitly fictional temporary files; no workspace historical materials imported",
+  "real_execution": [
+    "Google ADK 2.11.0 Runner and sessions",
+    "SQLite and FTS5",
+    "file persistence and recovery",
+    "concurrent CAS and deadline checks",
+    "CLI and deterministic valuations"
+  ],
+  "remote_service_validation": {
+    "embedding": false,
+    "llm": false,
+    "web_search": false,
+    "disclosure_http": false,
+    "actual_supplier_bill_available": false
+  },
+  "limitations": [
+    "offline decisions and HTTP fixtures are not live end-to-end research",
+    "first-version global commit lock and local vector similarity",
+    "v0.3.1 source services/subscriptions are interface reservations only"
+  ]
+}

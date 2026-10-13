@@ -1,0 +1,45 @@
+{
+  "checked_at": "2026-10-13T20:25:33.053367+08:00",
+  "version": "0.3.0",
+  "commit_title": "v0.3",
+  "target_remote": "origin",
+  "target_branch": "main",
+  "base_commit": "32008f5",
+  "tests": 95,
+  "elapsed_seconds": 50.133,
+  "passed": true,
+  "compileall": true,
+  "diff_check": true,
+  "remote_base_matches_local": true,
+  "remote_service_validation": {
+    "llm": false,
+    "embedding": false,
+    "external_disclosure": false
+  },
+  "scope": [
+    "v0.3 source and tests",
+    "current and archived documentation",
+    "English AGENTS.md and approved ignore policy"
+  ],
+  "excluded": [
+    "user source materials",
+    "research output",
+    "temporary files",
+    "local credentials",
+    "mixed untracked prototype directories"
+  ],
+  "gitignore_modified": false,
+  "log_sha256": "e1c32b94e7e449c89b37175debc69e1296b5699e03543e21a6e18a507e52a732",
+  "staged_files": 80,
+  "staged_scope_checked": true,
+  "credential_pattern_check": true,
+  "documentation_links_checked": 155,
+  "local_historical_artifact_links": 4,
+  "isolated_staged_tree": {
+    "tests": 95,
+    "elapsed_seconds": 56.78,
+    "passed": true,
+    "unstaged_CLI_work_excluded": true,
+    "log_sha256": "e87e85c93d4344d6a0a16b1dd6b19a439349842965a4679c60473e5cc9d0a176"
+  }
+}

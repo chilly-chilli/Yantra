@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from contextvars import ContextVar
 import json
+import os
+from pathlib import Path
 import time
 from typing import Any
 from uuid import uuid4
@@ -185,11 +187,32 @@ async def execute_research(tool_context: ToolContext) -> dict[str, Any]:
     if root is None:
         raise ValueError("Research must run through the Yantra root agent.")
     engine = root.engine
+    message = "".join(part.text or "" for part in (
+        tool_context.user_content.parts if tool_context.user_content else []
+    ) if not part.thought).strip()
     try:
+        if message == "/memories" or message.startswith(("/remember ","/forget ")):
+            from .engine import Engine
+            from .knowledge.preferences import Preferences
+            from .knowledge.store import KnowledgeStore, atomic_bytes
+            if engine is None and tool_context.state.get("run_id"):
+                engine = Engine.load(Path(os.getenv("YANTRA_RUNS_DIR","runs")),tool_context.state["run_id"])
+            metadata = engine.state.get("knowledge",{}) if engine else {}
+            store = KnowledgeStore(metadata.get("root") or os.getenv("YANTRA_KNOWLEDGE_DIR",".yantra/knowledge"))
+            preferences = Preferences(store)
+            if message == "/memories":
+                return {"requirements":preferences.list()}
+            if message.startswith("/forget "):
+                return preferences.revoke(message.split(" ",1)[1].strip())
+            data = json.loads(message.split(" ",1)[1])
+            saved = preferences.save(data["original"],data["meaning"],data["parameters"],data.get("scope") or metadata.get("company_id") or "global",source="adk:/remember",identifier=data.get("id"))
+            if data.get("apply_to_current"):
+                if engine is None or engine.state["status"] not in {"running","waiting"}:
+                    raise ValueError("requirement saved; active session required for application")
+                atomic_bytes(engine.directory/"preferences.request.json",json.dumps({"modify_this_task":bool(data.get("modify_this_task")),"keys":list(data["parameters"])}).encode())
+                saved["application"] = "pending_at_scheduling_boundary"
+            return saved
         if engine is None:
-            message = "".join(part.text or "" for part in (
-                tool_context.user_content.parts if tool_context.user_content else []
-            ) if not part.thought).strip()
             run_id = tool_context.state.get("run_id")
             engine = create_adk_engine(company=message or "DEMO", run_id=run_id)
             if not engine.state.get("raw_materials"):

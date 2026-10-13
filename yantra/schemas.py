@@ -43,6 +43,10 @@ class Research(Contract):
     exchange: str | None = None
     trading_currency: str | None = None
     confirmation_mode: Literal["autonomous", "manual"] = "manual"
+    company_id: str | None = None
+    share_class: str | None = None
+    questions: list[str] = Field(default_factory=list)
+    topics: list[str] = Field(default_factory=list)
 
 
 class Assumptions(Contract):
@@ -169,6 +173,7 @@ class FinancialRecord(Contract):
     normalization_note: str | None = None
     share_class: str | None = None
     accounting_scope: Literal["consolidated", "attributable", "parent"] | None = None
+    business_scope: str | None = None
     information_kind: Literal["fact", "management_statement", "assumption", "prediction", "judgment"] | None = None
 
 

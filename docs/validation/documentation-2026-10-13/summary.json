@@ -1,0 +1,733 @@
+{
+  "checked_at": "2026-10-13T20:06:05.681550+08:00",
+  "scope": "documentation only",
+  "markdown_files": 47,
+  "local_links_and_anchors": 149,
+  "cli_examples_checked": 55,
+  "cli_checks": "argparse only; no research, network or delete actions executed",
+  "commands": [
+    {
+      "file": "README.md",
+      "command": [
+        "--help"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "README.md",
+      "command": [
+        "configure"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "README.md",
+      "command": [
+        "start",
+        "--company",
+        "示例公司",
+        "--market",
+        "CN",
+        "--security-code",
+        "600001",
+        "--exchange",
+        "SSE",
+        "--share-class",
+        "A",
+        "--trading-currency",
+        "CNY",
+        "--material",
+        "/absolute/path/new-report.pdf",
+        "--mode",
+        "real-model",
+        "--env-file",
+        "/absolute/path/model.env"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/USAGE.md",
+      "command": [
+        "configure"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/USAGE.md",
+      "command": [
+        "models"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/USAGE.md",
+      "command": [
+        "extensions"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/USAGE.md",
+      "command": [
+        "start",
+        "--company",
+        "小米集团",
+        "--market",
+        "HK",
+        "--security-code",
+        "01810",
+        "--exchange",
+        "HKEX",
+        "--trading-currency",
+        "HKD",
+        "--material",
+        "/绝对路径/原始材料目录",
+        "--material",
+        "https://披露机构/报告.pdf",
+        "--mode",
+        "real-model",
+        "--env-file",
+        "/本地/模型配置.env",
+        "--runs-dir",
+        "runs"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/USAGE.md",
+      "command": [
+        "status",
+        "RUN_ID",
+        "--runs-dir",
+        "runs"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/USAGE.md",
+      "command": [
+        "resume",
+        "RUN_ID",
+        "--decision",
+        "confirm",
+        "--runs-dir",
+        "runs"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/USAGE.md",
+      "command": [
+        "resume",
+        "RUN_ID",
+        "--decision",
+        "modify",
+        "--parameters",
+        "{\"growth_rate\":0.03}",
+        "--runs-dir",
+        "runs"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/USAGE.md",
+      "command": [
+        "cancel",
+        "RUN_ID",
+        "--runs-dir",
+        "runs"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/USAGE.md",
+      "command": [
+        "resume",
+        "RUN_ID",
+        "--runs-dir",
+        "runs",
+        "--env-file",
+        "/本地/模型配置.env"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/USAGE.md",
+      "command": [
+        "knowledge",
+        "status"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/USAGE.md",
+      "command": [
+        "knowledge",
+        "query",
+        "汽车 毛利率"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/USAGE.md",
+      "command": [
+        "preferences",
+        "list"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/USAGE.md",
+      "command": [
+        "replay",
+        "RUN_ID",
+        "--runs-dir",
+        "runs"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/USAGE.md",
+      "command": [
+        "compare",
+        "FIRST_RUN_ID",
+        "SECOND_RUN_ID",
+        "--runs-dir",
+        "runs"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/CAPABILITIES.md",
+      "command": [
+        "configure",
+        "--env-file",
+        "/本地/credentials.env"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/CAPABILITIES.md",
+      "command": [
+        "models"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/CAPABILITIES.md",
+      "command": [
+        "extensions"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/CAPABILITIES.md",
+      "command": [
+        "models",
+        "add",
+        "local",
+        "--file",
+        "examples/v021/llm.example.json"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/CAPABILITIES.md",
+      "command": [
+        "models",
+        "select",
+        "llm",
+        "local"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/CAPABILITIES.md",
+      "command": [
+        "models",
+        "--env-file",
+        "/本地/credentials.env",
+        "check",
+        "local"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/CAPABILITIES.md",
+      "command": [
+        "models",
+        "select",
+        "llm",
+        "env"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/CAPABILITIES.md",
+      "command": [
+        "models",
+        "select",
+        "ocr",
+        "tesseract-auto"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/CAPABILITIES.md",
+      "command": [
+        "models",
+        "list"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/CAPABILITIES.md",
+      "command": [
+        "extensions",
+        "list"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/CAPABILITIES.md",
+      "command": [
+        "extensions",
+        "check",
+        "mcp",
+        "demo"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/CAPABILITIES.md",
+      "command": [
+        "extensions",
+        "disable",
+        "mcp",
+        "demo"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/CAPABILITIES.md",
+      "command": [
+        "extensions",
+        "enable",
+        "mcp",
+        "demo"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/CAPABILITIES.md",
+      "command": [
+        "extensions",
+        "add",
+        "skills",
+        "cashflow",
+        "--path",
+        "examples/v021/cashflow-skill",
+        "--roles",
+        "finance,verification"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/CAPABILITIES.md",
+      "command": [
+        "extensions",
+        "add",
+        "mcp",
+        "demo",
+        "--file",
+        "examples/v021/mcp.example.json",
+        "--roles",
+        "finance"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/CAPABILITIES.md",
+      "command": [
+        "extensions",
+        "check",
+        "mcp",
+        "demo"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/CAPABILITIES.md",
+      "command": [
+        "extensions",
+        "add",
+        "tools",
+        "echo",
+        "--file",
+        "examples/v021/tool.example.json",
+        "--roles",
+        "finance"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/CAPABILITIES.md",
+      "command": [
+        "start",
+        "--company",
+        "示例公司",
+        "--market",
+        "CN",
+        "--security-code",
+        "600000",
+        "--material",
+        "/绝对路径/原始报告.pdf",
+        "--mode",
+        "real-model",
+        "--llm",
+        "local",
+        "--ocr",
+        "tesseract-auto",
+        "--env-file",
+        "/本地/credentials.env"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/KNOWLEDGE.md",
+      "command": [
+        "start",
+        "--company",
+        "虚构公司",
+        "--market",
+        "CN",
+        "--security-code",
+        "600001",
+        "--exchange",
+        "SSE",
+        "--share-class",
+        "A",
+        "--trading-currency",
+        "CNY",
+        "--material",
+        "/absolute/path/new-report.pdf",
+        "--mode",
+        "real-model",
+        "--question",
+        "汽车业务与集团盈利是否一致",
+        "--topic",
+        "汽车",
+        "--knowledge-dir",
+        ".yantra/knowledge",
+        "--env-file",
+        "/absolute/path/model.env"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/KNOWLEDGE.md",
+      "command": [
+        "models",
+        "add",
+        "embedding-profile",
+        "--file",
+        "/absolute/path/embedding.json"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/KNOWLEDGE.md",
+      "command": [
+        "models",
+        "select",
+        "embedding",
+        "embedding-profile"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/KNOWLEDGE.md",
+      "command": [
+        "knowledge",
+        "rebuild",
+        "--budget",
+        "{\"max_cost_cny\":1,\"run_seconds\":60,\"max_models\":1}"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/KNOWLEDGE.md",
+      "command": [
+        "knowledge",
+        "rebuild",
+        "--vectors",
+        "--embedding",
+        "embedding-profile",
+        "--budget",
+        "{\"max_cost_cny\":2,\"run_seconds\":300,\"max_models\":20}"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/KNOWLEDGE.md",
+      "command": [
+        "knowledge",
+        "query",
+        "资本投入与盈利转化",
+        "--budget",
+        "{\"max_cost_cny\":1,\"run_seconds\":60,\"max_models\":10}"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/KNOWLEDGE.md",
+      "command": [
+        "knowledge",
+        "status"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/KNOWLEDGE.md",
+      "command": [
+        "knowledge",
+        "query",
+        "毛利率",
+        "--company-id",
+        "COMPANY_ID",
+        "--period",
+        "FY2025",
+        "--kind",
+        "fact",
+        "--cutoff",
+        "2026-02-01"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/KNOWLEDGE.md",
+      "command": [
+        "knowledge",
+        "view",
+        "KNOWLEDGE_ID",
+        "--revision-id",
+        "REVISION_ID"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/KNOWLEDGE.md",
+      "command": [
+        "knowledge",
+        "source",
+        "SOURCE_ID"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/KNOWLEDGE.md",
+      "command": [
+        "knowledge",
+        "edit-fact",
+        "KNOWLEDGE_ID",
+        "--changes",
+        "{\"value\":12,\"raw_value\":\"12\"}",
+        "--reason",
+        "人工更正，需重新核验"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/KNOWLEDGE.md",
+      "command": [
+        "knowledge",
+        "delete-source",
+        "SOURCE_ID"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/KNOWLEDGE.md",
+      "command": [
+        "knowledge",
+        "delete-source",
+        "SOURCE_ID",
+        "--session",
+        "RUN_ID"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/KNOWLEDGE.md",
+      "command": [
+        "knowledge",
+        "delete-source",
+        "SOURCE_ID",
+        "--impact"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/KNOWLEDGE.md",
+      "command": [
+        "knowledge",
+        "delete-source",
+        "SOURCE_ID",
+        "--permanent",
+        "--confirm",
+        "影响清单中的完整confirmation token"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/KNOWLEDGE.md",
+      "command": [
+        "preferences",
+        "remember",
+        "以后默认研究18个月",
+        "--meaning",
+        "默认研究期限18个月",
+        "--parameters",
+        "{\"horizon\":\"18个月\"}",
+        "--scope",
+        "global"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/KNOWLEDGE.md",
+      "command": [
+        "preferences",
+        "list"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/KNOWLEDGE.md",
+      "command": [
+        "preferences",
+        "list",
+        "--history"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/KNOWLEDGE.md",
+      "command": [
+        "preferences",
+        "remember",
+        "此公司改为24个月",
+        "--meaning",
+        "公司默认期限24个月",
+        "--parameters",
+        "{\"horizon\":\"24个月\"}",
+        "--scope",
+        "COMPANY_ID",
+        "--id",
+        "PREFERENCE_ID"
+      ],
+      "check": "parser only; not executed"
+    },
+    {
+      "file": "docs/KNOWLEDGE.md",
+      "command": [
+        "preferences",
+        "forget",
+        "PREFERENCE_ID"
+      ],
+      "check": "parser only; not executed"
+    }
+  ],
+  "historical_evidence_checksums": [
+    {
+      "path": "docs/validation/v022-summary.json",
+      "sha256": "d1dd25b0761900f0a3571204e652e136d42708177e38b8909c633ae29b4cf71c",
+      "unchanged_from_HEAD": true
+    },
+    {
+      "path": "docs/validation/v022-unittest.log",
+      "sha256": "d07e58285eb3f640e075e0cf7ece4d03c1d1d5a731e760819a95fc2fa3b3dc85",
+      "unchanged_from_HEAD": true
+    },
+    {
+      "path": "docs/validation/v023-summary.json",
+      "sha256": "18ded75a1feb1433d88dd2b214f8daf9c7bcd00385827db9ef64e3277a2452e2",
+      "unchanged_from_HEAD": true
+    },
+    {
+      "path": "docs/validation/v023-unittest.log",
+      "sha256": "cba282af5d2d9e302f671eaf3794e93efa61633373e031eaca685b4a3eb28e63",
+      "unchanged_from_HEAD": true
+    }
+  ],
+  "historical_validation_bodies": [
+    {
+      "original": "docs/VALIDATION_V0_2.md",
+      "archive": "docs/validation/v0.2/README.md",
+      "body_preserved_except_links_and_status": true
+    },
+    {
+      "original": "docs/VALIDATION_V0_2_1.md",
+      "archive": "docs/validation/v0.2.1/README.md",
+      "body_preserved_except_links_and_status": true
+    },
+    {
+      "original": "docs/VALIDATION_V0_2_2.md",
+      "archive": "docs/validation/v0.2.2/README.md",
+      "body_preserved_except_links_and_status": true
+    },
+    {
+      "original": "docs/VALIDATION_V0_2_3.md",
+      "archive": "docs/validation/v0.2.3/README.md",
+      "body_preserved_except_links_and_status": true
+    }
+  ],
+  "local_artifact_links": [
+    {
+      "file": "docs/validation/v0.2/README.md",
+      "target": "../../../runs/v02-acceptance/run-f41fe7ee4a56/report-v2.md",
+      "scope": "local historical run artifact"
+    },
+    {
+      "file": "docs/validation/v0.2/README.md",
+      "target": "../../../runs/v02-acceptance/run-2d56623aa316/report-v5.md",
+      "scope": "local historical run artifact"
+    },
+    {
+      "file": "docs/validation/v0.2.2/README.md",
+      "target": "../../../examples/v022/output/local/validation.json",
+      "scope": "local historical run artifact"
+    },
+    {
+      "file": "docs/validation/v0.2.2/README.md",
+      "target": "../../../examples/v022/output/historical-replay.json",
+      "scope": "local historical run artifact"
+    }
+  ],
+  "errors": [],
+  "passed": true,
+  "commit": false,
+  "push": false,
+  "full_research_suite_rerun": false,
+  "git_diff_check": true,
+  "reader_review": {
+    "passed": true,
+    "questions_checked": 6,
+    "findings_fixed": [
+      "undeclared uv dependency in installation",
+      "absolute workstation path in current valuation guide"
+    ]
+  },
+  "new_markdown_whitespace": {
+    "files": 32,
+    "passed": true
+  },
+  "CLI_help_checks": [
+    "yantra --help",
+    "yantra knowledge rebuild --help",
+    "yantra resume --help",
+    "python3 -m venv --help",
+    "python -m ensurepip --help"
+  ],
+  "historical_v03_evidence": "Existing v03 logs and JSON preserved at original paths; full regression not rerun for documentation-only changes."
+}

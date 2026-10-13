@@ -1,0 +1,17 @@
+usage: yantra [-h] [--config CONFIG]
+              {start,resume,status,compare,replay,cancel,configure,models,extensions,knowledge,preferences}
+              ...
+
+Yantra v0.3 — 检索、共享知识与证据核验投研
+
+positional arguments:
+  {start,resume,status,compare,replay,cancel,configure,models,extensions,knowledge,preferences}
+    configure           交互式配置模型和扩展
+    models              LLM/OCR 配置与选择
+    extensions          用户 skills、MCP 及 tools
+    knowledge           查询、查看、重建、编辑及删除项目知识
+    preferences         明确长期要求的新增、更新、查看及撤销
+
+options:
+  -h, --help            show this help message and exit
+  --config CONFIG       能力配置文件，默认 .yantra/config.json 或 YANTRA_CONFIG

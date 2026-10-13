@@ -597,8 +597,11 @@ def create_adk_engine(company="DEMO", run_id=None):
             "cutoff": os.getenv("YANTRA_CUTOFF", datetime.now(timezone.utc).isoformat()),
             "market": os.getenv("YANTRA_MARKET") or None, "security_code": os.getenv("YANTRA_SECURITY_CODE") or None,
             "exchange": os.getenv("YANTRA_EXCHANGE") or None, "trading_currency": os.getenv("YANTRA_TRADING_CURRENCY") or None,
+            "company_id": os.getenv("YANTRA_COMPANY_ID") or None,"share_class":os.getenv("YANTRA_SHARE_CLASS") or None,
             "confirmation_mode": os.getenv("YANTRA_CONFIRMATION_MODE", "autonomous")},
-            json.loads(os.environ["YANTRA_RAW_MATERIALS"]), framework=os.getenv("YANTRA_FRAMEWORK", "auto"),settings=ConfigStore())
+            json.loads(os.environ["YANTRA_RAW_MATERIALS"]), framework=os.getenv("YANTRA_FRAMEWORK", "auto"),settings=ConfigStore(),
+            knowledge_dir=os.getenv("YANTRA_KNOWLEDGE_DIR",".yantra/knowledge"),
+            explicit_parameters={k:v for k,v in {"horizon":os.getenv("YANTRA_HORIZON"),"framework":os.getenv("YANTRA_FRAMEWORK")}.items() if v is not None})
     return Engine.create(storage, {"company": company, "horizon": "12个月", "cutoff": "2025-12-31"},
                          mode=os.getenv("YANTRA_MODE", "offline-demo"),
                          materials_dir=os.getenv("YANTRA_MATERIALS_DIR") or None)

@@ -69,7 +69,7 @@ async def replay(storage, original):
 
 
 def parser():
-    p = argparse.ArgumentParser(prog="yantra", description="Yantra v0.2.3 — 方法授权、估值复算与证据核验投研")
+    p = argparse.ArgumentParser(prog="yantra", description="Yantra v0.3 — 检索、共享知识与证据核验投研")
     p.add_argument("--config",type=Path,help="能力配置文件，默认 .yantra/config.json 或 YANTRA_CONFIG")
     commands = p.add_subparsers(dest="command", required=True)
     for name in ("start", "resume", "status", "compare", "replay", "cancel"):
@@ -78,7 +78,7 @@ def parser():
         sub.add_argument("--env-file", type=Path, help="明确加载模型环境文件；不保存真实密钥")
         if name == "start":
             sub.add_argument("--company", required=True)
-            sub.add_argument("--horizon", default="12个月")
+            sub.add_argument("--horizon", default=None)
             from datetime import datetime
             from zoneinfo import ZoneInfo
             sub.add_argument("--cutoff", default=datetime.now(ZoneInfo("Asia/Shanghai")).isoformat())
@@ -90,7 +90,13 @@ def parser():
             sub.add_argument("--exchange")
             sub.add_argument("--trading-currency")
             sub.add_argument("--confirmation-mode", choices=("autonomous", "manual"), default="autonomous")
-            sub.add_argument("--framework", default="auto", help="auto/value/quality/change 或经独立核验的框架版本")
+            sub.add_argument("--framework", default=None, help="auto/value/quality/change 或经独立核验的框架版本")
+            sub.add_argument("--knowledge-dir", type=Path, default=Path(".yantra/knowledge"))
+            sub.add_argument("--company-id", help="明确同一公司跨证券类别的身份")
+            sub.add_argument("--share-class")
+            sub.add_argument("--question", action="append", default=[])
+            sub.add_argument("--topic", action="append", default=[])
+            sub.add_argument("--embedding",help="覆盖本次embedding模型配置")
             sub.add_argument("--framework-file", type=Path)
             sub.add_argument("--pricing", type=json.loads, help="具来源和日期的模型单价JSON")
             sub.add_argument("--llm",help="覆盖本次 LLM 配置选择")
@@ -114,7 +120,7 @@ def parser():
     model_actions=models.add_subparsers(dest="model_action")
     model_actions.add_parser("list")
     add=model_actions.add_parser("add");add.add_argument("name");add.add_argument("--file",type=Path,required=True)
-    select=model_actions.add_parser("select");select.add_argument("kind",choices=("llm","ocr"));select.add_argument("name")
+    select=model_actions.add_parser("select");select.add_argument("kind",choices=("llm","ocr","embedding"));select.add_argument("name")
     check=model_actions.add_parser("check");check.add_argument("name")
     extensions=commands.add_parser("extensions",help="用户 skills、MCP 及 tools")
     extensions.add_argument("--env-file",type=Path)
@@ -126,6 +132,8 @@ def parser():
     add.add_argument("--roles",default="finance,thesis,verification")
     for action in ("enable","disable","check"):
         command=ext_actions.add_parser(action);command.add_argument("kind",choices=("skills","mcp","tools"));command.add_argument("name")
+    from .knowledge.cli import add_commands
+    add_commands(commands)
     return p
 
 
@@ -154,21 +162,30 @@ async def execute(args):
         load_dotenv(args.env_file, override=True)
     from .configuration import ConfigStore
     settings=ConfigStore(args.config)
+    if args.command in {"knowledge","preferences"}:
+        from .knowledge.cli import execute as knowledge_command
+        knowledge_command(args,settings)
+        return
     if args.command in {"configure","models","extensions"}:
         await capability_command(args,settings)
         return
     if args.command == "start":
-        research = {"company": args.company, "horizon": args.horizon, "cutoff": args.cutoff,
+        research = {"company": args.company, "horizon": args.horizon or "12个月", "cutoff": args.cutoff,
                     "reference_price": args.reference_price, "price_time": args.price_time, "price_source": args.price_source}
         if args.material:
             if args.mode != "real-model":
                 raise ValueError("原始材料研究须用 --mode real-model；offline-demo保留固定演示语义")
             from .research import RawEngine
             research.update(market=args.market, security_code=args.security_code, exchange=args.exchange,
-                            trading_currency=args.trading_currency, confirmation_mode=args.confirmation_mode)
+                            trading_currency=args.trading_currency, confirmation_mode=args.confirmation_mode,
+                            company_id=args.company_id,share_class=args.share_class,questions=args.question,topics=args.topic)
+            explicit = {k:v for k,v in {"horizon":args.horizon,"framework":args.framework,"questions":args.question or None,"topics":args.topic or None}.items() if v is not None}
+            if args.framework_file:
+                explicit["framework"] = args.framework or "auto"
             engine = RawEngine.create_raw(args.runs_dir, research, args.material, limits=args.limits, pricing=args.pricing,
-                                          framework=args.framework, framework_file=args.framework_file,settings=settings,
-                                          llm_profile=args.llm,ocr_profile=args.ocr)
+                                          framework=args.framework or "auto", framework_file=args.framework_file,settings=settings,
+                                          llm_profile=args.llm,ocr_profile=args.ocr,embedding_profile=args.embedding,
+                                          knowledge_dir=args.knowledge_dir,explicit_parameters=explicit)
         else:
             # Preserve explicit v0.1 demonstration behavior, including manual confirmation.
             research["cutoff"] = research["cutoff"][:10]
@@ -279,7 +296,11 @@ def safe_validation_error(exc):
 def read_state(storage, run_id):
     if not run_id.startswith("run-") or any(c not in "abcdefghijklmnopqrstuvwxyz0123456789-" for c in run_id):
         raise ValueError("invalid run id")
-    return json.loads((Path(storage) / run_id / "state.json").read_text())
+    state = json.loads((Path(storage) / run_id / "state.json").read_text())
+    marker = Path(storage)/run_id/"source-missing.json"
+    if marker.exists():
+        state["reproducibility"] = json.loads(marker.read_text())
+    return state
 
 
 def main():

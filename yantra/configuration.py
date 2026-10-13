@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 def empty_config():
-    return {"version": 1, "models": {}, "selected": {"llm": None, "ocr": "tesseract-auto"},
+    return {"version": 1, "models": {}, "selected": {"llm": None, "ocr": "tesseract-auto", "embedding": None},
             "skills": {}, "mcp": {}, "tools": {}}
 
 

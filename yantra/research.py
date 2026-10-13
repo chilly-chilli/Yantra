@@ -33,6 +33,7 @@ RAW_MAIN = MAIN_INSTRUCTION + """
 核验无需强制存在估值。有财务及定性证据时可交付 partial。主框架选择写入结果；不强迫不适用公司做DCF。
 一旦finance有可定位财务记录及定性evidence，应进入thesis；关键缺口可以保留partial，不以补齐全部旧演示字段为下一阶段条件。
 补查须改变查询、页段或来源。相同材料没有新增有效结果时，不能重复同一财务任务；转入已有证据的论证、适用性判断及独立核验。
+知识submission_issues若显示旧基准冲突，研究角色须按当前knowledge_context基准重新协调提议并交独立核验，不能覆盖新版本。被否决的提议保留理由，不用重复提交绕过否决。
 """
 RAW_WORKER = WORKER_INSTRUCTION + """
 raw-v2 覆盖旧演示要求：可以请求 spawn_subtask 在父授权范围内动态创建第三层角色，role 用任务需要的自由文本；第三层禁止继续创建。通信及读取用 collaborate；跨Agent新任务先 request_transfer，等待主Agent内部批准，不可当作消息执行。
@@ -44,6 +45,7 @@ thesis的expectations必须是对象（含status、baseline、statement），不
 valuation propose: model可为dcf/pe/pb/ev_ebitda/ddm/not_applicable。先按方法检查来源、身份、币种、期间、股本类别、合并/归母口径及截止时点。PE/PB以每股EPS/BVPS乘同类同期间同日可比倍数；EV/EBITDA须明确净债务、少数股东权益和总股数才能发布每股结论；DDM为年度D0*(1+g)/(k-g)。新方法parameters按MethodInputs合约（见valuation工具description），每项来源保存FinancialRecord或MultipleObservation；basis解释参数与相关论点。框架与方法为两个维度。不适用时not_applicable并保留缺口；不能强制绕过条件、补造证据或把PB叫NAV。市场基准缺失保持unresolved。
 autonomous 的当前假设可由控制器授权，basis 每项含出处、口径及假设理由；manual 仍明确确认。
 verification: 程序一致性通过仍要独立审查经济判断、财务口径、事实与预测、风险及方法适用性。可否决 passed，不能删除程序问题；否决须写具体 Issue。不同公司能形成不同摘要。
+v0.3 knowledge_search/read 提供历史线索，knowledge_propose 只提议；knowledge_review 仅独立核验角色可用。历史论点不能作为本次已确认结论，问题获准只表示有核查价值。事实复用必须检查哈希、期间、证券、币种及口径。比较业务和集团指标时不得跨口径推出论点状态；先固定本次判断，再比较、补查、修订和独立核验。重点条目记录R1-R4及具体理由。
 """
 
 
@@ -55,6 +57,14 @@ class RawBackend(RealModelBackend):
         from .schemas import WorkerAction, ThesisAction, ProposalAction
         schema = ThesisAction if task["target"] == "thesis" and task["depth"] == 2 else ProposalAction if task["target"] == "valuation" and task["purpose"] == "propose" else WorkerAction
         return await self._decision("research_worker", RAW_WORKER, schema, {"task": task, "local": local})
+
+    async def review_knowledge(self, payload):
+        from .knowledge.schemas import ReviewBatch
+        return await self._decision("knowledge_verifier", "独立核验逐条提议的原文、提取口径、推理、假设、反证及问题价值。每条返回准确proposal_id/content_hash、passed和理由；预测不能成为历史事实，未知问题答案不通过。无充分依据否决，不能因归档或全报告核验而批准。", ReviewBatch, payload)
+
+    async def compare_knowledge(self, payload):
+        from .knowledge.schemas import ComparisonBatch, KnowledgeItem
+        return await self._decision("historical_comparison", "当前判断已固定，逐条比较历史关键论点及未关闭问题。记录支持/削弱/反驳/范围或假设变化/不足，来源必须来自本次证据。业务与集团指标分开；不得用不同期间和口径直接推翻或证实旧论点。给出补查任务，不声称状态已通过核验。", ComparisonBatch, payload)
 
 
 def pricing_from_env():
@@ -85,6 +95,8 @@ class RawEngine(Engine):
         with super()._lock():
             self.run_budget.state = self.state
             self.tools.research_context = self.state["research"]
+            if getattr(self, "knowledge", None):
+                self.knowledge.refresh()
             yield
 
     def __init__(self, directory, state, backend=None):
@@ -110,6 +122,14 @@ class RawEngine(Engine):
         self.tools.adapter.check = self._check_adapter_budget
         self.tools.research_context = state["research"]
         self.tools.adapter.timeout = lambda: min(45, self.run_budget.remaining())
+        self.knowledge = None
+        if state.get("knowledge"):
+            from .knowledge.runtime import ResearchKnowledge, CONTRACTS
+            self.knowledge = ResearchKnowledge(self)
+            self.tools.extension_contracts.update(CONTRACTS)
+            for role in self.permissions:
+                self.permissions[role].extend(["knowledge_search", "knowledge_read"])
+                self.permissions[role].append("knowledge_review" if role == "verification" else "knowledge_propose")
         from .adk_app import build_workers
         self.adk_workers = build_workers(self)
 
@@ -122,7 +142,7 @@ class RawEngine(Engine):
 
     @classmethod
     def create_raw(cls, storage, research, inputs, limits=None, pricing=None, backend=None, framework="auto", framework_file=None,
-                   settings=None, llm_profile=None, ocr_profile=None):
+                   settings=None, llm_profile=None, ocr_profile=None, embedding_profile=None, knowledge_dir=None, explicit_parameters=None):
         r = Research.model_validate(research).model_dump()
         if r["market"] and r["security_code"]:
             code = r["security_code"]
@@ -143,6 +163,7 @@ class RawEngine(Engine):
         catalog=ModelCatalog(settings) if settings is not None else None
         chosen_llm=catalog.resolve("llm",llm_profile) if catalog else None
         chosen_ocr=catalog.resolve("ocr",ocr_profile) if catalog else None
+        chosen_embedding=catalog.resolve("embedding",embedding_profile) if catalog else None
         selected = backend or (create_backend(chosen_llm,RawBackend) if chosen_llm else RawBackend.from_env(timeout_seconds=90))
         price = Pricing.model_validate(pricing or (chosen_llm or {}).get("pricing") or pricing_from_env()).model_dump()
         if not inputs:
@@ -163,7 +184,9 @@ class RawEngine(Engine):
             "valuation_schema": 2,
             "deadline": end, "limits": config.model_dump(), "pricing": price, "model_ledger": [],
             "program_version": __version__, "config": selected.config_summary() if hasattr(selected, "config_summary") else {"backend": "injected-test"},
-            "capabilities":{"models":{"llm":chosen_llm,"ocr":chosen_ocr},"extensions":extensions},
+            "capabilities":{"models":{"llm":chosen_llm,"ocr":chosen_ocr,"embedding":chosen_embedding},"extensions":extensions},
+            "knowledge":{"root":str(Path(knowledge_dir or Path(storage)/"knowledge").resolve()),"archived":{},"proposals":[],"startup":[],"fixed_refs":[],"snapshots":[],"comparisons":[],"reused":[]},
+            "explicit_parameters": explicit_parameters if explicit_parameters is not None else {"horizon":r["horizon"],"framework":framework},
             "input_source_ids": [m["id"] for m in registry.load_manifest()["materials"]],
             "input_snapshot": registry.snapshot(), "assumptions": Assumptions().model_dump(), "assumption_history": [], "user_overrides": [],
             "tasks": [], "results": [], "artifacts": {}, "calculations": {}, "issues": [], "invalidated": [], "report_history": [],
@@ -174,14 +197,24 @@ class RawEngine(Engine):
             "budget": {"tool_calls": 0, "model_calls": 0, "main_loops": 0, "repair_rounds": 0, "cost_reserved_usd": 0,
                        "active_seconds": 0, "model_cost_cny": 0, "external_service_cost_cny": 0}}
         engine = cls(directory, state, selected)
+        engine.knowledge.initialize()
+        from .knowledge.preferences import Preferences
+        defaults, applications = Preferences(engine.knowledge.store).resolve(state["knowledge"]["company_id"], state["explicit_parameters"],
+            {"horizon":r["horizon"],"framework":framework,"questions":r["questions"],"topics":r["topics"]},run_id)
+        state["preference_applications"] = applications
+        from .knowledge.schemas import digest
+        state["preference_signature"] = digest(Preferences(engine.knowledge.store).list())
+        state["preference_defaults"] = {"horizon":r["horizon"],"framework":framework,"questions":r["questions"],"topics":r["topics"]}
+        engine._set_requirements(defaults, initial=True)
         engine._save()
         try:
-            RawMaterialAdapter.create(directory/"materials",r["company"],inputs,engine._check_adapter_budget,engine.tools.adapter.recognizer)
+            RawMaterialAdapter.create(directory/"materials",r["company"],inputs,engine._check_adapter_budget,engine.tools.adapter.recognizer,engine.knowledge.cached_parse)
         except BudgetExceeded as exc:
             state["stop_reasons"].append(str(exc))
             engine.tools.adapter.gap(str(exc))
         state["input_source_ids"]=[m["id"] for m in engine.tools.load_manifest()["materials"]]
         state["input_snapshot"]=engine.tools.snapshot()
+        engine.knowledge.archive_sources(closing=bool(state["stop_reasons"]))
         engine._save()
         engine._log("run_created", {"research": r, "limits": state["limits"], "deadline": end, "pricing": price})
         return engine
@@ -225,7 +258,8 @@ class RawEngine(Engine):
     def _view(self):
         return super()._view() | {"framework": self.state["framework"], "standard_version": self.state["standard_version"],
             "extension_tools":self.extensions.contracts(),
-            "raw_v2": True, "identity": self.state["research"], "transfer_requests": [r for r in self.state["transfers"] if r["status"] == "requested"]}
+            "raw_v2": True, "identity": self.state["research"], "transfer_requests": [r for r in self.state["transfers"] if r["status"] == "requested"],
+            "knowledge":{k:self.state.get("knowledge",{}).get(k) for k in ("company_id","security_id","startup","startup_notice","snapshots","comparisons","reused","submission_issues")}, "user_requirements":self.state.get("requirement_notes","")}
 
     async def advance(self):
         # prepare itself is durable and uses the same run lock/deadline/budget.
@@ -317,6 +351,7 @@ class RawEngine(Engine):
             while self.state["status"] == "running":
                 try:
                     self.run_budget.check()
+                    self._apply_requirements()
                     self._apply_pending_parameters()
                     if self.state["budget"]["main_loops"] >= self.state["limits"]["max_main_loops"]:
                         raise StopRun("主循环次数上限")
@@ -373,6 +408,9 @@ class RawEngine(Engine):
             return self.state
 
     async def _prepare(self):
+        if self.knowledge:
+            self.knowledge.startup()
+            self._save()
         # Every run searches all four purposes, even with a full set of user materials.
         name = self.state["research"]["company"]
         if not self.state["research"]["market"] or not self.state["research"]["security_code"]:
@@ -390,7 +428,9 @@ class RawEngine(Engine):
                 raise StopRun("公司或证券身份有歧义或证据不足：请用 --market 和 --security-code 确认具体证券后启动")
             identity = candidates[0]
             self.state["identity"] = identity
-            self.state["research"].update({k: identity[k] for k in ("market", "exchange", "security_code", "trading_currency")})
+            self.state["research"].update({k: identity[k] for k in ("market", "exchange", "security_code", "trading_currency","share_class")})
+            if self.knowledge:
+                self.knowledge.initialize()
         queries = [("disclosure", f"{name} 年报 财务报告 官方"), ("counter_evidence", f"{name} 风险 竞争 现金流"),
                    ("changes", f"{name} 公告 最新 经营变化"), ("expectations", f"{name} 市场预期 估值 consensus")]
         for purpose, query in queries:
@@ -402,6 +442,8 @@ class RawEngine(Engine):
             receipt = await asyncio.to_thread(self.tools.adapter.search, query, purpose, 2)
             self.state["searches"].append(receipt)
             self.state["input_snapshot"] = self.tools.snapshot()
+            if self.knowledge:
+                self.knowledge.archive_sources()
             self._log("independent_search_result", receipt)
             self._save()
         if self.state.get("framework_auto") and not self.state.get("framework_file"):
@@ -458,6 +500,12 @@ class RawEngine(Engine):
             if prior:
                 inputs["prior_result"] = prior
         inputs["framework"] = self.state["framework"]
+        if self.knowledge:
+            inputs["historical_knowledge"] = {"records":self.state["knowledge"]["startup"],"notice":self.state["knowledge"].get("startup_notice")}
+            inputs["knowledge_context"]={"company_id":self.state["knowledge"]["company_id"],"security_id":self.state["knowledge"]["security_id"],"base_version":self.knowledge.store.version(self.state["knowledge"]["company_id"])}
+            inputs["knowledge_comparisons"] = {"records":self.state["knowledge"]["comparisons"]}
+            if role == "verification":
+                inputs["knowledge_proposals"] = {"records":[self.knowledge.store.proposal(p) for p in self.state["knowledge"]["proposals"]]}
         if role == "verification" and self.state.get("framework_draft"):
             inputs["framework_draft"] = self.state["framework_draft"]
         remaining = max(0, self.state["limits"]["total_tools"] - self.state["budget"]["tool_calls"])
@@ -472,6 +520,8 @@ class RawEngine(Engine):
     async def _delegate(self, action):
         task = self._make_task(action)
         self.state["tasks"].append(task.model_dump())
+        if self.knowledge and task.target == "verification":
+            self.knowledge.store.register_reviewer(task.task_id, self.state["run_id"])
         self._log("task_dispatched", task.model_dump())
         self._save()
         from .adk_app import run_worker
@@ -538,7 +588,108 @@ class RawEngine(Engine):
                 self.state["assumption_history"].append(dict(self.state["assumptions"]))
                 self.state["assumptions"] = Assumptions(version=self.state["assumptions"]["version"] + 1).model_dump()
         self._log("task_result", result.model_dump())
+        if self.knowledge:
+            if key == "finance":
+                self.knowledge.archive_extraction()
+            elif key in {"proposal","valuation"}:
+                self.knowledge.prioritize_refs(result.evidence_refs,"R2","原文位置用于本次估值适用性或参数检查："+str(result.data.get("model","")))
+            elif key == "thesis":
+                self.knowledge.archive_thesis(result.model_dump())
+                await self._compare_history(result.model_dump())
+            elif key == "verification":
+                await self._review_knowledge(task)
+                self.knowledge.commit_reviewed()
         self._save()
+
+    async def _review_knowledge(self, task):
+        from .knowledge.schemas import ReviewBatch
+        if not hasattr(self.backend, "review_knowledge"):
+            self._log("knowledge_review_unavailable", {"state":"pending","reason":"injected backend does not implement independent knowledge review"})
+            return
+        pending = [self.knowledge.store.proposal(p) for p in self.state["knowledge"]["proposals"]]
+        pending = [p for p in pending if p["item"]["kind"] in {"fact","thesis","question"} and not (p["revision_id"] and self.knowledge.store.verification(p["revision_id"])["status"] != "pending")]
+        for offset in range(0, len(pending), 12):
+            batch = pending[offset:offset+12]
+            payload = {"task_id":task.task_id,"proposals":batch,"original_anchors":[{"ref":ref,"text":chunk[0]["text"],"location":chunk[0]["location"]} for ref,chunk in self.tools.anchors().items() if any(ref == e["anchor_ref"] for p in batch for e in p["item"]["evidence"]+p["item"]["opposing_evidence"])]}
+            reviewed = ReviewBatch.model_validate(await self._decision("review_knowledge", payload))
+            expected = {p["id"] for p in batch}
+            if {r.proposal_id for r in reviewed.reviews} != expected or len(reviewed.reviews) != len(expected):
+                raise StopRun("知识核验未完整绑定本批提议")
+            for review in reviewed.reviews:
+                self.knowledge.service.review(review.model_dump(),task.task_id,"verification")
+
+    async def _compare_history(self, result):
+        from .knowledge.schemas import ComparisonBatch, KnowledgeItem
+        meta = self.state["knowledge"]
+        evidence = [self.knowledge.ref(r) for r in result["evidence_refs"] if r in self.tools.anchors()]
+        snapshot = self.knowledge.store.snapshot(self.state["run_id"],meta["company_id"],result["data"],evidence)
+        meta["snapshots"].append(snapshot)
+        history = [r for r in meta["startup"] if r["item"]["kind"] in {"thesis","question"} and r["item"]["judgment"] != "closed"]
+        comparisons = []
+        if history and hasattr(self.backend,"compare_knowledge"):
+            parsed = ComparisonBatch.model_validate(await self._decision("compare_knowledge", {"snapshot_id":snapshot,"current":result,"history":history,"evidence":evidence}))
+            allowed = {(r["entry_id"],r["id"]) for r in history}
+            for comparison in parsed.comparisons:
+                if (comparison.entry_id,comparison.revision_id) not in allowed:
+                    raise StopRun("历史比较引用不属于本次固定知识版本")
+                self.knowledge.store.validate_evidence(KnowledgeItem.model_validate(self.knowledge.item("thesis",{},[],opposing_evidence=comparison.evidence)))
+                prior=next(r for r in history if r["entry_id"]==comparison.entry_id and r["id"]==comparison.revision_id)
+                scope=prior["item"]["content"].get("metric_scope")
+                if scope and comparison.metric_scope!=scope and comparison.relation in {"supports","refutes"}:
+                    comparison.relation="insufficient"
+                    comparison.reason="指标范围不一致，需要核对业务与集团口径；"+comparison.reason
+                comparisons.append(comparison.model_dump())
+        else:
+            comparisons = [{"entry_id":r["entry_id"],"revision_id":r["id"],"relation":"insufficient","reason":"未完成独立历史差异判断","metric_scope":"requires_review","evidence":[],"follow_up":"核对当前与历史论点的期间、业务范围、支持与反证"} for r in history]
+        identifier = self.knowledge.store.compare(snapshot,comparisons)
+        meta["comparisons"].append({"id":identifier,"snapshot_id":snapshot,"comparisons":comparisons})
+        self._log("history_compared_after_snapshot",meta["comparisons"][-1])
+
+    def _set_requirements(self, values, initial=False):
+        changed = []
+        for key in ("horizon","questions","topics"):
+            if key in values and values[key] != self.state["research"].get(key):
+                self.state["research"][key] = values[key]
+                changed.append(key)
+        framework = values.get("framework")
+        if framework and (initial or framework != self.state.get("requirement_framework")):
+            self.state["framework_auto"] = framework == "auto"
+            selected = FrameworkStore(self.directory.parent/"frameworks").builtin("quality" if framework == "auto" else framework)
+            if selected != self.state["framework"]:
+                self.state["framework"] = selected
+                changed.append("framework")
+            self.state["requirement_framework"] = framework
+        if values.get("notes","") != self.state.get("requirement_notes",""):
+            changed.append("notes")
+        self.state["requirement_notes"] = values.get("notes","")
+        if changed and not initial:
+            for key in ("thesis","proposal","valuation","verification"):
+                old = self.state["artifacts"].pop(key,None)
+                if old:
+                    self.state["invalidated"].append(old["task_id"])
+            self.state["assumption_history"].append(dict(self.state["assumptions"]))
+            self.state["assumptions"] = Assumptions(version=self.state["assumptions"]["version"]+1).model_dump()
+            self._log("requirements_applied_artifacts_invalidated",{"fields":changed})
+
+    def _apply_requirements(self):
+        if not self.knowledge:
+            return
+        request = self.directory/"preferences.request.json"
+        from .knowledge.preferences import Preferences
+        from .knowledge.schemas import digest
+        signature = digest(Preferences(self.knowledge.store).list())
+        if not request.exists() and signature == self.state.get("preference_signature"):
+            return
+        payload = json.loads(request.read_text()) if request.exists() else {}
+        explicit = self.state["explicit_parameters"]
+        if payload.get("modify_this_task"):
+            for key in payload.get("keys",[]):
+                explicit.pop(key,None)
+        values, applied = Preferences(self.knowledge.store).resolve(self.state["knowledge"]["company_id"],explicit,self.state["preference_defaults"],self.state["run_id"])
+        self._set_requirements(values)
+        self.state["preference_applications"] = applied
+        self.state["preference_signature"] = signature
+        request.unlink(missing_ok=True)
 
     @staticmethod
     def _validate_parameters(parameters, model="dcf"):
@@ -657,6 +808,8 @@ class RawEngine(Engine):
             response = await self._spawn(task, args)
         elif name == "collaborate":
             response = self._collaborate(task, args)
+        elif name.startswith("knowledge_") and self.knowledge:
+            response = self.knowledge.execute(name,args,task)
         elif name == "read_skill_resource":
             try:
                 data=self.extensions.read_resource(args["skill"],args["path"],task.target)
@@ -697,6 +850,8 @@ class RawEngine(Engine):
             response = (await asyncio.to_thread(self.tools.execute, name, args)).model_dump()
             if name in {"fetch_source", "search_public"}:
                 self.state["input_snapshot"] = self.tools.snapshot()
+                if self.knowledge:
+                    self.knowledge.archive_sources()
         local["tool_outputs"].append({"tool": name, "arguments": args, "response": response})
         if not response["ok"]:
             execution["failures"][fingerprint] = execution["failures"].get(fingerprint, 0) + 1
@@ -733,6 +888,8 @@ class RawEngine(Engine):
         self.tools.accept_extraction(aggregate, cutoff)
         self.state["extracted_source_hashes"] = source_hashes
         self.state["extraction_key"] = extraction_key
+        if self.knowledge:
+            self.knowledge.archive_extraction()
 
     async def _spawn(self, parent, args):
         spec = ChildArguments.model_validate(args)
@@ -868,6 +1025,8 @@ class RawEngine(Engine):
             report["投资结论摘要"]["statement"] = thesis["summary"]
         report["事实与数据基础"]["research_evidence"] = self.state["artifacts"].get("finance", {}).get("data", {}).get("evidence", [])
         report["事实与数据基础"].update(framework=self.state["framework"], standard_version=self.state["standard_version"], searches=self.state["searches"])
+        if self.knowledge:
+            report["事实与数据基础"]["knowledge"] = {"fixed_refs":self.knowledge.fixed_refs(),"snapshots":self.state["knowledge"]["snapshots"],"comparisons":self.state["knowledge"]["comparisons"],"notice":self.state["knowledge"].get("startup_notice"),"submission_issues":self.state["knowledge"].get("submission_issues",[])}
         report["事实与数据基础"]["input_version"] = {"manifest_hash": self.state["input_snapshot"]["manifest_hash"],
             "sources": [{k: m.get(k) for k in ("id", "file", "source_hash", "url", "acquired_at", "date")} for m in self.state["input_snapshot"]["manifest"]["materials"]]}
         comparison = self.state["artifacts"].get("valuation", {}).get("data", {}).get("market_comparison")
@@ -879,6 +1038,15 @@ class RawEngine(Engine):
         return report
 
     def _finish(self, cancelled=False):
+        marker=self.directory/"source-missing.json"
+        if marker.exists():
+            self.state["reproducibility"]=json.loads(marker.read_text())
+            issue={"id":"permanently-deleted-source","severity":"critical","target":"finance","requirement":"source_missing","message":"历史证据已永久删除，无法完整复现；相关成果需重新获取与核验"}
+            if issue not in self.state["issues"]:
+                self.state["issues"].append(issue)
+            verification=self.state["artifacts"].get("verification")
+            if verification:
+                verification["data"]["passed"]=False
         finance = self.state["artifacts"].get("finance")
         if finance and not finance["data"].get("financials") and self.tools.extraction_path.exists():
             saved = json.loads(self.tools.extraction_path.read_text())
@@ -890,4 +1058,7 @@ class RawEngine(Engine):
         super()._finish(cancelled)
         if self.state["artifacts"].get("finance", {}).get("data", {}).get("evidence") and self.state["status"] == "failed":
             self.state["status"] = "partial"
+            self._save()
+        if self.knowledge:
+            self.knowledge.finish()
             self._save()

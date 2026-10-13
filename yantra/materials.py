@@ -235,9 +235,10 @@ class RawMaterialAdapter:
         self.check = lambda: None
         self.timeout = lambda: 45
         self.recognizer = None
+        self.cached_parse = None
 
     @classmethod
-    def create(cls, directory, company, inputs, check=lambda: None, recognizer=None):
+    def create(cls, directory, company, inputs, check=lambda: None, recognizer=None, cached_parse=None):
         self = cls(directory)
         directory = self.materials_dir
         directory.mkdir(parents=True, exist_ok=True)
@@ -245,6 +246,7 @@ class RawMaterialAdapter:
             "adapter": "raw-v2", "fictional": False, "materials": [], "gaps": []}, ensure_ascii=False))
         self.check = check
         self.recognizer = recognizer
+        self.cached_parse = cached_parse
         for item in inputs:
             if str(item).startswith(("https://", "http://")):
                 try:
@@ -275,18 +277,21 @@ class RawMaterialAdapter:
             index["gaps"].append(message)
         self._write(index)
 
-    def add(self, content, suffix, origin, url=None, disclosure_date=None):
+    def add(self, content, suffix, origin, url=None, disclosure_date=None, channel=None):
         self.check()
         digest = hashlib.sha256(content).hexdigest()
         index = self.load_manifest()
         existing = next((x for x in index["materials"] if x["source_hash"] == digest), None)
         if existing:
+            existing.setdefault("acquisitions", []).append(channel or {"origin": origin, "url": url, "acquired_at": now()})
+            self._write(index)
             return existing
         identifier = "src-" + digest[:20]
         path = self.materials_dir / (identifier + suffix)
         path.write_bytes(content)
         try:
-            chunks, gaps = parse_file(path, self.check, max(.1, self.timeout()), self.recognizer)
+            cached = self.cached_parse(digest) if self.cached_parse else None
+            chunks, gaps = cached if cached is not None else parse_file(path, self.check, max(.1, self.timeout()), self.recognizer)
         except Exception as exc:
             from .budget import BudgetExceeded
             if isinstance(exc, BudgetExceeded):
@@ -322,22 +327,19 @@ class RawMaterialAdapter:
                     date_basis = chunk["ref"]
                     break
         entry = {"id": identifier, "file": path.name, "source_hash": digest, "origin": origin, "url": url,
-                 "acquired_at": now(), "date": disclosure_date, "date_basis": date_basis, "chunks": chunks, "gaps": gaps}
+                 "acquired_at": now(), "date": disclosure_date, "date_basis": date_basis or (channel or {}).get("publication_basis"), "chunks": chunks, "gaps": gaps,
+                 "acquisitions": [channel or {"origin": origin, "url": url, "acquired_at": now()}]}
         index["materials"].append(entry)
         self._write(index)
         return entry
 
-    def fetch(self, url):
+    def fetch_raw(self, url):
         self.check()
         parsed = urlparse(url)
         if parsed.scheme not in {"http", "https"} or parsed.username or parsed.password:
             raise ValueError("public HTTP(S) URL required")
-        index = self.load_manifest()
-        cached = next((x for x in index["materials"] if x.get("url") == url), None)
-        if cached:
-            return cached
         try:
-            with httpx.Client(follow_redirects=True, timeout=max(.1, min(45, self.timeout())), headers={"User-Agent": "Yantra/0.2 public research"}) as client:
+            with httpx.Client(follow_redirects=True, timeout=max(.1, min(45, self.timeout())), headers={"User-Agent": "Yantra/0.3 public research"}) as client:
                 with client.stream("GET", url) as response:
                     response.raise_for_status()
                     content = bytearray()
@@ -366,7 +368,7 @@ class RawMaterialAdapter:
             suffix = ".pdf"
         elif "html" in mime or suffix not in FORMATS:
             suffix = ".html" if "html" in mime else ".txt"
-        return self.add(bytes(content), suffix, final_url, url=url)
+        return {"content": bytes(content), "suffix": suffix, "mime": mime, "final_url": final_url}
 
     def read_materials(self, arguments: ReadArguments):
         index = self.load_manifest()
@@ -388,31 +390,19 @@ class RawMaterialAdapter:
         return {"company": index["company"], "company_name": index["company_name"], "material_version": index["version"],
                 "fictional": False, "adapter": "raw-v2", "cutoff": arguments.cutoff, "documents": documents, "gaps": list(dict.fromkeys(gaps))}
 
+    def pipeline(self):
+        from .sources import SourcePipeline
+        return SourcePipeline(self, getattr(self, "source_adapter", None), getattr(self, "checkpoint_store", None), getattr(self, "cutoff", None))
+
+    def fetch(self, url):
+        from .sources import Candidate
+        receipt = self.pipeline().acquire(Candidate("web_search", "public_web", url=url))
+        if not receipt.get("source_id"):
+            raise ValueError("source acquisition failed: " + str(receipt.get("failure_reason")))
+        return next(e for e in self.load_manifest()["materials"] if e["id"] == receipt["source_id"])
+
     def search(self, query, purpose, max_results):
-        from ddgs import DDGS
-        self.check()
-        entries, errors = [], []
-        for backend in ("auto", "bing"):
-            try:
-                hits = list(DDGS(timeout=max(1, int(min(15, self.timeout())))).text(query, max_results=max_results, backend=backend))
-                if hits:
-                    break
-            except Exception as exc:
-                errors.append(type(exc).__name__)
-                hits = []
-        for hit in hits:
-            self.check()
-            url = hit.get("href")
-            if not url:
-                continue
-            item = {"url": url, "title": hit.get("title"), "snippet": hit.get("body"), "purpose": purpose}
-            try:
-                source = self.fetch(url)
-                item.update(source_id=source["id"], parsed=bool(source["chunks"]))
-            except Exception as exc:
-                item["error"] = type(exc).__name__
-            entries.append(item)
-        receipt = {"query": query, "purpose": purpose, "acquired_at": now(), "results": entries, "errors": errors, "service_cost_cny": 0}
+        receipt = self.pipeline().discover_and_fetch(query, purpose, max_results)
         with (self.materials_dir / "searches.jsonl").open("a") as file:
             file.write(json.dumps(receipt, ensure_ascii=False) + "\n")
         return receipt

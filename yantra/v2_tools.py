@@ -185,7 +185,7 @@ class RawToolRegistry(ToolRegistry):
                 pair = anchors.get(r.source_ref)
                 if not pair or pair[1]["source_hash"] != r.source_hash or not source_number_present(r.raw_value, pair[0]["text"]) or numeric(r.raw_value) != r.value:
                     raise ValueError("DCF original numeric/hash basis invalid")
-                if r.security_code != research["security_code"] or r.currency != research["trading_currency"] or not r.consolidated or r.accounting_scope != "consolidated":
+                if r.security_code != research["security_code"] or r.currency != research["trading_currency"] or not r.consolidated or r.accounting_scope != "consolidated" or r.business_scope not in {None,"group"}:
                     raise ValueError("DCF bridge identity/currency/scope mismatch")
                 if not r.share_class or r.share_class != metrics.get("share_class"):
                     raise ValueError("DCF bridge share class is missing or does not match total shares")
@@ -265,7 +265,7 @@ class RawToolRegistry(ToolRegistry):
         # Preserve competing values and source identities; calculations never silently pick one.
         groups = {}
         for row in records:
-            key = (row["field"], row["period"], row["currency"], row["consolidated"], row.get("security_code"), row.get("share_class"), row.get("accounting_scope"))
+            key = (row["field"], row["period"], row["currency"], row["consolidated"], row.get("security_code"), row.get("share_class"), row.get("accounting_scope"),row.get("business_scope"))
             groups.setdefault(key, []).append(row)
         conflicts = [list(rows) for rows in groups.values() if len({(x["value"], x["unit"], x["restatement"]) for x in rows}) > 1]
         if conflicts:
@@ -298,6 +298,8 @@ class RawToolRegistry(ToolRegistry):
             item = {**row.model_dump(), "normalized_value": _out(quantity), "normalized_unit": target}
             normalized.append(item)
             key = (row.period, row.currency, row.consolidated, row.security_code, row.accounting_scope) if row.accounting_scope else (row.period, row.currency, row.consolidated)
+            if row.business_scope:
+                key=(*key,row.business_scope)
             groups.setdefault(key, {}).setdefault(row.field, []).append((quantity, row))
         results = {"periods": {}, "fcf": {}, "gaps": gaps}
         for group, rows in groups.items():
@@ -309,6 +311,8 @@ class RawToolRegistry(ToolRegistry):
                 else:
                     gaps.append(f"未解决冲突：{period}/{field}")
             metrics = {"currency": currency, "consolidated": scope, "unit": "million"}
+            if len(group)>5:
+                metrics["business_scope"]=group[5]
             for name, numerator in (("operating_margin", "operating_profit"), ("net_margin", "net_profit")):
                 if "revenue" in unique and unique["revenue"][0] != 0 and numerator in unique:
                     metrics[name] = _out(unique[numerator][0] / unique["revenue"][0])
@@ -319,7 +323,7 @@ class RawToolRegistry(ToolRegistry):
             if {"ebit", "tax_rate", "depreciation", "capex", "delta_nwc"} <= unique.keys():
                 from .valuation import fcff_from_ebit
                 bridge = [unique[k][1] for k in ("ebit", "tax_rate", "depreciation", "capex", "delta_nwc")]
-                if scope and all(r.accounting_scope == "consolidated" and r.security_code == bridge[0].security_code and r.security_code for r in bridge) and unique["tax_rate"][1].unit == "ratio":
+                if scope and all(r.accounting_scope == "consolidated" and r.security_code == bridge[0].security_code and r.security_code and r.business_scope in {None,"group"} for r in bridge) and unique["tax_rate"][1].unit == "ratio":
                     metrics["fcff"] = fcff_from_ebit(*(unique[k][0] for k in ("ebit", "tax_rate", "depreciation", "capex", "delta_nwc")))
                     metrics["fcff_bridge"] = {"method": "ebit", "formula": "EBIT*(1-tax_rate)+D&A-Capex-delta_NWC", "source_refs": [r.source_ref for r in bridge]}
                     results["fcf"][period] = metrics["fcff"]
@@ -328,7 +332,7 @@ class RawToolRegistry(ToolRegistry):
             if {"operating_cash_flow", "capex"} <= unique.keys():
                 proxy = _out(unique["operating_cash_flow"][0] - abs(unique["capex"][0]))
                 metrics["ocf_minus_capex"] = proxy
-                if unique["operating_cash_flow"][1].cash_flow_basis == "unlevered":
+                if unique["operating_cash_flow"][1].cash_flow_basis == "unlevered" and unique["operating_cash_flow"][1].business_scope in {None,"group"}:
                     if "fcff" not in metrics:
                         metrics["fcff"] = proxy
                         results["fcf"][period] = proxy
@@ -340,7 +344,9 @@ class RawToolRegistry(ToolRegistry):
                     metrics.update(shares=_out(unique["shares"][0]), security_code=row.security_code, share_scope=row.share_scope)
                     if row.share_class:
                         metrics["share_class"] = row.share_class
-            suffix = f"/{group[3]}/{group[4]}" if len(group) == 5 else ""
+            suffix = f"/{group[3]}/{group[4]}" if len(group) >= 5 else ""
+            if len(group)>5:
+                suffix+="/business:"+str(group[5])
             results["periods"][f"{period}/{currency}/{'consolidated' if scope else 'parent'}{suffix}"] = metrics
         # ISO-like fiscal dates sort numerically; annual/interim are kept separate.
         ordered = sorted(results["periods"], key=lambda p: tuple(int(x) for x in re.findall(r"\d+", p.split("/")[0])))

@@ -21,7 +21,7 @@ from .schemas import Contract, Pricing
 
 
 class ModelProfile(Contract):
-    kind: Literal["llm", "ocr"]
+    kind: Literal["llm", "ocr", "embedding"]
     provider: Literal["openai-compatible", "tesseract", "vision", "command"]
     model_id: str = ""
     base_url: str = ""
@@ -35,11 +35,12 @@ class ModelProfile(Contract):
     call_cost_cny: float = Field(default=0, ge=0)
     cost_source: str | None = None
     cost_as_of: str | None = None
+    dimensions: int | None = Field(default=None, gt=0)
 
     @model_validator(mode="after")
     def adapter(self):
-        if self.kind == "llm" and self.provider != "openai-compatible":
-            raise ValueError("LLM 使用 openai-compatible 适配器")
+        if self.kind in {"llm", "embedding"} and self.provider != "openai-compatible":
+            raise ValueError("LLM/embedding 使用 openai-compatible 适配器")
         if self.kind == "ocr" and self.provider == "openai-compatible":
             raise ValueError("OCR 请选择 tesseract、vision 或 command")
         if self.provider in {"openai-compatible", "vision"}:
@@ -88,8 +89,8 @@ class ModelCatalog:
         return {"name": name, **ModelProfile.model_validate(profile).model_dump(mode="json")}
 
     def select(self, kind, name):
-        if kind not in {"llm", "ocr"}:
-            raise ValueError("模型类型只能是 llm/ocr")
+        if kind not in {"llm", "ocr", "embedding"}:
+            raise ValueError("模型类型只能是 llm/ocr/embedding")
         self.resolve(kind, name)
         self.store.update(lambda c: c["selected"].__setitem__(kind, name))
 
@@ -230,11 +231,11 @@ def interactive_models(catalog):
                 print(f"{name}: {profile['kind']} / {profile['provider']} / {profile['model_id']}")
             print("当前选择："+json.dumps(catalog.store.load()["selected"],ensure_ascii=False))
         elif action == "select":
-            kind=ask("类型 llm/ocr", "llm"); name=ask("配置名称（LLM 可选 env）")
+            kind=ask("类型 llm/ocr/embedding", "llm"); name=ask("配置名称（LLM 可选 env）")
             catalog.select(kind,name); print("已保存选择。")
         elif action == "add":
-            name=ask("配置名称"); kind=ask("类型 llm/ocr", "llm")
-            provider="openai-compatible" if kind=="llm" else ask("OCR 适配器 tesseract/vision/command", "tesseract")
+            name=ask("配置名称"); kind=ask("类型 llm/ocr/embedding", "llm")
+            provider="openai-compatible" if kind in {"llm", "embedding"} else ask("OCR 适配器 tesseract/vision/command", "tesseract")
             data={"kind":kind,"provider":provider}
             if provider in {"openai-compatible","vision"}:
                 data.update(model_id=ask("模型 ID"),base_url=ask("API base URL"),api_key_env=ask("密钥环境变量名", "MODEL_API_KEY"))
