@@ -1,0 +1,32 @@
+test_interactive_extensions_import_and_disable (test_capabilities.CLITests.test_interactive_extensions_import_and_disable) ... ok
+test_interactive_selection_and_json_registration (test_capabilities.CLITests.test_interactive_selection_and_json_registration) ... ok
+test_command_streamed_json_and_output_limit (test_capabilities.ExtensionTests.test_command_streamed_json_and_output_limit) ... Executing <Task pending name='Task-2' coro=<ExtensionTests.test_command_streamed_json_and_output_limit() running at /Users/chillychili/Yantra/tests/test_capabilities.py:222> wait_for=<Future pending cb=[Task.task_wakeup()] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:449> cb=[_run_until_complete_cb() at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:182] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/runners.py:100> took 0.128 seconds
+ok
+test_command_timeout_and_secret_redaction (test_capabilities.ExtensionTests.test_command_timeout_and_secret_redaction) ... ok
+test_mcp_executes_through_native_worker_with_source_receipt (test_capabilities.ExtensionTests.test_mcp_executes_through_native_worker_with_source_receipt) ... Executing <Task pending name='Task-16' coro=<ExtensionTests.test_mcp_executes_through_native_worker_with_source_receipt() running at /Users/chillychili/Yantra/tests/test_capabilities.py:266> wait_for=<Future pending cb=[Task.task_wakeup()] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:449> cb=[_run_until_complete_cb() at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:182] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/runners.py:100> took 0.204 seconds
+Executing <Task pending name='Task-18' coro=<run_node_async.<locals>._run.<locals>._drive_root_node() running at /Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/workflow/_node_runner_utils.py:250> wait_for=<_GatheringFuture pending cb=[Task.task_wakeup()] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/tasks.py:712> created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/tasks.py:420> took 0.375 seconds
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+ok
+test_registered_tool_executes_through_native_worker_and_budget (test_capabilities.ExtensionTests.test_registered_tool_executes_through_native_worker_and_budget) ... Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+ok
+test_skill_external_symlink_rejected_at_import_and_snapshot (test_capabilities.ExtensionTests.test_skill_external_symlink_rejected_at_import_and_snapshot) ... ok
+test_skills_resources_are_frozen_and_role_scoped (test_capabilities.ExtensionTests.test_skills_resources_are_frozen_and_role_scoped) ... ok
+test_stdio_mcp_discovery_call_schema_and_redaction (test_capabilities.ExtensionTests.test_stdio_mcp_discovery_call_schema_and_redaction) ... ok
+test_streamable_http_mcp (test_capabilities.ExtensionTests.test_streamable_http_mcp) ... ok
+test_command_ocr_runs_in_material_pipeline_with_budget (test_capabilities.ModelTests.test_command_ocr_runs_in_material_pipeline_with_budget) ... ok
+test_config_selection_and_no_literal_credentials (test_capabilities.ModelTests.test_config_selection_and_no_literal_credentials) ... ok
+test_model_list_probe_has_no_inference_call (test_capabilities.ModelTests.test_model_list_probe_has_no_inference_call) ... Executing <Task finished name='Task-130' coro=<ModelTests.test_model_list_probe_has_no_inference_call() done, defined at /Users/chillychili/Yantra/tests/test_capabilities.py:65> result=None created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/runners.py:100> took 0.500 seconds
+ok
+test_selected_profile_is_pinned_across_resume (test_capabilities.ModelTests.test_selected_profile_is_pinned_across_resume) ... Executing <Task finished name='Task-135' coro=<ModelTests.test_selected_profile_is_pinned_across_resume() done, defined at /Users/chillychili/Yantra/tests/test_capabilities.py:81> result=None created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/runners.py:100> took 0.107 seconds
+ok
+test_skill_instructions_and_images_reach_native_adk (test_capabilities.ModelTests.test_skill_instructions_and_images_reach_native_adk) ... Skipping missing token usage metadata for agent framework_selector and model test-capture
+ok
+test_vision_ocr_image_usage_and_own_price_in_material_pipeline (test_capabilities.ModelTests.test_vision_ocr_image_usage_and_own_price_in_material_pipeline) ... ok
+test_vision_ocr_requires_explicit_budget_bound (test_capabilities.ModelTests.test_vision_ocr_requires_explicit_budget_bound) ... ok
+
+----------------------------------------------------------------------
+Ran 17 tests in 8.346s
+
+OK

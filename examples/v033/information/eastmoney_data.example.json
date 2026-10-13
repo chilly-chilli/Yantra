@@ -1,0 +1,35 @@
+{
+  "description": "东方财富妙想金融数据：按 toolQuery 自然语言查询行情、财务及关联关系；保留原始单位、表格和证券身份，需核验。",
+  "command": [
+    ".venv/bin/python",
+    "-m",
+    "yantra.information",
+    "eastmoney_data"
+  ],
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "toolQuery": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2000
+      }
+    },
+    "required": [
+      "toolQuery"
+    ],
+    "additionalProperties": false
+  },
+  "env_refs": {
+    "MX_APIKEY": "MX_APIKEY"
+  },
+  "roles": [
+    "finance",
+    "thesis",
+    "verification"
+  ],
+  "timeout_seconds": 60,
+  "cost_cny": 0,
+  "cost_kind": "service",
+  "enabled": false
+}

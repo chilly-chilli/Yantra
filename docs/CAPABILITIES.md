@@ -126,7 +126,7 @@ tool 描述包括 `description`、`command`、`input_schema`、roles 和可选 e
 
 ## 信息获取扩展
 
-v0.3.3 提供扶摇 REST、东方财富财经搜索、AKShare 查询和 98dou 财联社聚合工具，沿用 tools 的角色授权、超时和原始响应凭证。接口、Key 申请、可移植注册命令及费用声明见[信息来源配置](INFORMATION_SOURCES.md)。这四项是命令扩展，订阅／轮询仍未实现；第三方聚合结果仍须独立核验。
+v0.3.3 提供扶摇 REST、东方财富妙想金融数据／资讯搜索直接 API、AKShare 查询和 98dou 财联社聚合工具，沿用 tools 的角色授权、超时和原始响应凭证。接口、Key 申请、可移植注册命令及费用声明见[信息来源配置](INFORMATION_SOURCES.md)。这些工具是命令扩展，妙想无需技能包；订阅／轮询仍未实现，第三方结果仍须独立核验。
 
 ## 新建与恢复
 

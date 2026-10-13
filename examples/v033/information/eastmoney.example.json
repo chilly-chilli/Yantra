@@ -21,7 +21,7 @@
     "additionalProperties": false
   },
   "env_refs": {
-    "EASTMONEY_APIKEY": "EASTMONEY_APIKEY"
+    "MX_APIKEY": "MX_APIKEY"
   },
   "roles": [
     "finance",

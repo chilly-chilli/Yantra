@@ -1,0 +1,107 @@
+{
+  "date": "2026-10-14",
+  "version": "0.3.3",
+  "final_services": [
+    "eastmoney_data",
+    "eastmoney"
+  ],
+  "live_probes": [
+    {
+      "provider": "eastmoney_data",
+      "success": true,
+      "endpoint": "https://mkapi2.dfcfs.com/finskillshub/api/claw/query",
+      "retrieved_at": "2026-10-13T16:31:09.764981+00:00",
+      "elapsed_seconds": 3.27,
+      "top_fields": [
+        "success",
+        "status",
+        "code",
+        "message",
+        "data",
+        "requestId"
+      ],
+      "result_shapes": [
+        {
+          "path": ".data.data.searchDataResultDTO.dataTableDTOList",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "provider": "eastmoney",
+      "success": true,
+      "endpoint": "https://mkapi2.dfcfs.com/finskillshub/api/claw/news-search",
+      "retrieved_at": "2026-10-13T16:31:11.338000+00:00",
+      "elapsed_seconds": 1.573,
+      "top_fields": [
+        "success",
+        "status",
+        "code",
+        "message",
+        "data",
+        "requestId"
+      ],
+      "result_shapes": []
+    }
+  ],
+  "prior_scope_probe": {
+    "provider": "eastmoney_screen",
+    "success": true,
+    "endpoint": "https://mkapi2.dfcfs.com/finskillshub/api/claw/stock-screen",
+    "retrieved_at": "2026-10-13T16:31:12.344693+00:00",
+    "elapsed_seconds": 1.007,
+    "top_fields": [
+      "success",
+      "status",
+      "code",
+      "message",
+      "data",
+      "requestId"
+    ],
+    "result_shapes": [
+      {
+        "path": ".data.data.partialResults",
+        "text_characters": 3444
+      },
+      {
+        "path": ".data.data.allResults.result.columns",
+        "count": 22
+      },
+      {
+        "path": ".data.data.allResults.result.dataList",
+        "count": 24
+      }
+    ],
+    "final_state": "excluded_by_user; adapter and registration removed"
+  },
+  "official_artifact_hashes": {
+    "data": "8c4eff9df2eeaba3bc29fa289346b4a5f660fd0b38e4f7fcc3a0fc7b304547f7",
+    "search": "c0a4b43d46b18619bf85df9d4bb62bf6ff02bb64b3e75d2ed7f62a97bd6e0597"
+  },
+  "offline_checks": {
+    "information_tests": {
+      "passed": 17,
+      "elapsed_seconds": 1.445
+    },
+    "capabilities_tests": {
+      "passed": 17,
+      "elapsed_seconds": 8.346
+    }
+  },
+  "configuration": {
+    "credential": "MX_APIKEY in root .env",
+    "legacy_alias": "EASTMONEY_APIKEY=${MX_APIKEY}",
+    "skill": "disabled",
+    "screen": "not registered",
+    "secrets_in_git": false
+  },
+  "not_performed": [
+    "complete research",
+    "LLM calls",
+    "account mutations or publishing",
+    "skill installation",
+    "shell startup changes",
+    "push",
+    "release"
+  ]
+}

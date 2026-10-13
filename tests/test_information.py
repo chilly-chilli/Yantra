@@ -3,6 +3,7 @@ import asyncio
 import contextlib
 import io
 import json
+import sys
 from pathlib import Path
 import tempfile
 from types import SimpleNamespace
@@ -56,11 +57,71 @@ class InformationTests(unittest.TestCase):
         self.assertNotIn('synthetic-secret', str(caught.exception))
 
     def test_eastmoney_official_post_contract(self):
-        with patch.dict('os.environ', EASTMONEY_APIKEY='synthetic-secret'), patch.object(information, 'request_json', return_value={'title': '合成新闻'}) as request:
+        with patch.dict('os.environ', MX_APIKEY='synthetic-secret'), patch.object(information, 'request_json', return_value={'title': '合成新闻'}) as request:
             result = information.fetch('eastmoney', {'query': '示例公司公告'})
         request.assert_called_once_with('https://mkapi2.dfcfs.com/finskillshub/api/claw/news-search', method='POST',
             headers={'apikey': 'synthetic-secret'}, payload={'query': '示例公司公告'})
         self.assertEqual(result['data']['title'], '合成新闻')
+
+    def test_miaoxiang_data_payload_preserves_response(self):
+        raw = {'status': 0, 'data': {'data': {'rawTable': {'value': ['123.4500', None]},
+                                           'unit': '供应商原始单位'}}}
+        with patch.dict('os.environ', MX_APIKEY='synthetic-secret'), \
+                patch.object(information, 'request_json', return_value=raw) as request:
+            result = information.fetch('eastmoney_data', {'toolQuery': '受控测试查询'})
+        request.assert_called_once_with('https://mkapi2.dfcfs.com/finskillshub/api/claw/query',
+            method='POST', headers={'apikey': 'synthetic-secret'}, payload={'toolQuery': '受控测试查询'})
+        self.assertEqual(result['data'], raw)
+
+    def test_legacy_search_snapshot_credential_and_new_tools_require_mx_key(self):
+        with patch.dict('os.environ', {'EASTMONEY_APIKEY': 'legacy-synthetic'}, clear=True), \
+                patch.object(information, 'request_json', return_value={'status': 0}) as request:
+            information.fetch('eastmoney', {'query': '受控测试查询'})
+            self.assertEqual(request.call_args.kwargs['headers'], {'apikey': 'legacy-synthetic'})
+            request.reset_mock()
+            with self.assertRaisesRegex(ValueError, 'MX_APIKEY'):
+                information.fetch('eastmoney_data', {'toolQuery': '受控测试查询'})
+            request.assert_not_called()
+
+    def test_miaoxiang_business_errors_and_wrong_fields_rejected(self):
+        for provider, (_, field) in information.EASTMONEY_ENDPOINTS.items():
+            for body in ({'code': 113, 'message': 'synthetic-secret'},
+                         {'status': 114, 'message': 'synthetic-secret'}, {'code': '115'},
+                         {'success': False, 'status': 0, 'code': 0}):
+                with self.subTest(provider=provider, body=body), patch.dict('os.environ', MX_APIKEY='synthetic-secret'), \
+                        patch.object(information, 'request_json', return_value=body):
+                    with self.assertRaisesRegex(ValueError, '业务错误') as caught:
+                        information.fetch(provider, {field: '受控测试查询'})
+                    self.assertNotIn('synthetic-secret', str(caught.exception))
+            with patch.object(information, 'request_json') as request:
+                with self.assertRaisesRegex(ValueError, '参数无效'):
+                    information.fetch(provider, {field: '受控测试查询', 'api_key': 'synthetic-secret'})
+                request.assert_not_called()
+
+    def test_miaoxiang_command_receives_key_and_redacts_echoed_response(self):
+        async def check():
+            with tempfile.TemporaryDirectory() as directory, patch.dict('os.environ', MX_APIKEY='synthetic-mx-secret'):
+                store = ConfigStore(Path(directory) / 'config.json')
+                catalog = ExtensionCatalog(store)
+                spec = information.extension_specs()['eastmoney_data']
+                spec['enabled'] = True
+                # Run the real command entry with a controlled HTTP replacement in the child.
+                bootstrap = ("from yantra import information\n"
+                    "def mock(url, **kwargs):\n"
+                    "    assert url.endswith('/api/claw/query')\n"
+                    "    assert kwargs['method'] == 'POST'\n"
+                    "    assert kwargs['headers']['apikey'] == 'synthetic-mx-secret'\n"
+                    "    return {'status': 0, 'data': kwargs['payload'], 'echo': kwargs['headers']['apikey']}\n"
+                    "information.request_json = mock\n"
+                    "raise SystemExit(information.main())\n")
+                spec['command'] = [sys.executable, '-c', bootstrap, 'eastmoney_data']
+                await catalog.add('tools', 'eastmoney_data', spec)
+                runtime = ExtensionRuntime(catalog.snapshot(Path(directory) / 'run'))
+                result = await runtime.call('ext_eastmoney_data', {'toolQuery': '受控测试查询'}, 10)
+                self.assertEqual(result['data']['data'], {'toolQuery': '受控测试查询'})
+                self.assertEqual(result['data']['echo'], '[REDACTED]')
+                self.assertNotIn('synthetic-mx-secret', json.dumps(result))
+        asyncio.run(check())
 
     def test_cls_requires_no_credential(self):
         with patch.dict('os.environ', {}, clear=True), patch.object(information, 'request_json', return_value={'data': []}) as request:
@@ -78,6 +139,7 @@ class InformationTests(unittest.TestCase):
             ('fuyao', {'operation': 'prices-snapshot', 'parameters': {'thscodes': '600001'}}),
             ('fuyao', {'operation': 'ticker-search', 'parameters': {'q': '示例', 'api_key': 'secret'}}),
             ('eastmoney', {'query': 'q', 'url': 'https://example.invalid'}),
+            ('eastmoney_screen', {'keyword': 'excluded service'}),
             ('akshare', {'function': 'os.system', 'parameters': {}}),
             ('akshare', {'function': 'stock_news_em', 'parameters': {'symbol': 'q'}, 'limit': 0}),
             ('cls', {'token': 'secret'})]

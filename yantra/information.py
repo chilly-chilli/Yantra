@@ -42,6 +42,8 @@ AKSHARE_FUNCTIONS = {
         "end_date": {"type": "string", "pattern": r"^[0-9]{8}$"},
         "adjust": {"enum": ["", "qfq", "hfq"]}}, ("symbol", "start_date", "end_date")),
 }
+EASTMONEY_ENDPOINTS = {"eastmoney": ("news-search", "query"),
+    "eastmoney_data": ("query", "toolQuery")}
 
 
 def operation_schema(operations, key):
@@ -56,15 +58,16 @@ def operation_schema(operations, key):
 
 SCHEMAS = {
     "fuyao": operation_schema({name: schema for name, (_, schema) in FUYAO_OPERATIONS.items()}, "operation"),
-    "eastmoney": object_schema({"query": TEXT}, ("query",)),
+    **{name: object_schema({field: TEXT}, (field,)) for name, (_, field) in EASTMONEY_ENDPOINTS.items()},
     "akshare": operation_schema(AKSHARE_FUNCTIONS, "function"),
     "cls": object_schema({}),
 }
 ENV_REFS = {"fuyao": {"FUYAO_API_KEY": "FUYAO_API_KEY"},
-    "eastmoney": {"EASTMONEY_APIKEY": "EASTMONEY_APIKEY"}, "akshare": {}, "cls": {}}
+    **{name: {"MX_APIKEY": "MX_APIKEY"} for name in EASTMONEY_ENDPOINTS}, "akshare": {}, "cls": {}}
 DESCRIPTIONS = {
     "fuyao": "同花顺 Fuyao A股：标的检索、指定证券行情及估值快照、最近财务报表。证券代码须含 SH/SZ/BJ 后缀，返回供应商原始字段及口径。",
     "eastmoney": "东方财富妙想金融资讯搜索：按 query 检索新闻、研报、公告或政策；原始结果需继续核验。",
+    "eastmoney_data": "东方财富妙想金融数据：按 toolQuery 自然语言查询行情、财务及关联关系；保留原始单位、表格和证券身份，需核验。",
     "akshare": "AKShare只读信息：白名单函数查询个股资料、历史行情、新闻、财务摘要；保留中文字段和上游单位，limit控制返回行数并标记截断。",
     "cls": "觅知API聚合的财联社全部实时电报。无参数；第三方转发来源，事件结论需查原文核验。",
 }
@@ -129,9 +132,14 @@ def fetch(provider, arguments):
         data = request_json(url, headers={"X-api-key": credential("FUYAO_API_KEY")}, parameters=arguments["parameters"])
         if not isinstance(data, dict) or data.get("code") != 0:
             raise ValueError("Fuyao 返回业务错误或不符合 ApiResponse 合约")
-    elif provider == "eastmoney":
-        url = "https://mkapi2.dfcfs.com/finskillshub/api/claw/news-search"
-        data = request_json(url, method="POST", headers={"apikey": credential("EASTMONEY_APIKEY")}, payload=arguments)
+    elif provider in EASTMONEY_ENDPOINTS:
+        endpoint, _ = EASTMONEY_ENDPOINTS[provider]
+        url = "https://mkapi2.dfcfs.com/finskillshub/api/claw/" + endpoint
+        # Saved search snapshots pass only the former credential reference.
+        key_env = "EASTMONEY_APIKEY" if provider == "eastmoney" and not os.getenv("MX_APIKEY") and os.getenv("EASTMONEY_APIKEY") else "MX_APIKEY"
+        data = request_json(url, method="POST", headers={"apikey": credential(key_env)}, payload=arguments)
+        if isinstance(data, dict) and (data.get("success") is False or any(data[field] not in (0, "0") for field in ("status", "code") if field in data)):
+            raise ValueError("妙想 API 返回业务错误；请检查 Key、调用额度和查询条件")
     else:
         url = "https://api.98dou.cn/api/hotlist/cls/all"
         data = request_json(url)
