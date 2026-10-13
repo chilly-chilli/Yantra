@@ -1,0 +1,149 @@
+{
+  "date": "2026-10-13T16:07:52.559336+08:00",
+  "version": "0.2.2",
+  "python": "3.12.6",
+  "baseline_unittest": {
+    "count": 49,
+    "seconds": 13.929,
+    "passed": true
+  },
+  "release_unittest": {
+    "count": 65,
+    "seconds": 27.859,
+    "passed": true,
+    "new_tests": 16
+  },
+  "checks": {
+    "compileall": true,
+    "git_diff_check": true,
+    "cli_version": true
+  },
+  "remote_model_calls": 0,
+  "scope": "Scripted ADK integration, original local materials and mathematical/source audit; no real LLM economic inference or remote authenticity check.",
+  "synthetic": [
+    {
+      "model": "pe",
+      "run_id": "run-b53c7fe4e6db",
+      "status": "partial",
+      "report": "/Users/chillychili/Yantra/examples/v022/output/pe/runs/run-b53c7fe4e6db/report-v1.md",
+      "per_share_value": 30.0
+    },
+    {
+      "model": "pb",
+      "run_id": "run-bad7911caca1",
+      "status": "partial",
+      "report": "/Users/chillychili/Yantra/examples/v022/output/pb/runs/run-bad7911caca1/report-v1.md",
+      "per_share_value": 12.0
+    },
+    {
+      "model": "ev_ebitda",
+      "run_id": "run-d02105e72aa1",
+      "status": "partial",
+      "report": "/Users/chillychili/Yantra/examples/v022/output/ev_ebitda/runs/run-d02105e72aa1/report-v1.md",
+      "per_share_value": 97.5
+    },
+    {
+      "model": "ddm",
+      "run_id": "run-02ba6bfb5870",
+      "status": "partial",
+      "report": "/Users/chillychili/Yantra/examples/v022/output/ddm/runs/run-02ba6bfb5870/report-v1.md",
+      "per_share_value": 12.75
+    }
+  ],
+  "local_materials": [
+    {
+      "case": "local-real-PE",
+      "run_id": "run-27fac3fc0a10",
+      "status": "partial",
+      "model": "pe",
+      "per_share_value": 26.381025,
+      "value_range": [
+        26.381025,
+        26.381025
+      ],
+      "market_comparison": {
+        "status": "resolved",
+        "kind": "reference_price",
+        "baseline": {
+          "kind": "reference_price",
+          "record": {
+            "field": "price",
+            "value": 70.27,
+            "period": "2026-10-12",
+            "unit": "CNY/share",
+            "currency": "CNY",
+            "consolidated": true,
+            "source_ref": "src-40deaf9732eab7747d9a:A3",
+            "source_hash": "40deaf9732eab7747d9a16fdd8408d63d5ba67f25a4fca040456b60dd8df04c4",
+            "raw_value": "70.27",
+            "disclosure_date": "2026-10-12",
+            "restatement": null,
+            "cash_flow_basis": null,
+            "security_code": "000858",
+            "share_scope": null,
+            "disclosure_source_ref": null,
+            "disclosure_quote": null,
+            "model_value": null,
+            "normalization_note": null,
+            "share_class": "A",
+            "accounting_scope": "attributable",
+            "information_kind": null
+          },
+          "as_of": "2026-10-12",
+          "earnings_basis": "point_in_time",
+          "provider": "用户提供本地表，未联网验证行情商",
+          "sample_size": null,
+          "own_value": null,
+          "own_basis": null
+        },
+        "our_value": 26.381025,
+        "difference": -0.624576,
+        "statement": "估值或经营假设相对指定基准的差异；不是预期收益率"
+      },
+      "program_verification": true,
+      "replay": {
+        "first": "run-27fac3fc0a10",
+        "second": "run-745c9dab6c9e",
+        "calculation_equal": true,
+        "differences": [],
+        "errors": {},
+        "program_audit_passed": true,
+        "remote_model_calls": 0
+      },
+      "report": "/Users/chillychili/Yantra/examples/v022/output/local/run-27fac3fc0a10/report-v1.md",
+      "remote_model_calls": 0,
+      "scope": "本地用户材料、人工核对提取、注入脚本后端；没有真实LLM推理、行情联网或原文件外部认证"
+    },
+    {
+      "case": "missing-comparable-refusal",
+      "run_id": "run-b36fdf260f7c",
+      "status": "partial",
+      "model": "not_applicable",
+      "per_share_value": null,
+      "value_range": null,
+      "market_comparison": null,
+      "program_verification": true,
+      "replay": {
+        "first": "run-b36fdf260f7c",
+        "second": "run-c42185a097c8",
+        "calculation_equal": true,
+        "differences": [],
+        "errors": {},
+        "program_audit_passed": true,
+        "remote_model_calls": 0
+      },
+      "report": "/Users/chillychili/Yantra/examples/v022/output/local/run-b36fdf260f7c/report-v1.md",
+      "remote_model_calls": 0,
+      "scope": "本地用户材料、人工核对提取、注入脚本后端；没有真实LLM推理、行情联网或原文件外部认证"
+    }
+  ],
+  "historical": {
+    "first": "run-f41fe7ee4a56",
+    "second": "run-35156b98b407",
+    "calculation_equal": true,
+    "differences": [],
+    "errors": {},
+    "program_audit_passed": false,
+    "remote_model_calls": 0
+  }
+}

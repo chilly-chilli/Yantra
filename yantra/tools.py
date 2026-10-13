@@ -165,7 +165,7 @@ class ToolRegistry:
             "extract_financials": (ReadArguments, "Extract fields with period, currency, unit, consolidation and exact source location."),
             "convert_units": (ConversionArguments, "Convert monetary or share units; currency remains unchanged. No implicit FX conversion."),
             "calculate_metrics": (MetricsArguments, "Normalize compatible units and compute FCF, debt, growth and profit margins deterministically."),
-            "valuation": (ValuationArguments, "Confirmed-assumptions-only DCF. parameters requires base_fcf,growth_rate,discount_rate,terminal_growth,years,net_debt,shares,currency,unit. unit must be million."),
+            "valuation": (ValuationArguments, "Current authorized model, parameters and version only. Fixed demo: legacy DCF with base_fcf,growth_rate,discount_rate,terminal_growth,years,net_debt,shares,currency,unit (million). Raw registry dispatches PE/PB/EV-EBITDA/DDM."),
             "check_consistency": (CheckArguments, "Verify original citations, source values, current assumptions, calculations and structured research evidence gaps."),
         }
         return {name: {"description": description, "arguments_schema": schema.model_json_schema()} for name, (schema, description) in contracts.items()}
@@ -283,6 +283,8 @@ class ToolRegistry:
 
     def _valuation(self, args: dict[str, Any]) -> ToolResponse:
         arguments = ValuationArguments.model_validate(args)
+        if arguments.model != "dcf":
+            raise ValueError("fixed demonstration only supports legacy DCF")
         parameters = arguments.parameters
         base = _dcf(parameters)
         scenarios = []
@@ -420,7 +422,7 @@ class ToolRegistry:
                     issue("thesis", "structure_claim", "Claims require an explicit fact/assumption/prediction/judgment type")
                     continue
                 kind = claim.get("kind", claim.get("type"))
-                if kind not in {"fact", "assumption", "prediction", "judgment"}:
+                if kind not in {"fact", "management_statement", "assumption", "prediction", "judgment"}:
                     issue("thesis", "classify_claim", "Claim type must distinguish fact, assumption, prediction, and judgment")
                 refs = claim.get("evidence_refs", [])
                 if kind == "fact" and (not refs or any(ref not in anchors for ref in refs)):

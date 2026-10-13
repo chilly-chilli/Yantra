@@ -1,5 +1,6 @@
 """Program owned permissions, budgets, durable state and research completion gates."""
 from __future__ import annotations
+from . import __version__
 
 import asyncio
 from contextlib import contextmanager
@@ -32,7 +33,7 @@ TOOL_SPECS = {
     "extract_financials": "{company, material_ids?:list[str]}; returns financials records with field/value/period/unit/currency/consolidated/source_ref/source_hash",
     "convert_units": "{value,from_unit,to_unit,currency}; deterministic unit conversion",
     "calculate_metrics": "{records:list[FinancialRecord]}; deterministic margins, growth, free cash flow, net debt",
-    "valuation": "{parameters:{base_fcf,growth_rate,discount_rate,terminal_growth,years,net_debt,shares,currency,unit},assumptions_version}; DCF scenarios and sensitivity; confirmed version required",
+    "valuation": "{model,parameters,basis,assumptions_version}; current confirmed method + parameters + version required; raw methods DCF/PE/PB/EV-EBITDA/DDM; fixed demonstration retains legacy DCF",
     "check_consistency": "{results:dict[artifact,Result],assumptions,research}; original evidence and calculation audit, structured issues",
 }
 
@@ -83,7 +84,7 @@ class Engine:
             "run_id": run_id, "status": "running", "mode": mode, "research": r,
             "created_at": datetime.now(timezone.utc).isoformat(), "limits": config.model_dump(),
             "config": selected_backend.config_summary() if hasattr(selected_backend, "config_summary") else {"backend": "injected-test"},
-            "program_version": "0.1.0", "input_snapshot": registry.snapshot(),
+            "program_version": __version__, "input_snapshot": registry.snapshot(),
             "assumptions": Assumptions().model_dump(), "assumption_history": [], "user_overrides": [],
             "tasks": [], "results": [], "artifacts": {}, "calculations": {}, "issues": [],
             "invalidated": [], "report_history": [], "stop_reasons": [], "pending_user": None,
@@ -446,7 +447,9 @@ class Engine:
         self._save()
 
     @staticmethod
-    def _validate_parameters(p):
+    def _validate_parameters(p, model="dcf"):
+        if model != "dcf":
+            raise ValueError("fixed demonstration supports legacy DCF only")
         required = {"base_fcf", "growth_rate", "discount_rate", "terminal_growth", "years", "net_debt", "shares", "currency", "unit"}
         if set(p) != required or p["currency"] != "CNY" or p["unit"] != "million":
             raise ValueError("DCF参数必须完整，金额使用CNY million，股数为million shares")
@@ -477,11 +480,15 @@ class Engine:
                 if not parameters:
                     raise ValueError("modify requires parameters")
                 current = self.state["assumptions"]
-                updated = current["parameters"] | parameters
-                self._validate_parameters(updated)
+                model = parameters.get("model", current.get("model", "dcf"))
+                updated = parameters["parameters"] if "parameters" in parameters else current["parameters"] | parameters
+                basis = parameters.get("basis", current["basis"] | {k: "用户明确修改并确认" for k in parameters})
+                self._validate_parameters(updated, model)
+                candidate = Assumptions(model=model, version=current["version"]+1, confirmed=True, parameters=updated, basis=basis, authorization_source="user").model_dump()
+                if self.state.get("raw_materials"):
+                    self._check_authorization(candidate)
                 self.state["assumption_history"].append(json.loads(json.dumps(current)))
-                self.state["assumptions"] = {"version": current["version"] + 1, "confirmed": True,
-                                             "parameters": updated, "basis": current["basis"] | {k: "用户明确修改并确认" for k in parameters}, "authorization_source": "user"}
+                self.state["assumptions"] = candidate
                 self.state["user_overrides"] = sorted(set(self.state.get("user_overrides", [])) | set(parameters))
                 for k in ("thesis", "valuation", "verification"):
                     artifact = self.state["artifacts"].pop(k, None)
@@ -494,6 +501,7 @@ class Engine:
                 self.state["stop_reasons"] = []
                 self.state["artifacts"]["proposal"] = json.loads(json.dumps(self.state["artifacts"]["proposal"]))
                 self.state["artifacts"]["proposal"]["data"]["parameters"] = updated
+                self.state["artifacts"]["proposal"]["data"]["model"] = model
                 self.state["artifacts"]["proposal"]["assumptions_version"] = self.state["assumptions"]["version"]
                 self.state["artifacts"]["proposal"]["data"]["basis"] = self.state["assumptions"]["basis"]
             if decision == "reject":
@@ -522,7 +530,7 @@ class Engine:
         return {
             "投资结论摘要": {"type": "judgment", "statement": "证据不足以形成实盘投资结论；保留条件性研究假说。",
                                "company": self.state["research"]["company"], "mode": self.state["mode"], "gaps": gaps},
-            "投资逻辑": {"facts": thesis.get("claims", []), "assumptions": thesis.get("hypotheses", [])},
+            "投资逻辑": {"claims": thesis.get("claims", []), "facts": [x for x in thesis.get("claims", []) if x.get("kind", x.get("type")) == "fact"], "assumptions": thesis.get("hypotheses", [])},
             "事实与数据基础": {"financials": finance.get("financials", []), "evidence_refs": a.get("finance", {}).get("evidence_refs", []),
                                  "research": self.state["research"], "input_version": self.state["input_snapshot"]},
             "财务分析与估值": {"historical_metrics": finance.get("metrics", {}), "model": data.get("proposal", {}),
@@ -552,7 +560,7 @@ class Engine:
             "financial_sources_and_scope": bool(records) and all(all(k in x and x[k] is not None for k in ("source_ref", "source_hash", "period", "unit", "currency", "consolidated")) for x in records) and bool(verifier.get("passed")),
             "calculation_receipts": bool(referenced) and all(x in self.state["calculations"] for x in referenced),
             "current_confirmed_valuation": bool(assumptions["confirmed"] and valuation and valuation.get("assumptions_version") == assumptions["version"]),
-            "facts_and_assumptions_separated": bool(thesis.get("claims") and thesis.get("hypotheses")) and all(x.get("type") == "fact" for x in thesis.get("claims", [])) and all(x.get("type") in ("assumption", "prediction", "judgment") for x in thesis.get("hypotheses", [])),
+            "facts_and_assumptions_separated": bool(thesis.get("claims") and thesis.get("hypotheses")) and all(x.get("kind", x.get("type")) in ("fact", "management_statement", "assumption", "prediction", "judgment") for x in thesis.get("claims", [])) and all(x.get("kind", x.get("type")) in ("assumption", "prediction", "judgment") for x in thesis.get("hypotheses", [])),
             "risks_and_disconfirmation": bool(thesis.get("risks") and thesis.get("disconfirming") and thesis.get("tracking")),
             "market_baseline_or_explicit_gap": bool(expectations.get("baseline") or (expectations.get("status") == "unverified_hypothesis" and expectations.get("statement"))),
             "eight_sections": list(report) == SECTIONS,

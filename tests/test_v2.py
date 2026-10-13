@@ -87,10 +87,10 @@ class PositiveCashFlowBackend(V2TestBackend):
         doc = payload["document"]
         anchor = doc["anchors"][0]
         financials = []
-        for field, value in {"revenue": 1234.5, "operating_cash_flow": 192, "capex": 72, "debt": 150, "cash": 50, "shares": 100}.items():
-            financials.append({"field": field, "value": value, "raw_value": "1,234.50" if field=="revenue" else str(value), "period": "FY2025", "unit": "million shares" if field=="shares" else "million", "currency": "CNY", "consolidated": True,
+        for field, value in {"revenue": 1234.5, "operating_cash_flow": 192, "capex": 72, "debt": 150, "cash": 50, "shares": 100, "minority_interest": 0, "ebit": 160, "tax_rate": .25, "depreciation": 72, "delta_nwc": 0}.items():
+            financials.append({"field": field, "value": value, "raw_value": "1,234.50" if field=="revenue" else str(value), "period": "FY2025", "unit": "ratio" if field=="tax_rate" else "million shares" if field=="shares" else "million", "currency": "CNY", "consolidated": True,
                 "source_ref": anchor["ref"], "source_hash": doc["source_hash"], "disclosure_date": "2026-01-01",
-                "cash_flow_basis": "unlevered" if field=="operating_cash_flow" else None, "security_code": "600000" if field=="shares" else None, "share_scope": "total ordinary shares" if field=="shares" else None})
+                "cash_flow_basis": "unlevered" if field=="operating_cash_flow" else None, "security_code": "600000", "share_class": "A", "accounting_scope": "consolidated", "share_scope": "total ordinary shares" if field=="shares" else None})
         value = await super().extract(payload)
         value["financials"] = financials
         return value
@@ -106,8 +106,9 @@ class PositiveCashFlowBackend(V2TestBackend):
     async def worker(self, task, local):
         if task["target"] == "valuation":
             if task["purpose"] == "propose":
-                parameters = {"base_fcf":120,"growth_rate":.05,"discount_rate":.1,"terminal_growth":.02,"years":5,"net_debt":100,"shares":100,"currency":"CNY","unit":"million"}
-                return self._result(task, local, data={"model":"dcf","parameters":parameters,"basis":{k:"固定原始材料及显式测试假设" for k in parameters},"scope":"虚构稳定正无杠杆现金流工业样本","gaps":[]})
+                parameters = {"base_fcf":120,"growth_rate":.05,"discount_rate":.1,"terminal_growth":.02,"years":5,"net_debt":100,"shares":100,"minority_interest":0,"currency":"CNY","unit":"million"}
+                refs = task["inputs"]["finance"]["evidence_refs"]
+                return self._result(task, local, data={"model":"dcf","parameters":parameters,"basis":{k:{"source_refs":refs,"formula":"固定原始材料及显式测试假设"} for k in parameters},"scope":"虚构稳定正无杠杆现金流工业样本","gaps":[]})
             if not local["tool_outputs"]:
                 return self._tool("valuation", {"parameters":task["assumptions"]["parameters"],"assumptions_version":task["assumptions"]["version"]})
             return self._result(task, local, data=local["tool_outputs"][-1]["response"]["data"])
@@ -365,7 +366,7 @@ class ControllerTests(unittest.IsolatedAsyncioTestCase):
         for mode in ("autonomous", "manual"):
             with tempfile.TemporaryDirectory() as d, patch("yantra.materials.RawMaterialAdapter.search", fake_search):
                 source=Path(d)/"original.txt"
-                source.write_text(TEXT.splitlines()[0]+" unlevered operating_cash_flow 192 capex 72 debt 150 cash 50 total ordinary shares 100\n")
+                source.write_text(TEXT.splitlines()[0]+" unlevered operating_cash_flow 192 capex 72 debt 150 cash 50 total ordinary shares 100 minority_interest 0 ebit 160 tax_rate 0.25 depreciation 72 delta_nwc 0\n")
                 research={"company":"测试公司","horizon":"12个月","cutoff":"2026-10-13","market":"CN","security_code":"600000","trading_currency":"CNY","confirmation_mode":mode}
                 engine=RawEngine.create_raw(Path(d)/"runs",research,[source],backend=PositiveCashFlowBackend(),pricing=PRICE,framework="quality")
                 state=await run_engine(engine)
@@ -375,6 +376,7 @@ class ControllerTests(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual((await engine.advance())["status"],"waiting")
                     state=await engine.respond("confirm")
                 self.assertIn("valuation",state["artifacts"],state["stop_reasons"])
+                self.assertTrue(state["artifacts"]["verification"]["data"]["passed"],state["issues"])
                 self.assertEqual(state["assumptions"]["authorization_source"], "controller" if mode=="autonomous" else "user")
                 old=state["artifacts"]["valuation"]["data"]["per_share_value"]
                 changed=await engine.respond("modify",{"growth_rate":.03})

@@ -76,7 +76,7 @@ WORKER_INSTRUCTION = """
 不能 delegate_task、创建 Agent、调用其他子 Agent、结束整项研究或扩大任务。
 只使用给定任务、相关成果和 local 工具结果，不能依赖其他会话历史或模型记忆补数字。
 资料财务角色检查指标、期间、单位、币种、合并口径；关键数字需要来源定位。
-逻辑角色区分事实、假设、预测、判断，写支持和相反证据、催化事件、风险、反证、跟踪指标。
+逻辑角色区分事实、管理层陈述、假设、预测、判断，写支持和相反证据、催化事件、风险、反证、跟踪指标。
 市场预期比较必须有来源和日期明确的基准，没有基准就写待验证假说。
 估值角色先提案给用户；只有 task 当前确认假设才可请求确定性计算工具，禁止直接心算。
 核验角色返回问题严重程度与定向修复要求，保持结论方向中立，不预设看好或看空。
@@ -86,11 +86,13 @@ result 使用规定成果包，记录任务编号、状态、分析、证据、�
 返回成果的数据接口固定如下，不要改名、压缩或用文字替换程序输出：
 finance：result.data.financials 原样取自成功 extract_financials 的 data.financials；
 result.data.metrics 为成功 calculate_metrics 的完整 data，并保留财务资料 gaps。
-valuation 的 propose：result.data 包含 model="dcf"、parameters、basis、scope、gaps。
-parameters 必须完整包含 base_fcf、growth_rate、discount_rate、terminal_growth、years、
+valuation 的 propose：result.data 包含 model、parameters、basis、scope、gaps；原始材料模式支持dcf/pe/pb/ev_ebitda/ddm/not_applicable，固定演示使用dcf。
+DCF parameters 必须完整包含 base_fcf、growth_rate、discount_rate、terminal_growth、years、
 net_debt、shares、currency、unit；现金流、净债务和股数使用 task.inputs.finance 中的实际财务结果。
 basis 对每个参数分别说明依据：可观察值引用已有证据或计算 ID；缺少依据的增长、折现或长期参数
 明确标为待用户确认的假设，不虚构市场依据。scope 说明正现金流且较稳定的非金融工业企业适用范围。
+新方法参数按valuation工具给出的MethodInputs契约；硬门槛不足不能手动绕过，缺可靠市场基准保留unresolved。PB不是资产重估NAV，研究框架不固定对应某一方法。
+新建原始材料DCF还须minority_interest（百万元），以EBIT桥接确定base_fcf；base_fcf/net_debt/shares/minority_interest的basis须为含source_refs的结构化原文依据。OCF倒推尚未开放给新研究，标签unlevered不能代替利息及税盾核对；固定演示和旧快照继续使用旧参数与算法。
 valuation 的 calculate/repair：调用 valuation 后，result.data 原样使用成功 valuation 的完整 data。
 verification：调用 check_consistency 后，result.data 原样使用其完整 data；可追加符合 Issue 结构的业务问题，
 不能删改自动检查的问题或把失败改为通过。

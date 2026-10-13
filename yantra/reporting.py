@@ -16,6 +16,9 @@ def memo_markdown(state, directory):
     valuation = a.get("valuation", {}).get("data", {})
     snapshot = state["input_snapshot"]
     version = assumptions["version"]
+    model = valuation.get("model", assumptions.get("model", "dcf"))
+    method_label = {"dcf": "DCF", "pe": "PE", "pb": "PB", "ev_ebitda": "EV/EBITDA", "ddm": "单阶段 DDM"}.get(model, model.upper())
+    labels = {"fact": "事实", "management_statement": "管理层陈述", "assumption": "假设", "prediction": "预测", "judgment": "判断"}
 
     def source(ref):
         if ":A" in ref:
@@ -42,28 +45,28 @@ def memo_markdown(state, directory):
         lines += ["行动由脚本化演示策略选择，用于验证执行闭环；不代表真实模型推理。"]
     lines += ["## 1. 投资结论摘要", "[判断] " + report["投资结论摘要"]["statement"]]
     if valuation.get("per_share_value") is not None:
-        lines += [f"[预测] 当前授权参数下，DCF 基础情景每股价值为 **{valuation['per_share_value']:.6f} {valuation.get('currency', 'CNY')}**。该结果是条件性模型输出。"]
+        lines += [f"[预测] 当前授权参数下，{method_label} 每股价值为 **{valuation['per_share_value']:.6f} {valuation.get('currency', 'CNY')}**。该结果是条件性模型输出。"]
     if research["reference_price"] is None:
-        lines += ["参考价格及价格时点缺失，无法计算相对现价的回报空间。"]
+        lines += ["用户参考价格及价格时点缺失；相对现价差异须使用下方已核对的计算基准。"]
     else:
         lines += [f"用户提供参考价格：{research['reference_price']}，时点：{research['price_time']}，来源：{research.get('price_source')}。"]
     lines += ["## 2. 投资逻辑"]
     for claim in thesis.get("claims", []):
-        lines += ["[事实] " + claim.get("statement", claim.get("text", ""))]
+        lines += ["[" + labels.get(claim.get("kind", claim.get("type")), "未分类") + "] " + claim.get("statement", claim.get("text", ""))]
         refs = claim.get("evidence_refs", [])
         if refs:
             lines += ["依据：" + "、".join(source(ref) for ref in refs)]
     for hypothesis in thesis.get("hypotheses", []):
-        lines += ["[假设] " + hypothesis.get("statement", ""),
+        lines += ["[" + labels.get(hypothesis.get("kind", hypothesis.get("type", "assumption")), "未分类") + "] " + hypothesis.get("statement", ""),
                   "成立条件：" + str(hypothesis.get("condition", "待定义")),
                   "相反证据或缺口：" + str(hypothesis.get("counter_evidence", "待核验")),
                   "催化事件：" + str(hypothesis.get("catalyst", "待验证"))]
     lines += ["## 3. 事实与数据基础", "[事实] 原始材料定位如下。币种、原始单位、合并口径与原文件哈希保存在结构化记录。",
-              "| 期间 | 字段 | 数值 | 单位 | 原始位置 |", "|---|---|---:|---|---|"]
+              "| 类型 | 期间 | 字段 | 数值 | 单位 | 原始位置 |", "|---|---|---|---:|---|---|"]
     for row in finance.get("financials", []):
-        lines += [f"| {row['period']} | {FIELDS.get(row['field'], row['field'])} | {row['value']:g} | {row['currency']} {row['unit']} | {source(row['source_ref'])} |"]
+        lines += [f"| {labels.get(row.get('information_kind') or 'fact')} | {row['period']} | {FIELDS.get(row['field'], row['field'])} | {row['value']:g} | {row['currency']} {row['unit']} | {source(row['source_ref'])} |"]
     for item in finance.get("evidence", []):
-        lines += [f"[{item['kind']}] {item['statement']} · {item.get('speaker') or ''} · {source(item['source_ref'])}"]
+        lines += [f"[{labels.get(item['kind'], '未分类')}] {item['statement']} · {item.get('speaker') or ''} · {source(item['source_ref'])}"]
     if not finance.get("financials"):
         lines += ["未取得可用财务底表，不补造数字。"]
     lines += ["## 4. 财务分析与估值"]
@@ -85,9 +88,19 @@ def memo_markdown(state, directory):
         elif isinstance(basis, str) and ":L" in basis:
             basis = source(basis)
         lines += [f"| {key} | {value} | {basis} |"]
-    if valuation:
+    if valuation and model != "dcf":
+        lines += ["[预测] 公式：" + str(valuation.get("formula", "")),
+                  "方法状态：" + str(valuation.get("method_status")),
+                  "每股区间：" + json.dumps(valuation.get("value_range", []), ensure_ascii=False),
+                  "区间规则：" + str(valuation.get("range_rule", "未形成区间")),
+                  "企业价值（百万元）：" + str(valuation.get("enterprise_value")),
+                  "股权价值（百万元）：" + str(valuation.get("equity_value")),
+                  "敏感性：" + json.dumps(valuation.get("sensitivity", []), ensure_ascii=False),
+                  *bullets(valuation.get("gaps", []))]
+    elif valuation:
+        equity_formula = "股权价值 = 企业价值 − 净债务 − 少数股东权益" if "minority_interest" in valuation.get("inputs", {}) else "股权价值 = 企业价值 − 净债务"
         lines += ["[预测] FCF_t = 基础 FCF × (1+增长率)^t；终值 = FCF_N × (1+永续增长率)/(折现率−永续增长率)。",
-                  "企业价值 = 显式现金流现值合计 + 终值现值；股权价值 = 企业价值 − 净债务；每股价值 = 股权价值/股数。",
+                  "企业价值 = 显式现金流现值合计 + 终值现值；" + equity_formula + "；每股价值 = 股权价值/股数。",
                   f"| 情景 | 增长率 | 折现率 | 每股价值（{valuation.get('currency', '未确认')}） |", "|---|---:|---:|---:|"]
         for s in valuation.get("scenarios", []):
             value = s.get("per_share_value", "无效：" + s.get("reason", ""))
@@ -100,6 +113,8 @@ def memo_markdown(state, directory):
     lines += ["## 8. 市场预期差", "[待验证假设] " + str(report["市场预期差"].get("statement", "缺少带来源和日期的比较基准"))]
     if report["市场预期差"].get("baseline"):
         lines += ["比较基准：" + json.dumps(report["市场预期差"]["baseline"], ensure_ascii=False)]
+    if report["市场预期差"].get("comparison"):
+        lines += ["[计算] " + json.dumps(report["市场预期差"]["comparison"], ensure_ascii=False)]
     lines += ["## 证据缺口与核验", *bullets(report["投资结论摘要"]["gaps"])]
     if state.get("raw_materials"):
         lines += [f"主框架：{state['framework']['version']} · 研究标准：v{state['standard_version']} · 估值授权：{assumptions.get('authorization_source', 'none')}",

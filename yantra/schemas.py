@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 Role = Literal["finance", "thesis", "valuation", "verification"]
 Purpose = Literal["collect", "supplement", "repair", "analyze", "propose", "calculate", "audit", ""]
 RunStatus = Literal["running", "waiting", "completed", "partial", "failed", "cancelled"]
+ValuationMethod = Literal["dcf", "pe", "pb", "ev_ebitda", "ddm"]
 
 
 class Contract(BaseModel):
@@ -45,6 +46,7 @@ class Research(Contract):
 
 
 class Assumptions(Contract):
+    model: ValuationMethod = "dcf"  # Missing identity in historical snapshots means legacy DCF.
     version: int = Field(default=1, ge=1)
     confirmed: bool = False
     parameters: dict[str, Any] = Field(default_factory=dict)
@@ -165,6 +167,9 @@ class FinancialRecord(Contract):
     disclosure_quote: str | None = None
     model_value: float | None = None
     normalization_note: str | None = None
+    share_class: str | None = None
+    accounting_scope: Literal["consolidated", "attributable", "parent"] | None = None
+    information_kind: Literal["fact", "management_statement", "assumption", "prediction", "judgment"] | None = None
 
 
 class EvidenceRecord(Contract):
@@ -286,7 +291,7 @@ class ThesisAction(WorkerAction):
 
 
 class ValuationProposal(Contract):
-    model: Literal["dcf", "not_applicable"]
+    model: Literal["dcf", "pe", "pb", "ev_ebitda", "ddm", "not_applicable"]
     parameters: dict[str, Any] = Field(default_factory=dict)
     basis: dict[str, Any] = Field(default_factory=dict)
     scope: str
@@ -327,8 +332,10 @@ class MetricsArguments(Contract):
 
 
 class ValuationArguments(Contract):
+    model: ValuationMethod = "dcf"
     parameters: dict[str, Any]
     assumptions_version: int = Field(ge=1)
+    basis: dict[str, Any] = Field(default_factory=dict)
 
 
 class CheckArguments(Contract):
@@ -337,3 +344,66 @@ class CheckArguments(Contract):
     research: Research | None = None
     report: dict[str, Any] | None = None
     user_overrides: list[str] = Field(default_factory=list)
+
+
+class MultipleObservation(Contract):
+    multiple_type: Literal["pe", "pb", "ev_ebitda"]
+    value: float = Field(gt=0)
+    security_code: str = Field(min_length=1)
+    share_class: str = Field(min_length=1)
+    currency: str = Field(min_length=1)
+    period: str = Field(min_length=1)
+    earnings_basis: Literal["FY", "TTM", "forward", "point_in_time"]
+    accounting_scope: Literal["consolidated", "attributable"]
+    per_share_basis: Literal["basic EPS", "diluted EPS", "ending book value per share"] | None = None
+    as_of: str = Field(min_length=1)
+    source_ref: str = Field(min_length=1)
+    source_hash: str = Field(min_length=1)
+    quote: str = Field(min_length=1)
+    raw_value: str = Field(min_length=1)
+    price_record: FinancialRecord | None = None
+    fundamental_record: FinancialRecord | None = None
+
+
+class MarketBenchmark(Contract):
+    kind: Literal["current_price", "reference_price", "consensus_target", "earnings_expectation"]
+    record: FinancialRecord
+    as_of: str = Field(min_length=1)
+    earnings_basis: Literal["FY", "TTM", "forward", "point_in_time"]
+    provider: str = Field(min_length=1)
+    sample_size: int | None = Field(default=None, ge=1)
+    own_value: float | None = None
+    own_basis: str | None = None
+
+
+class MethodInputs(Contract):
+    security_code: str = Field(min_length=1)
+    share_class: str = Field(min_length=1)
+    currency: Literal["CNY", "HKD", "USD"]
+    period: str = Field(min_length=1)
+    earnings_basis: Literal["FY", "TTM", "forward", "point_in_time"]
+    metric: FinancialRecord
+    multiples: list[MultipleObservation] = Field(default_factory=list)
+    comparable_rule: str | None = None
+    net_debt: FinancialRecord | None = None
+    minority_interest: FinancialRecord | None = None
+    shares: FinancialRecord | None = None
+    cost_of_equity: float | None = Field(default=None, gt=0, lt=1)
+    terminal_growth: float | None = Field(default=None, ge=0, lt=1)
+    benchmark: MarketBenchmark | None = None
+
+
+class MethodOutput(Contract):
+    model: ValuationMethod
+    method_status: Literal["calculated", "enterprise_only"]
+    currency: str
+    unit: str = "million"
+    per_share_unit: str
+    per_share_value: float | None = None
+    enterprise_value: float | None = None
+    equity_value: float | None = None
+    value_range: list[float] = Field(default_factory=list)
+    range_rule: str
+    sensitivity: list[dict[str, Any]] = Field(default_factory=list)
+    market_comparison: dict[str, Any]
+    gaps: list[str] = Field(default_factory=list)

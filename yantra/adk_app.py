@@ -27,7 +27,7 @@ ROLES = ("finance", "thesis", "valuation", "verification")
 ROLE_DESCRIPTIONS = {
     "finance": "读取原始材料，提取带来源与口径的财务字段，计算财务指标。",
     "thesis": "依据财务成果分析投资假说、风险、反证及市场预期比较基准。",
-    "valuation": "提出估值假设，仅按用户确认的当前版本执行确定性 DCF。",
+    "valuation": "提出方法与估值假设，按当前授权的方法、参数与版本执行确定性DCF、PE、PB、EV/EBITDA或单阶段DDM；固定演示保留旧DCF。",
     "verification": "核验原始证据、计算、假设版本和业务缺口，返回定向修复要求。",
 }
 _root_agent: ContextVar[Any] = ContextVar("yantra_root_agent", default=None)

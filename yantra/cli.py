@@ -69,7 +69,7 @@ async def replay(storage, original):
 
 
 def parser():
-    p = argparse.ArgumentParser(prog="yantra", description="Yantra v0.2.1 — 模型选择、能力扩展与证据核验投研")
+    p = argparse.ArgumentParser(prog="yantra", description="Yantra v0.2.3 — 方法授权、估值复算与证据核验投研")
     p.add_argument("--config",type=Path,help="能力配置文件，默认 .yantra/config.json 或 YANTRA_CONFIG")
     commands = p.add_subparsers(dest="command", required=True)
     for name in ("start", "resume", "status", "compare", "replay", "cancel"):

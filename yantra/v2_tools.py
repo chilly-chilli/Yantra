@@ -4,10 +4,12 @@ from __future__ import annotations
 import json
 import math
 import re
+from decimal import Decimal
+from pathlib import Path
 
-from .materials import RawMaterialAdapter, cutoff_time, numeric, research_chunks
-from .schemas import CheckArguments, ChildArguments, CollaborationArguments, Extraction, FetchArguments, MetricsArguments, ReadArguments, SearchArguments, ToolResponse
-from .tools import ToolRegistry, _convert, _hash, _out
+from .materials import RawMaterialAdapter, cutoff_time, numeric, research_chunks, source_number_present
+from .schemas import CheckArguments, ChildArguments, CollaborationArguments, Extraction, FetchArguments, MetricsArguments, ReadArguments, SearchArguments, ToolResponse, ValuationArguments
+from .tools import ToolRegistry, _convert, _hash, _out, _number
 
 
 def canonical(value):
@@ -33,6 +35,8 @@ class RawToolRegistry(ToolRegistry):
         contracts.update({"spawn_subtask": {"description": "Create a third-layer role within the parent task's granted tools and source references. No fourth layer.", "arguments_schema": ChildArguments.model_json_schema()},
                           "collaborate": {"description": "Read or message only explicitly shared tasks. request_transfer creates an approval request, not a task.", "arguments_schema": CollaborationArguments.model_json_schema()}})
         contracts["read_materials"]["description"] = "Read raw-source text and tables with original page/cell/slide/image anchors and hashes."
+        from .schemas import MethodInputs
+        contracts["valuation"]["description"] = "Execute authorized model DCF/PE/PB/EV-EBITDA/single-stage DDM. Historical DCF parameters are unchanged. New raw DCF also requires minority_interest (million), reviewed EBIT FCFF bridge and structured source_refs in basis for base_fcf/net_debt/shares/minority_interest. All bridge records must carry security_code, share_class and accounting_scope. New non-DCF parameters schema: " + json.dumps(MethodInputs.model_json_schema(), ensure_ascii=False)
         contracts.update(self.extension_contracts)
         return contracts
 
@@ -57,6 +61,138 @@ class RawToolRegistry(ToolRegistry):
 
     def anchors(self):
         return {chunk["ref"]: (chunk, doc) for doc in self.adapter.read_materials(ReadArguments(company=self.load_manifest()["company"]))["documents"] for chunk in doc["chunks"]}
+
+    def validate_method_sources(self, model, parameters, research):
+        from .valuation import validate_inputs, quantity, compare_market, per_share_unit_matches
+        p = validate_inputs(model, parameters)
+        if p.security_code != research["security_code"] or p.currency != research["trading_currency"]:
+            raise ValueError("valuation security/currency does not match research")
+        anchors = self.anchors()
+        accepted = json.loads(self.extraction_path.read_text()) if self.extraction_path.exists() else {"financials": []}
+        records = accepted["financials"]
+
+        def source(row, date, raw, quote=None):
+            pair = anchors.get(row.source_ref)
+            if not pair or pair[1]["source_hash"] != row.source_hash:
+                raise ValueError("source anchor/hash does not resolve in this run")
+            if not source_number_present(raw, pair[0]["text"]) or (quote and (quote not in pair[0]["text"] or not source_number_present(raw, quote))):
+                raise ValueError("source numeric token/quote missing")
+            if not date or cutoff_time(date) > cutoff_time(research["cutoff"]):
+                raise ValueError("source is undated or after cutoff")
+            if pair[1].get("date") and cutoff_time(pair[1]["date"]) > cutoff_time(research["cutoff"]):
+                raise ValueError("original source publication after cutoff")
+
+        def financial(row, accepted_required=True):
+            source(row, row.disclosure_date, row.raw_value)
+            if numeric(row.raw_value) != row.value:
+                raise ValueError("financial input disagrees with raw number")
+            if accepted_required and canonical(row.model_dump()) not in [canonical(r) for r in records]:
+                raise ValueError("financial input is not an accepted original extraction")
+
+        def observation_date(row, as_of):
+            doc = anchors[row.source_ref][1]
+            if doc.get("date") != as_of and as_of not in doc["text"]:
+                raise ValueError("observation date does not resolve to the original source")
+
+        for row in [p.metric, p.net_debt, p.minority_interest, p.shares]:
+            if row:
+                financial(row)
+        for m in p.multiples:
+            source(m, m.as_of, m.raw_value, m.quote)
+            observation_date(m, m.as_of)
+            if m.price_record or m.fundamental_record:
+                if not (m.price_record and m.fundamental_record) or model not in {"pe", "pb"}:
+                    raise ValueError("derived comparable requires price and EPS/BVPS records")
+                price, fundamental = m.price_record, m.fundamental_record
+                financial(price); financial(fundamental)
+                if (price.security_code, price.share_class, price.currency, price.field, price.period) != (m.security_code, m.share_class, m.currency, "price", m.as_of) or not per_share_unit_matches(price.unit, m.currency):
+                    raise ValueError("comparable price identity/date/unit mismatch")
+                if (fundamental.security_code, fundamental.share_class, fundamental.currency, fundamental.period, fundamental.field, fundamental.accounting_scope) != (m.security_code, m.share_class, m.currency, m.period, "eps" if model == "pe" else "bvps", "attributable") or not fundamental.consolidated or not per_share_unit_matches(fundamental.unit, m.currency) or quantity(fundamental) <= 0:
+                    raise ValueError("comparable fundamental identity/period/scope mismatch")
+                if not math.isclose(m.value, float(quantity(price) / quantity(fundamental)), rel_tol=1e-10):
+                    raise ValueError("derived multiple disagrees with independently sourced price/fundamental")
+                if fundamental.share_scope != m.per_share_basis:
+                    raise ValueError("comparable fundamental per-share basis mismatch")
+            else:
+                if _number(numeric(m.raw_value)) != _number(m.value):
+                    raise ValueError("multiple differs from original numeric token")
+        if p.benchmark:
+            b = p.benchmark
+            financial(b.record)
+            source(b.record, b.as_of, b.record.raw_value)
+            observation_date(b.record, b.as_of)
+            if b.record.disclosure_date != b.as_of:
+                raise ValueError("benchmark observation and source dates disagree")
+            if b.kind in {"consensus_target", "earnings_expectation"}:
+                text = anchors[b.record.source_ref][0]["text"]
+                if not re.search(r"一致|consensus", text, re.I) or b.provider not in text or str(b.sample_size) not in text:
+                    raise ValueError("consensus benchmark lacks original provider/sample evidence")
+        compare_market(p, None)
+        return p
+
+    def _valuation(self, args):
+        from .valuation import receipt
+        a = ValuationArguments.model_validate(args)
+        if a.model == "dcf":
+            if "minority_interest" in a.parameters:
+                legacy = {k: v for k, v in a.parameters.items() if k != "minority_interest"}
+                legacy["net_debt"] = _out(_number(legacy["net_debt"]) + _number(a.parameters["minority_interest"]))
+                existing_refs = set(self.calculations)
+                result = super()._valuation({"parameters": legacy, "assumptions_version": a.assumptions_version})
+                payload = result.data["calculation"]
+                if result.calculation_refs[0] not in existing_refs:
+                    self.calculations.pop(result.calculation_refs[0], None)
+                payload.update(kind="dcf_bridge", schema_version=1, model="dcf", inputs=a.parameters, basis=a.basis)
+                payload["scope"] = "Source-checked FCFF bridge; equity deducts explicit net debt and minority interest. Conditional stable positive cash flow model."
+                payload["formula"]["equity_value"] = "EV - net_debt - minority_interest"
+                ref = self._record_calculation(payload)
+                return ToolResponse(ok=True, data={**result.data, "model": "dcf", "inputs": a.parameters, "basis": a.basis,
+                    "formula": payload["formula"], "calculation": payload, "calculation_ref": ref}, calculation_refs=[ref],
+                    evidence_refs=sorted({r for b in a.basis.values() if isinstance(b, dict) for r in b.get("source_refs", [])}))
+            return super()._valuation(args)
+        context = getattr(self, "research_context", None)
+        if context is None:
+            raise ValueError("current research identity/cutoff required")
+        p = self.validate_method_sources(a.model, a.parameters, context)
+        payload = receipt(a.model, a.parameters, a.assumptions_version, a.basis)
+        ref = self._record_calculation(payload)
+        rows = [p.metric, p.net_debt, p.minority_interest, p.shares]
+        rows += [m for m in p.multiples]
+        rows += [r for m in p.multiples for r in [m.price_record, m.fundamental_record] if r]
+        if p.benchmark:
+            rows.append(p.benchmark.record)
+        return ToolResponse(ok=True, data={**payload["results"], "inputs": a.parameters, "formula": payload["formula"],
+            "basis": a.basis, "assumptions_version": a.assumptions_version, "calculation": payload, "calculation_ref": ref},
+            evidence_refs=sorted({r.source_ref for r in rows if r}), calculation_refs=[ref])
+
+    def validate_dcf_sources(self, assumptions, research):
+        from .schemas import FinancialRecord
+        anchors = self.anchors()
+        records = json.loads(self.extraction_path.read_text())["financials"]
+        metrics = self._calculate_metrics({"records": records}).data
+        if metrics.get("fcff_bridge", {}).get("method") != "ebit":
+            raise ValueError("new DCF receipts require the reviewed EBIT bridge")
+        refs = {"net_debt": {"debt", "cash"}, "shares": {"shares"}, "minority_interest": {"minority_interest"},
+                "base_fcf": {"ebit", "tax_rate", "depreciation", "capex", "delta_nwc"} if metrics.get("fcff_bridge", {}).get("method") == "ebit" else {"operating_cash_flow", "capex"}}
+        for parameter, fields in refs.items():
+            basis = assumptions["basis"].get(parameter)
+            if not isinstance(basis, dict) or not basis.get("source_refs"):
+                raise ValueError(f"DCF {parameter} requires structured source basis")
+            selected = [FinancialRecord.model_validate(r) for r in records if r["field"] in fields and r["period"] == metrics["latest_period"]]
+            if {r.field for r in selected} != fields or any(r.source_ref not in basis["source_refs"] for r in selected):
+                raise ValueError("DCF bridge basis lacks all current fiscal source references")
+            for r in selected:
+                pair = anchors.get(r.source_ref)
+                if not pair or pair[1]["source_hash"] != r.source_hash or not source_number_present(r.raw_value, pair[0]["text"]) or numeric(r.raw_value) != r.value:
+                    raise ValueError("DCF original numeric/hash basis invalid")
+                if r.security_code != research["security_code"] or r.currency != research["trading_currency"] or not r.consolidated or r.accounting_scope != "consolidated":
+                    raise ValueError("DCF bridge identity/currency/scope mismatch")
+                if not r.share_class or r.share_class != metrics.get("share_class"):
+                    raise ValueError("DCF bridge share class is missing or does not match total shares")
+                if not r.disclosure_date or cutoff_time(r.disclosure_date) > cutoff_time(research["cutoff"]):
+                    raise ValueError("DCF bridge date exceeds cutoff")
+        if metrics.get("net_debt") != assumptions["parameters"]["net_debt"] or metrics.get("shares") != assumptions["parameters"]["shares"] or metrics.get("fcff") != assumptions["parameters"]["base_fcf"]:
+            raise ValueError("DCF inputs differ from source bridge")
 
     def _read_materials(self, args):
         parsed = ReadArguments.model_validate(args)
@@ -83,7 +219,7 @@ class RawToolRegistry(ToolRegistry):
             text = pair[0]["text"]
             if not row.disclosure_date and pair[1].get("date"):
                 row.disclosure_date = pair[1]["date"]
-            if not row.raw_value or row.raw_value not in text:
+            if not source_number_present(row.raw_value, text):
                 gaps.append(f"拒绝无原文数值的字段：{row.field}")
                 continue
             try:
@@ -102,7 +238,9 @@ class RawToolRegistry(ToolRegistry):
                     raise ValueError("source became public after cutoff")
                 if not re.search(r"\d{4}", row.period):
                     raise ValueError("period is not a fiscal period")
-                _convert(row.value, row.unit, "million shares" if row.field == "shares" else "million")
+                from .valuation import PER_SHARE_UNITS
+                if row.unit not in PER_SHARE_UNITS and row.unit != "ratio":
+                    _convert(row.value, row.unit, "million shares" if row.field == "shares" else "million")
             except ValueError:
                 gaps.append(f"字段日期、期间、单位或数值未通过校验：{row.field} at {row.source_ref}")
                 continue
@@ -127,7 +265,7 @@ class RawToolRegistry(ToolRegistry):
         # Preserve competing values and source identities; calculations never silently pick one.
         groups = {}
         for row in records:
-            key = (row["field"], row["period"], row["currency"], row["consolidated"])
+            key = (row["field"], row["period"], row["currency"], row["consolidated"], row.get("security_code"), row.get("share_class"), row.get("accounting_scope"))
             groups.setdefault(key, []).append(row)
         conflicts = [list(rows) for rows in groups.values() if len({(x["value"], x["unit"], x["restatement"]) for x in rows}) > 1]
         if conflicts:
@@ -144,19 +282,26 @@ class RawToolRegistry(ToolRegistry):
         refs = sorted({x["source_ref"] for x in data["financials"] + data["evidence"]})
         return ToolResponse(ok=True, data=data, evidence_refs=refs)
 
-    def _calculate_metrics(self, args):
+    def _calculate_metrics(self, args, *, verify_sources=True):
         records = MetricsArguments.model_validate(args).records
+        if verify_sources and not self.extraction_path.exists():
+            raise ValueError("metrics require an original extraction receipt")
+        accepted = json.loads(self.extraction_path.read_text())["financials"] if self.extraction_path.exists() else []
+        if verify_sources and any(canonical(r.model_dump()) not in [canonical(x) for x in accepted] for r in records):
+            raise ValueError("metrics require accepted original records")
         groups, gaps = {}, []
         normalized = []
         for row in records:
-            target = "million shares" if row.field == "shares" else "million"
-            quantity = _convert(row.value, row.unit, target)
+            from .valuation import PER_SHARE_UNITS
+            target = row.unit if row.unit in PER_SHARE_UNITS or row.unit == "ratio" else "million shares" if row.field == "shares" else "million"
+            quantity = Decimal(str(row.value)) if target == row.unit else _convert(row.value, row.unit, target)
             item = {**row.model_dump(), "normalized_value": _out(quantity), "normalized_unit": target}
             normalized.append(item)
-            key = (row.period, row.currency, row.consolidated)
+            key = (row.period, row.currency, row.consolidated, row.security_code, row.accounting_scope) if row.accounting_scope else (row.period, row.currency, row.consolidated)
             groups.setdefault(key, {}).setdefault(row.field, []).append((quantity, row))
         results = {"periods": {}, "fcf": {}, "gaps": gaps}
-        for (period, currency, scope), rows in groups.items():
+        for group, rows in groups.items():
+            period, currency, scope = group[:3]
             unique = {}
             for field, values in rows.items():
                 if len({x[0] for x in values}) == 1:
@@ -169,21 +314,39 @@ class RawToolRegistry(ToolRegistry):
                     metrics[name] = _out(unique[numerator][0] / unique["revenue"][0])
             if {"debt", "cash"} <= unique.keys():
                 metrics["net_debt"] = _out(unique["debt"][0] - unique["cash"][0])
+            if "minority_interest" in unique:
+                metrics["minority_interest"] = _out(unique["minority_interest"][0])
+            if {"ebit", "tax_rate", "depreciation", "capex", "delta_nwc"} <= unique.keys():
+                from .valuation import fcff_from_ebit
+                bridge = [unique[k][1] for k in ("ebit", "tax_rate", "depreciation", "capex", "delta_nwc")]
+                if scope and all(r.accounting_scope == "consolidated" and r.security_code == bridge[0].security_code and r.security_code for r in bridge) and unique["tax_rate"][1].unit == "ratio":
+                    metrics["fcff"] = fcff_from_ebit(*(unique[k][0] for k in ("ebit", "tax_rate", "depreciation", "capex", "delta_nwc")))
+                    metrics["fcff_bridge"] = {"method": "ebit", "formula": "EBIT*(1-tax_rate)+D&A-Capex-delta_NWC", "source_refs": [r.source_ref for r in bridge]}
+                    results["fcf"][period] = metrics["fcff"]
+                else:
+                    gaps.append(f"{period} EBIT桥接身份、合并口径或税率单位未核对")
             if {"operating_cash_flow", "capex"} <= unique.keys():
                 proxy = _out(unique["operating_cash_flow"][0] - abs(unique["capex"][0]))
                 metrics["ocf_minus_capex"] = proxy
                 if unique["operating_cash_flow"][1].cash_flow_basis == "unlevered":
-                    metrics["fcff"] = proxy
-                    results["fcf"][period] = proxy
+                    if "fcff" not in metrics:
+                        metrics["fcff"] = proxy
+                        results["fcf"][period] = proxy
                 else:
                     gaps.append(f"{period} OCF−资本开支尚未调节融资利息和税盾，不视为FCFF")
             if "shares" in unique:
                 row = unique["shares"][1]
                 if row.share_scope and row.security_code:
                     metrics.update(shares=_out(unique["shares"][0]), security_code=row.security_code, share_scope=row.share_scope)
-            results["periods"][f"{period}/{currency}/{'consolidated' if scope else 'parent'}"] = metrics
+                    if row.share_class:
+                        metrics["share_class"] = row.share_class
+            suffix = f"/{group[3]}/{group[4]}" if len(group) == 5 else ""
+            results["periods"][f"{period}/{currency}/{'consolidated' if scope else 'parent'}{suffix}"] = metrics
         # ISO-like fiscal dates sort numerically; annual/interim are kept separate.
         ordered = sorted(results["periods"], key=lambda p: tuple(int(x) for x in re.findall(r"\d+", p.split("/")[0])))
+        context = getattr(self, "research_context", None)
+        if context and any(len(k.split("/")) == 5 for k in ordered):
+            ordered = [k for k in ordered if len(k.split("/")) == 5 and k.split("/")[3] == context["security_code"] and k.split("/")[4] == "consolidated"]
         if ordered:
             results.update(latest_period=ordered[-1].split("/")[0], **results["periods"][ordered[-1]])
         payload = {"kind": "raw_financial_metrics", "inputs": normalized,
@@ -194,7 +357,7 @@ class RawToolRegistry(ToolRegistry):
 
     def _check_consistency(self, args):
         value = CheckArguments.model_validate(args)
-        entries = value.results.values() if isinstance(value.results, dict) else value.results
+        entries = [{**v, "target": k} for k, v in value.results.items()] if isinstance(value.results, dict) else value.results
         anchors = self.anchors()
         issues, refs, calcs = [], set(), set()
         original = json.loads(self.extraction_path.read_text()) if self.extraction_path.exists() else {"financials": [], "evidence": []}
@@ -213,24 +376,51 @@ class RawToolRegistry(ToolRegistry):
                 if canonical(row) not in [canonical(r) for r in original["financials"]]:
                     issue("finance", "财务记录不等于已校验原文提取", "critical")
             for row in data.get("claims", []):
-                if row.get("type") == "fact" and (not row.get("evidence_refs") or any(r not in anchors for r in row["evidence_refs"])):
+                if row.get("kind", row.get("type")) not in {"fact", "management_statement", "assumption", "prediction", "judgment"}:
+                    issue("thesis", "论点必须注明实际信息类型")
+                if row.get("kind", row.get("type")) in {"fact", "management_statement"} and (not row.get("evidence_refs") or any(r not in anchors for r in row["evidence_refs"])):
                     issue("thesis", "事实必须引用原始材料")
+            if data.get("market_comparison"):
+                thesis = next((e.get("data", e).get("expectations", {}) for e in (value.results.values() if isinstance(value.results, dict) else value.results) if "expectations" in e.get("data", e)), {})
+                baseline = thesis.get("baseline")
+                if baseline and baseline != data["market_comparison"].get("baseline"):
+                    issue("thesis", "论点与计算工具使用不同市场基准", "critical")
             for ref in entry.get("calculation_refs", []):
                 receipt = self.calculations.get(ref)
                 if not receipt or ref != f"calc:{_hash(receipt)[:24]}":
                     issue("valuation", "缺少或损坏计算凭证", "critical")
                     continue
-                if receipt["kind"] == "raw_financial_metrics":
+                if receipt["kind"] == "unit_conversion":
+                    expected = self._convert_units(receipt["inputs"]).data
+                    expected = {k: v for k, v in expected.items() if k != "calculation_ref"}
+                elif receipt["kind"] == "raw_financial_metrics":
                     rows = [{k: v for k, v in r.items() if k not in {"normalized_value", "normalized_unit"}} for r in receipt["inputs"]]
                     if any(canonical(r) not in [canonical(x) for x in original["financials"]] for r in rows):
                         issue("finance", "计算输入与原始记录不符", "critical")
-                    expected = self._calculate_metrics({"records": rows}).data["calculation"]
-                elif receipt["kind"] == "dcf":
+                    expected = self._calculate_metrics({"records": rows}, verify_sources=False).data["calculation"]
+                elif receipt["kind"] in {"dcf", "dcf_bridge", "valuation_method"}:
+                    model = receipt.get("model") if receipt["kind"] == "valuation_method" else "dcf"
                     if not value.assumptions.confirmed or receipt["assumptions_version"] != value.assumptions.version or receipt["inputs"] != value.assumptions.parameters:
                         issue("valuation", "估值授权或版本失效", "critical")
-                    expected = self._valuation({"parameters": receipt["inputs"], "assumptions_version": receipt["assumptions_version"]}).data["calculation"]
+                    if model != value.assumptions.model or (receipt["kind"] in {"valuation_method", "dcf_bridge"} and receipt["basis"] != value.assumptions.basis):
+                        issue("valuation", "方法身份或参数依据与授权不符", "critical")
+                    try:
+                        if receipt["kind"] == "dcf_bridge":
+                            self.validate_dcf_sources(value.assumptions.model_dump(), value.research.model_dump())
+                        expected = self._valuation({"model": model, "parameters": receipt["inputs"], "assumptions_version": receipt["assumptions_version"], "basis": receipt.get("basis", {})}).data["calculation"]
+                    except (ValueError, KeyError, FileNotFoundError) as exc:
+                        issue("valuation", f"估值来源或复算拒绝：{exc}", "critical")
+                        continue
+                    if (entry.get("target") == "valuation" or data.get("calculation")) and (data.get("calculation") != receipt or any(data.get(k) != v for k, v in receipt["results"].items())):
+                        issue("valuation", "发布结果与凭证不符", "critical")
+                    if entry.get("target") == "valuation" or data.get("calculation"):
+                        metadata = ["inputs", "formula", "assumptions_version"] + (["basis", "model"] if receipt["kind"] != "dcf" else [])
+                        metadata += [k for k in ["scenarios", "sensitivity"] if k in receipt]
+                        if any(data.get(k) != receipt.get(k) for k in metadata):
+                            issue("valuation", "发布参数、方法、公式或情景与凭证不符", "critical")
                 else:
-                    expected = receipt
+                    issue("valuation", "未知凭证类型，不支持复算", "critical")
+                    continue
                 if canonical(expected) != canonical(receipt):
                     issue("valuation", "计算复算不一致", "critical")
                 else:

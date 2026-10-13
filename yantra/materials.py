@@ -75,6 +75,11 @@ def numeric(value):
     return float(value)
 
 
+def source_number_present(raw, text):
+    """Require a complete original numeric token, not a digit inside a code/date/value."""
+    return bool(raw and re.search(r"(?<![\d.,+\-(（])" + re.escape(raw) + r"(?![\d.,)）])", text))
+
+
 def parse_file(path, check=lambda: None, timeout=30, recognizer=None):
     """Each location points to the original format, never only converted Markdown."""
     path = Path(path)

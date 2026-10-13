@@ -9,13 +9,14 @@ import os
 from pathlib import Path
 import time
 from uuid import uuid4
+from . import __version__
 
 from .backend import MAIN_INSTRUCTION, WORKER_INSTRUCTION, RealModelBackend
 from .budget import BudgetExceeded, MAX_RUN_SECONDS, RunBudget, deadline
 from .engine import Engine, StopRun, TERMINAL
 from .frameworks import FrameworkStore
 from .materials import RawMaterialAdapter, cutoff_time, research_chunks
-from .schemas import Assumptions, ChildArguments, CollaborationArguments, Limits, MainAction, Pricing, ReadArguments, Research, Result, Task, ThesisData
+from .schemas import Assumptions, ChildArguments, CollaborationArguments, Limits, MainAction, Pricing, ReadArguments, Research, Result, Task, ThesisData, ValuationProposal
 from .v2_tools import RawToolRegistry
 
 RAW_PERMISSIONS = {
@@ -40,7 +41,7 @@ finance可用result.data={"use_receipts":true}返回，由控制器从本任务�
 read_materials与extract_financials可指定query（如合并现金流量表/consolidated statement of cash flows）或anchor_refs定向阅读原文，material_ids限定文档；缺口补查使用新查询而非重复默认选区。
 thesis: 分析具体经营、竞争和风险证据，引用实际材料；管理层陈述附主体，预测不可称历史事实；result.data 可增加 summary 形成证据支持的研究摘要。
 thesis的expectations必须是对象（含status、baseline、statement），不能是列表；claims/hypotheses为对象列表，risks/disconfirming/tracking/gaps为字符串列表。缺口用约定字段，不能改变接口形状。
-valuation propose: 先检查FCFF调节、正稳定现金流、证券股本、币种及周期适用性，不适用或依据不足时 model=not_applicable,parameters={},basis={},scope=明确限制,gaps=缺口，status=partial；不能为了有目标价编造增长、价格或股数。
+valuation propose: model可为dcf/pe/pb/ev_ebitda/ddm/not_applicable。先按方法检查来源、身份、币种、期间、股本类别、合并/归母口径及截止时点。PE/PB以每股EPS/BVPS乘同类同期间同日可比倍数；EV/EBITDA须明确净债务、少数股东权益和总股数才能发布每股结论；DDM为年度D0*(1+g)/(k-g)。新方法parameters按MethodInputs合约（见valuation工具description），每项来源保存FinancialRecord或MultipleObservation；basis解释参数与相关论点。框架与方法为两个维度。不适用时not_applicable并保留缺口；不能强制绕过条件、补造证据或把PB叫NAV。市场基准缺失保持unresolved。
 autonomous 的当前假设可由控制器授权，basis 每项含出处、口径及假设理由；manual 仍明确确认。
 verification: 程序一致性通过仍要独立审查经济判断、财务口径、事实与预测、风险及方法适用性。可否决 passed，不能删除程序问题；否决须写具体 Issue。不同公司能形成不同摘要。
 """
@@ -83,6 +84,7 @@ class RawEngine(Engine):
     def _lock(self):
         with super()._lock():
             self.run_budget.state = self.state
+            self.tools.research_context = self.state["research"]
             yield
 
     def __init__(self, directory, state, backend=None):
@@ -106,6 +108,7 @@ class RawEngine(Engine):
             from .models import OCRRecognizer
             self.tools.adapter.recognizer = OCRRecognizer(profile,self)
         self.tools.adapter.check = self._check_adapter_budget
+        self.tools.research_context = state["research"]
         self.tools.adapter.timeout = lambda: min(45, self.run_budget.remaining())
         from .adk_app import build_workers
         self.adk_workers = build_workers(self)
@@ -157,8 +160,9 @@ class RawEngine(Engine):
         framework_store = FrameworkStore(Path(storage).resolve() / "frameworks")
         state = {"run_id": run_id, "status": "running", "mode": "real-model" if backend is None else "test",
             "raw_materials": True, "research": r, "created_at": datetime.fromtimestamp(started, timezone.utc).isoformat(),
+            "valuation_schema": 2,
             "deadline": end, "limits": config.model_dump(), "pricing": price, "model_ledger": [],
-            "program_version": "0.2.1", "config": selected.config_summary() if hasattr(selected, "config_summary") else {"backend": "injected-test"},
+            "program_version": __version__, "config": selected.config_summary() if hasattr(selected, "config_summary") else {"backend": "injected-test"},
             "capabilities":{"models":{"llm":chosen_llm,"ocr":chosen_ocr},"extensions":extensions},
             "input_source_ids": [m["id"] for m in registry.load_manifest()["materials"]],
             "input_snapshot": registry.snapshot(), "assumptions": Assumptions().model_dump(), "assumption_history": [], "user_overrides": [],
@@ -324,7 +328,7 @@ class RawEngine(Engine):
                         if action.target == "finance" and action.purpose != "repair" and finance.get("financials") and finance.get("evidence") and not self.state["artifacts"].get("thesis"):
                             action = MainAction(action="delegate_task", target="thesis", purpose="analyze", question="基于已有可定位财务及经营证据形成论点、风险与反证，保留财务缺口；按需要独立补查", rationale="已有事实基础，进入论证并保留partial缺口")
                         if action.target == "verification" and self.state["artifacts"].get("thesis") and not self.state["artifacts"].get("proposal"):
-                            action = MainAction(action="delegate_task", target="valuation", purpose="propose", question="明确评估现有DCF适用性；不足时提交not_applicable及依据，继续独立核验", rationale="核验前保留可核查的方法适用性判断")
+                            action = MainAction(action="delegate_task", target="valuation", purpose="propose", question="按来源与口径评估DCF、PE、PB、EV/EBITDA、DDM；不足时提交not_applicable及依据，继续独立核验", rationale="核验前保留可核查的方法适用性判断")
                         await self._delegate(action)
                     elif action.action == "ask_user":
                         self._pause(action.question)
@@ -351,7 +355,7 @@ class RawEngine(Engine):
                             raise StopRun("候选报告包含未核验改写")
                         if not self.state["stop_reasons"] and self.state["artifacts"].get("thesis"):
                             if not self.state["artifacts"].get("proposal"):
-                                await self._delegate(MainAction(action="delegate_task", target="valuation", purpose="propose", question="提交方法适用性判断；无法可靠DCF时明确not_applicable及缺口"))
+                                await self._delegate(MainAction(action="delegate_task", target="valuation", purpose="propose", question="提交方法适用性判断；无可靠估值路径时明确not_applicable及缺口"))
                                 self._save()
                                 continue
                             if not self.state["artifacts"].get("verification"):
@@ -475,6 +479,16 @@ class RawEngine(Engine):
         if result.task_id != task.task_id or result.assumptions_version != task.assumptions.version:
             raise StopRun("成果任务或假设版本不匹配")
         key = "proposal" if task.target == "valuation" and task.purpose == "propose" else task.target
+        if key == "proposal":
+            try:
+                proposal = ValuationProposal.model_validate(result.data)
+                if proposal.model != "not_applicable":
+                    candidate = Assumptions(model=proposal.model, parameters=proposal.parameters, basis=proposal.basis).model_dump()
+                    self._check_authorization(candidate)
+            except (ValueError, StopRun, FileNotFoundError, KeyError) as exc:
+                result.status = "partial"
+                result.data = {"model": "not_applicable", "parameters": {}, "basis": {}, "scope": "方法硬门槛未通过，拒绝发布估值", "gaps": [str(exc)]}
+                result.unresolved = list(dict.fromkeys(result.unresolved + [str(exc)]))
         if key == "finance" and not result.data.get("financials") and self.tools.extraction_path.exists():
             persisted = json.loads(self.tools.extraction_path.read_text())
             result.data.update(persisted)
@@ -486,19 +500,29 @@ class RawEngine(Engine):
             self.state["invalidated"].append(self.state["artifacts"][key]["task_id"])
         self.state["artifacts"][key] = result.model_dump()
         if key == "proposal":
-            if result.data.get("model") not in {"dcf", "not_applicable"}:
+            if result.data.get("model") not in {"dcf", "pe", "pb", "ev_ebitda", "ddm", "not_applicable"}:
                 result.data = {"model": "not_applicable", "parameters": {}, "basis": {},
                     "scope": "本轮未取得符合合约的估值提案；程序不授权估值，方法适用性仍需核验",
                     "gaps": list(dict.fromkeys(result.unresolved + ["估值提案未完整返回；未运行DCF，不提供目标价"]))}
                 result.status = "partial"
                 self.state["artifacts"][key] = result.model_dump()
-            if result.data.get("model") == "dcf":
-                self._validate_parameters(result.data["parameters"])
-                self.state["assumptions"].update(parameters=result.data["parameters"], basis=result.data.get("basis", {}), confirmed=False, authorization_source="none")
+            ValuationProposal.model_validate(result.data)
+            if result.data.get("model") != "not_applicable":
+                model = result.data["model"]
+                self._validate_parameters(result.data["parameters"], model)
+                current = self.state["assumptions"]
+                if current["parameters"]:
+                    self.state["assumption_history"].append(json.loads(json.dumps(current)))
+                    current["version"] += 1
+                current.update(model=model, parameters=result.data["parameters"], basis=result.data.get("basis", {}), confirmed=False, authorization_source="none")
+                self._check_authorization(current)
                 if self.state["research"]["confirmation_mode"] == "autonomous":
                     self._authorize()
-            elif result.data.get("model") != "not_applicable":
-                raise StopRun("估值提案必须明确方法及适用性")
+            else:
+                current = self.state["assumptions"]
+                if current["parameters"]:
+                    self.state["assumption_history"].append(json.loads(json.dumps(current)))
+                    self.state["assumptions"] = Assumptions(version=current["version"]+1).model_dump()
         if key == "verification":
             self.state["issues"] = result.data.get("issues", [])
             if self.state.get("framework_draft") and result.data.get("framework_passed") and result.data.get("passed"):
@@ -506,37 +530,63 @@ class RawEngine(Engine):
                 verified = store.verify(self.state["framework_draft"]["version"], {"passed": True, "review_task_id": task.task_id})
                 self._log("framework_verified_for_future_runs", verified)
         else:
-            for dependent in (["thesis", "proposal", "valuation", "verification"] if key == "finance" else ["valuation", "verification"] if key == "thesis" else ["verification"]):
+            for dependent in (["thesis", "proposal", "valuation", "verification"] if key == "finance" else ["valuation", "verification"] if key in {"thesis", "proposal"} else ["verification"]):
                 artifact = self.state["artifacts"].pop(dependent, None)
                 if artifact:
                     self.state["invalidated"].append(artifact["task_id"])
-            if key == "finance" and task.purpose == "repair":
+            if key == "finance" and self.state["assumptions"]["parameters"]:
                 self.state["assumption_history"].append(dict(self.state["assumptions"]))
                 self.state["assumptions"] = Assumptions(version=self.state["assumptions"]["version"] + 1).model_dump()
         self._log("task_result", result.model_dump())
         self._save()
 
     @staticmethod
-    def _validate_parameters(parameters):
+    def _validate_parameters(parameters, model="dcf"):
+        from .valuation import validate_inputs
+        if model != "dcf":
+            validate_inputs(model, parameters)
+            return
         # Reuse all numeric guards, with currency validated separately.
         currency = parameters.get("currency")
         if currency not in {"CNY", "HKD", "USD"}:
             raise ValueError("DCF currency must be explicit CNY/HKD/USD")
-        Engine._validate_parameters(parameters | {"currency": "CNY"})
+        legacy = {k: v for k, v in parameters.items() if k != "minority_interest"}
+        Engine._validate_parameters(legacy | {"currency": "CNY"})
+        if "minority_interest" in parameters:
+            from .tools import _number
+            if _number(parameters["minority_interest"]) < 0:
+                raise ValueError("minority interest must be nonnegative")
 
-    def _authorize(self):
-        assumptions = self.state["assumptions"]
+    def _check_authorization(self, assumptions):
         metrics = self.state["artifacts"].get("finance", {}).get("data", {}).get("metrics", {})
         params = assumptions["parameters"]
-        self._validate_parameters(params)
+        model = assumptions.get("model", "dcf")
+        self._validate_parameters(params, model)
+        if model != "dcf":
+            self.tools.validate_method_sources(model, params, self.state["research"])
+            required = ["metric", "comparable_rule"] if model != "ddm" else ["metric", "cost_of_equity", "terminal_growth"]
+            if any(not assumptions["basis"].get(k) for k in required):
+                raise StopRun("估值方法参数依据不完整")
+            return
         if metrics.get("currency") != params["currency"] or metrics.get("security_code") != self.state["research"]["security_code"] or not metrics.get("share_scope"):
             raise StopRun("DCF币种或证券股数口径未通过授权检查")
         if params["base_fcf"] not in metrics.get("fcf", {}).values() or params["net_debt"] != metrics.get("net_debt") or params["shares"] != metrics.get("shares"):
             raise StopRun("DCF现金流、净债务或股数缺少确定性财务调节")
         if any(not assumptions["basis"].get(k) for k in params if k not in {"currency", "unit"}):
             raise StopRun("DCF参数依据不完整")
+        if self.state.get("valuation_schema", 1) >= 2:
+            if metrics.get("fcff_bridge", {}).get("method") != "ebit":
+                raise StopRun("新研究优先使用已核对EBIT桥接；OCF倒推路径尚未开放，unlevered标签不能代替利息及税盾核对")
+            if "minority_interest" not in params or metrics.get("minority_interest") != params["minority_interest"]:
+                raise StopRun("DCF少数股东权益缺少明确数值及来源；未知不能按零计算")
+            if metrics.get("share_scope") != "total ordinary shares":
+                raise StopRun("DCF需要匹配的总普通股股数")
+            self.tools.validate_dcf_sources(assumptions, self.state["research"])
+    def _authorize(self):
+        assumptions = self.state["assumptions"]
+        self._check_authorization(assumptions)
         assumptions.update(confirmed=True, authorization_source="controller")
-        self._log("autonomous_valuation_authorized", {"version": assumptions["version"], "basis": assumptions["basis"]})
+        self._log("autonomous_valuation_authorized", {"model": assumptions.get("model", "dcf"), "version": assumptions["version"], "basis": assumptions["basis"]})
 
     def _apply_pending_parameters(self):
         path = self.directory / "parameters.request.json"
@@ -544,19 +594,29 @@ class RawEngine(Engine):
             return
         changes = json.loads(path.read_text())
         current = self.state["assumptions"]
-        updated = current["parameters"] | changes
-        self._validate_parameters(updated)
+        # New requests may replace method + parameters + basis; plain dicts remain legacy DCF edits.
+        model = changes.get("model", current.get("model", "dcf"))
+        updated = changes["parameters"] if "parameters" in changes else current["parameters"] | changes
+        basis = changes.get("basis", current["basis"] | {k: "用户明确修改并确认" for k in changes})
+        self._validate_parameters(updated, model)
+        candidate = Assumptions(model=model, version=current["version"]+1, confirmed=True, authorization_source="user", parameters=updated, basis=basis).model_dump()
+        self._check_authorization(candidate)
         self.state["assumption_history"].append(json.loads(json.dumps(current)))
-        self.state["assumptions"] = Assumptions(version=current["version"] + 1, confirmed=True, authorization_source="user", parameters=updated,
-            basis=current["basis"] | {k: "用户明确修改并确认" for k in changes}).model_dump()
+        self.state["assumptions"] = candidate
+        self.state["artifacts"]["proposal"]["data"].update(model=model, parameters=updated, basis=basis)
+        self.state["artifacts"]["proposal"]["assumptions_version"] = candidate["version"]
         self.state["user_overrides"] = sorted(set(self.state["user_overrides"]) | set(changes))
         for key in ("thesis", "valuation", "verification"):
             old = self.state["artifacts"].pop(key, None)
             if old:
                 self.state["invalidated"].append(old["task_id"])
         self.state["issues"] = []
+        if self.state["report"]:
+            self.state["report_history"].append(self.state["report"])
+        self.state["report"] = None
         self._log("user_parameters_applied", {"changes": changes, "version": self.state["assumptions"]["version"]})
         path.unlink()
+        self._save()
 
     def _prepare_worker_tool(self, execution, name, arguments):
         self.run_budget.check()
@@ -574,8 +634,10 @@ class RawEngine(Engine):
             args.update(company=task.company, cutoff=task.cutoff)
         if name == "valuation":
             current = self.state["assumptions"]
-            if task.target != "valuation" or not current["confirmed"] or args.get("parameters") != current["parameters"] or args.get("assumptions_version") != current["version"]:
+            if task.target != "valuation" or not current["confirmed"] or args.get("model", "dcf") != current.get("model", "dcf") or args.get("parameters") != current["parameters"] or args.get("assumptions_version") != current["version"] or task.assumptions.model_dump() != Assumptions.model_validate(current).model_dump():
                 raise StopRun("估值必须使用当前授权版本")
+            self._check_authorization(current)
+            args["basis"] = current["basis"]
         if name == "check_consistency":
             args = {"results": task.inputs, "assumptions": task.assumptions.model_dump(), "research": self.state["research"], "user_overrides": self.state["user_overrides"]}
         import hashlib
@@ -788,6 +850,8 @@ class RawEngine(Engine):
             self._stop(str(exc))
             self._finish()
             return self.state
+        if decision == "confirm":
+            self._check_authorization(self.state["assumptions"])
         state = await super().respond(decision, parameters)
         if decision in {"confirm", "modify"}:
             state["assumptions"]["authorization_source"] = "user"
@@ -806,6 +870,12 @@ class RawEngine(Engine):
         report["事实与数据基础"].update(framework=self.state["framework"], standard_version=self.state["standard_version"], searches=self.state["searches"])
         report["事实与数据基础"]["input_version"] = {"manifest_hash": self.state["input_snapshot"]["manifest_hash"],
             "sources": [{k: m.get(k) for k in ("id", "file", "source_hash", "url", "acquired_at", "date")} for m in self.state["input_snapshot"]["manifest"]["materials"]]}
+        comparison = self.state["artifacts"].get("valuation", {}).get("data", {}).get("market_comparison")
+        if comparison:
+            report["市场预期差"].update(comparison=comparison, baseline=comparison["baseline"])
+            if comparison["status"] == "unresolved":
+                report["市场预期差"].update(status="unresolved", statement=comparison["statement"])
+                report["投资结论摘要"]["gaps"].append(comparison["statement"])
         return report
 
     def _finish(self, cancelled=False):

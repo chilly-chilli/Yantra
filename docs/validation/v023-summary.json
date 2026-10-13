@@ -1,0 +1,19 @@
+{
+  "version": "0.2.3",
+  "date": "2026-10-13",
+  "python": "3.12.6",
+  "unittest": {
+    "count": 65,
+    "seconds": 29.469,
+    "passed": true
+  },
+  "checks": {
+    "compileall": true,
+    "cli_version": true,
+    "git_diff_check": true
+  },
+  "remote_model_calls": 0,
+  "previous_integration_record": "VALIDATION_V0_2_2.md",
+  "previous_local_material_run_version": "0.2.2",
+  "scope": "Release version change and regression; original local-material validation snapshots remain unchanged."
+}
