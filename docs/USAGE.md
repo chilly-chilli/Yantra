@@ -28,12 +28,12 @@ cp /opt/homebrew/share/tessdata/eng.traineddata .venv/share/tessdata/eng.trained
 ## 配置入口
 
 ```sh
-.venv/bin/python -m yantra configure
-.venv/bin/python -m yantra models interactive
-.venv/bin/python -m yantra extensions interactive
+.venv/bin/python -m yantra configure --env-file .env
+.venv/bin/python -m yantra models --env-file .env interactive
+.venv/bin/python -m yantra extensions --env-file .env interactive
 ```
 
-配置保存在`.yantra/config.json`；凭据通过环境变量或显式`--env-file`加载。模型、OCR、embedding、skills和MCP的完整命令见[能力配置](CAPABILITIES.md)。
+配置保存在`.yantra/config.json`；本项目所有本地模型、OCR 和资料服务凭据统一放在仓库根目录 `.env`。`.env.example` 仅为模板，新克隆且尚无 `.env` 时复制后填写，不覆盖已有配置。CLI 通过显式 `--env-file .env` 加载，其他工作目录可传根文件的绝对路径；不自动加载或合并其他文件。ADK 2.11.0 的本地 `run/web` 从 `yantra/` 向父目录查找，可直接加载根 `.env`。模型、OCR、embedding、skills 和 MCP 的完整命令见[能力配置](CAPABILITIES.md)。
 
 ## Agent非交互调用与输出契约
 
@@ -106,13 +106,13 @@ CLI 按 [OSC 7501 规范 revision 0.4](https://www.superlogical.com/rex/docs/bui
 
 ## 原始材料研究
 
-将 `.env.example` 的模型配置填入本地环境文件。模型凭据与资料服务凭据分别管理。CLI 只加载显式指定的 `--env-file`，不输出密钥。真实研究启动前必须提供人民币输入／输出单价、价格来源和日期；其他计价币种可以通过 `--pricing` 提供带来源和日期的汇率。未知模型单价不使用固定每调用金额冒充费用控制。
+将 `.env.example` 中需要的配置填入根 `.env`，模型与资料服务使用各自变量名。CLI 只加载显式指定的 `--env-file`，不输出密钥。真实研究启动前必须提供人民币输入／输出单价、价格来源和日期；其他计价币种可以通过 `--pricing` 提供带来源和日期的汇率。未知模型单价不使用固定每调用金额冒充费用控制。
 
 ```sh
 .venv/bin/python -m yantra start \
   --company 小米集团 --market HK --security-code 01810 --exchange HKEX --trading-currency HKD \
   --material '/绝对路径/原始材料目录' --material 'https://披露机构/报告.pdf' \
-  --mode real-model --env-file '/本地/模型配置.env' --runs-dir runs
+  --mode real-model --env-file .env --runs-dir runs
 ```
 
 `--material` 可重复。生产路径不要求人工 manifest、固定行号或字段名 JSON。仅提供名称时先从原始资料识别证券；证据不足或存在多个柜台、类别、跨市场证券时，停止正式任务调度，保存候选，并要求通过市场及证券代码消除歧义。显式参数是用户对目标证券的确认；仍需核验公司、财报、股数及行情对应关系。
@@ -144,7 +144,7 @@ DCF、PE、PB、EV/EBITDA和DDM的公式、参数、单位与硬条件集中在[
 .venv/bin/python -m yantra resume RUN_ID --decision confirm --runs-dir runs
 .venv/bin/python -m yantra resume RUN_ID --decision modify --parameters '{"growth_rate":0.03}' --runs-dir runs
 .venv/bin/python -m yantra cancel RUN_ID --runs-dir runs
-.venv/bin/python -m yantra resume RUN_ID --runs-dir runs --env-file '/本地/模型配置.env'
+.venv/bin/python -m yantra resume RUN_ID --runs-dir runs --env-file .env
 ```
 
 活动原始研究的参数修改以请求文件提交，在调度边界应用新版本，失效受影响成果，再重算与核验。取消可由另一终端提交，随后在预算边界收束；正在进行的 HTTP 请求最多等待其局部超时。正常恢复沿用原预算及截止；`resume --continue-research` 可明确继续 partial/failed，仍不重置预算及截止；已中断操作保留预留，未完成请求不会自动重放。修改不重置预算；已取消研究不能恢复。拒绝估值仅用于人工等待时。
@@ -182,7 +182,7 @@ export YANTRA_RAW_MATERIALS='["/绝对路径/原始财报.pdf"]'
 export YANTRA_MARKET=HK
 export YANTRA_SECURITY_CODE=01810
 export YANTRA_TRADING_CURRENCY=HKD
-# 其他 MODEL_*、人民币单价与来源已在本地环境配置
+# 其他 MODEL_*、人民币单价与来源已在根 .env 配置
 .venv/bin/adk run yantra
 .venv/bin/adk web --port 8000
 ```

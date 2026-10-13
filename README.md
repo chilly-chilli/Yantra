@@ -12,7 +12,8 @@
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 .venv/bin/python -m yantra --help
-.venv/bin/python -m yantra configure
+test -f .env || cp .env.example .env
+.venv/bin/python -m yantra configure --env-file .env
 ```
 
 按[安装与配置说明](docs/USAGE.md#安装)准备 OCR、模型凭据和有来源的定价，然后启动研究：
@@ -22,7 +23,7 @@ python3 -m venv .venv
   --company 示例公司 --market CN --security-code 600001 --exchange SSE \
   --share-class A --trading-currency CNY \
   --material /absolute/path/new-report.pdf --mode real-model \
-  --env-file /absolute/path/model.env
+  --env-file .env
 ```
 
 上述公司、代码和路径为待替换示例。原始材料研究要求明确选择 `real-model`；固定虚构演示使用 `offline-demo`。默认研究期限12个月、总墙钟上限2小时、模型费上限49元；核验否决与资料缺口始终保留。

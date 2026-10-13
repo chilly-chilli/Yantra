@@ -28,7 +28,7 @@ SQLite中的`fulltext`和`vectors`是派生数据。正式事实、修订或核�
   --security-code 600001 --exchange SSE --share-class A --trading-currency CNY \
   --material /absolute/path/new-report.pdf --mode real-model \
   --question '汽车业务与集团盈利是否一致' --topic 汽车 \
-  --knowledge-dir .yantra/knowledge --env-file /absolute/path/model.env
+  --knowledge-dir .yantra/knowledge --env-file .env
 ```
 
 跨市场／类别属于同一法律主体时，明确`--company-id`；未确认的不同证券不自动合并。`knowledge status`给出公司和证券目录。`--question`及`--topic`可重复，研究问题用于检索公司以外的相关知识。

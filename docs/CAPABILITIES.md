@@ -7,7 +7,7 @@
 ## 交互与命令
 
 ```sh
-.venv/bin/python -m yantra configure --env-file /本地/credentials.env
+.venv/bin/python -m yantra configure --env-file .env
 .venv/bin/python -m yantra models
 .venv/bin/python -m yantra extensions
 ```
@@ -19,7 +19,7 @@
 ```sh
 .venv/bin/python -m yantra models add local --file examples/v021/llm.example.json
 .venv/bin/python -m yantra models select llm local
-.venv/bin/python -m yantra models --env-file /本地/credentials.env check local
+.venv/bin/python -m yantra models --env-file .env check local
 .venv/bin/python -m yantra models select llm env
 .venv/bin/python -m yantra models select ocr tesseract-auto
 .venv/bin/python -m yantra models list
@@ -52,7 +52,7 @@ LLM 人民币单价可放在 `pricing`，包含输入／输出每百万 token �
 
 ### PaddleOCR 任务 API
 
-v0.3.3 增加 `provider=paddleocr-api`，使用 [AI Studio 官方 jobs 协议](https://ai.baidu.com/ai-doc/AISTUDIO/Mml7n69e7)，默认模型 `PaddleOCR-VL-1.6`。本地令牌只填入仓库根目录 `.env` 的 `PADDLEOCR_API_TOKEN`，填原始令牌，不加 `Bearer`。CLI 仍须显式 `--env-file .env` 加载；项目不会自动读取或合并 `yantra/.env`。已有 LLM 凭据可继续用原文件或自行合并到根 `.env`。
+v0.3.3 增加 `provider=paddleocr-api`，使用 [AI Studio 官方 jobs 协议](https://ai.baidu.com/ai-doc/AISTUDIO/Mml7n69e7)，默认模型 `PaddleOCR-VL-1.6`。本地令牌与 LLM、资料服务配置统一填入仓库根目录 `.env`，Paddle 使用 `PADDLEOCR_API_TOKEN`，填原始令牌，不加 `Bearer`。CLI 须显式 `--env-file .env` 加载；统一凭据文件与 ADK 查找规则见[配置入口](USAGE.md#配置入口)。旧 MCP 变量按原名保留以支持旧快照，不自动替代新的 API 令牌变量。
 
 ```sh
 .venv/bin/python -m yantra models add paddleocr-api --file examples/v033/paddleocr-api.example.json
@@ -133,7 +133,7 @@ v0.3.3 提供扶摇 REST、东方财富财经搜索、AKShare 查询和 98dou �
 ```sh
 .venv/bin/python -m yantra start --company 示例公司 --market CN --security-code 600000 \
   --material /绝对路径/原始报告.pdf --mode real-model \
-  --llm local --ocr tesseract-auto --env-file /本地/credentials.env
+  --llm local --ocr tesseract-auto --env-file .env
 ```
 
 启动参数只覆盖当前研究，默认选择保存在项目配置中。`models select embedding 配置名`设置默认向量模型；`start --embedding 配置名`覆盖本次选择。模型端点、标识、单价、环境变量名、扩展描述和角色固定在 `state.json` 的 capabilities 中；技能文件及资源固定到运行目录。恢复沿用快照，即使用户改变默认模型或停用扩展；密钥值仍从恢复进程环境取得。修改默认模型／启停扩展仅影响新研究。实际命令程序、远端服务代码及模型权重没有冻结，离线 replay 不重复调用扩展或 OCR 模型。
