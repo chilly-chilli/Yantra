@@ -1,0 +1,113 @@
+"""Readable memo views of the accepted structured artifacts."""
+import json
+import re
+
+FIELDS = {"revenue": "营业收入", "operating_profit": "营业利润", "net_profit": "净利润",
+          "operating_cash_flow": "经营现金流", "capex": "资本开支",
+          "debt": "债务", "cash": "现金", "shares": "股数"}
+
+
+def memo_markdown(state, directory):
+    report = state["report"]
+    research, assumptions = state["research"], state["assumptions"]
+    a = state["artifacts"]
+    thesis = a.get("thesis", {}).get("data", {})
+    finance = a.get("finance", {}).get("data", {})
+    valuation = a.get("valuation", {}).get("data", {})
+    snapshot = state["input_snapshot"]
+    version = assumptions["version"]
+
+    def source(ref):
+        if ":A" in ref:
+            material, anchor = ref.rsplit(":A", 1)
+            entry = next((m for m in snapshot["manifest"]["materials"] if m["id"] == material), None)
+            if entry:
+                location = next((c["location"] for c in entry["chunks"] if c["ref"] == ref), {})
+                return f"[{ref} {location}]({directory / 'materials' / entry['file']})"
+        material, _, line = ref.partition(":L")
+        entries = {m["id"]: m for m in snapshot["manifest"]["materials"]}
+        if material not in entries or not line.isdigit():
+            return ref
+        path = directory / "materials" / entries[material]["file"]
+        return f"[{ref}]({path}:{line})"
+
+    def bullets(values):
+        return ["- " + str(v) for v in values] or ["- 证据不足，待补查。"]
+
+    lines = ["# Yantra 投资备忘录", f"运行：{state['run_id']} · 模式：{state['mode']} · 状态：**{state['status']}**",
+             f"对象：{research['company']} · 研究期限：{research['horizon']} · 资料截止：{research['cutoff']}"]
+    if snapshot["fictional"]:
+        lines += ["**材料声明：本报告使用明确标注的虚构固定材料，不是真实公司研究或实时行情。**"]
+    if state["mode"] == "offline-demo":
+        lines += ["行动由脚本化演示策略选择，用于验证执行闭环；不代表真实模型推理。"]
+    lines += ["## 1. 投资结论摘要", "[判断] " + report["投资结论摘要"]["statement"]]
+    if valuation.get("per_share_value") is not None:
+        lines += [f"[预测] 当前授权参数下，DCF 基础情景每股价值为 **{valuation['per_share_value']:.6f} {valuation.get('currency', 'CNY')}**。该结果是条件性模型输出。"]
+    if research["reference_price"] is None:
+        lines += ["参考价格及价格时点缺失，无法计算相对现价的回报空间。"]
+    else:
+        lines += [f"用户提供参考价格：{research['reference_price']}，时点：{research['price_time']}，来源：{research.get('price_source')}。"]
+    lines += ["## 2. 投资逻辑"]
+    for claim in thesis.get("claims", []):
+        lines += ["[事实] " + claim.get("statement", claim.get("text", ""))]
+        refs = claim.get("evidence_refs", [])
+        if refs:
+            lines += ["依据：" + "、".join(source(ref) for ref in refs)]
+    for hypothesis in thesis.get("hypotheses", []):
+        lines += ["[假设] " + hypothesis.get("statement", ""),
+                  "成立条件：" + str(hypothesis.get("condition", "待定义")),
+                  "相反证据或缺口：" + str(hypothesis.get("counter_evidence", "待核验")),
+                  "催化事件：" + str(hypothesis.get("catalyst", "待验证"))]
+    lines += ["## 3. 事实与数据基础", "[事实] 原始材料定位如下。币种、原始单位、合并口径与原文件哈希保存在结构化记录。",
+              "| 期间 | 字段 | 数值 | 单位 | 原始位置 |", "|---|---|---:|---|---|"]
+    for row in finance.get("financials", []):
+        lines += [f"| {row['period']} | {FIELDS.get(row['field'], row['field'])} | {row['value']:g} | {row['currency']} {row['unit']} | {source(row['source_ref'])} |"]
+    for item in finance.get("evidence", []):
+        lines += [f"[{item['kind']}] {item['statement']} · {item.get('speaker') or ''} · {source(item['source_ref'])}"]
+    if not finance.get("financials"):
+        lines += ["未取得可用财务底表，不补造数字。"]
+    lines += ["## 4. 财务分析与估值"]
+    metrics = finance.get("metrics", {})
+    if metrics:
+        lines += ["[计算] OCF−资本开支仅在无杠杆现金流口径完成调节后用作FCFF；净债务 = 债务 − 现金。",
+                  f"各期已调节自由现金流（{metrics.get('currency', '未确认')} 百万元）：" + json.dumps(metrics.get("fcf", {}), ensure_ascii=False),
+                  f"最新期间净债务（{metrics.get('currency', '未确认')} 百万元）：{metrics.get('net_debt', '缺失')}。"]
+        if "revenue_growth" in metrics:
+            lines += [f"收入增长率：{metrics['revenue_growth']:.2%}；营业利润率：" + json.dumps(metrics.get("operating_margin", {}), ensure_ascii=False)]
+    proposal = a.get("proposal", {}).get("data", {})
+    lines += ["模型：" + str(proposal.get("model", "尚未提出")), "适用范围：" + str(proposal.get("scope", "证据不足")),
+              f"[假设] 版本 v{version}，确认状态：{'已明确确认' if assumptions['confirmed'] else '未确认，禁止正式估值'}。",
+              "| 参数 | 当前值 | 依据 |", "|---|---|---|"]
+    for key, value in assumptions["parameters"].items():
+        basis = assumptions["basis"].get(key, "口径标签")
+        if isinstance(basis, dict):
+            basis = str(basis.get("formula", "")) + "；" + "、".join(source(r) for r in basis.get("source_refs", []))
+        elif isinstance(basis, str) and ":L" in basis:
+            basis = source(basis)
+        lines += [f"| {key} | {value} | {basis} |"]
+    if valuation:
+        lines += ["[预测] FCF_t = 基础 FCF × (1+增长率)^t；终值 = FCF_N × (1+永续增长率)/(折现率−永续增长率)。",
+                  "企业价值 = 显式现金流现值合计 + 终值现值；股权价值 = 企业价值 − 净债务；每股价值 = 股权价值/股数。",
+                  f"| 情景 | 增长率 | 折现率 | 每股价值（{valuation.get('currency', '未确认')}） |", "|---|---:|---:|---:|"]
+        for s in valuation.get("scenarios", []):
+            value = s.get("per_share_value", "无效：" + s.get("reason", ""))
+            lines += [f"| {s['name']} | {s['inputs']['growth_rate']:.2%} | {s['inputs']['discount_rate']:.2%} | {value} |"]
+        lines += ["敏感性结果、逐年现金流、完整输入及公式见下方计算凭证。"]
+    else:
+        lines += ["尚无正式估值结果。"]
+    for index, key in ((5, "风险因素"), (6, "反向验证条件"), (7, "持续跟踪指标")):
+        lines += [f"## {index}. {key}", *bullets(report[key])]
+    lines += ["## 8. 市场预期差", "[待验证假设] " + str(report["市场预期差"].get("statement", "缺少带来源和日期的比较基准"))]
+    if report["市场预期差"].get("baseline"):
+        lines += ["比较基准：" + json.dumps(report["市场预期差"]["baseline"], ensure_ascii=False)]
+    lines += ["## 证据缺口与核验", *bullets(report["投资结论摘要"]["gaps"])]
+    if state.get("raw_materials"):
+        lines += [f"主框架：{state['framework']['version']} · 研究标准：v{state['standard_version']} · 估值授权：{assumptions.get('authorization_source', 'none')}",
+                  f"全局截止：{state['deadline']} · 模型费用核算及未结算预留：¥{state['budget']['model_cost_cny']:.6f}（账单不可得时保留预留）"]
+    lines += bullets([i["severity"] + "：" + i["message"] for i in state["issues"]]) if state["issues"] else ["当前程序检查未检出严重一致性问题；资料缺口仍需保留。"]
+    lines += ["自动检查未满足：" + "、".join(k for k, passed in state["hard_checks"].items() if not passed),
+              "核验通过表示符合本次研究过程标准；投资因果、风险重要性及模型适当性仍需业务判断，不保证未来收益。",
+              f"[完整计算凭证：输入、公式和结果]({directory / f'calculations-v{version}.json'}) · [结构化备忘录]({directory / f'report-v{version}.json'})",
+              f"[开发记录]({directory / 'events.jsonl'}) · [运行状态]({directory / 'state.json'})"]
+    text = "\n\n".join(lines) + "\n"
+    return re.sub(r"(?m)(\|$)\n\n(?=\|)", r"\1\n", text)

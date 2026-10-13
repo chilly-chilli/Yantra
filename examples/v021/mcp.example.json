@@ -1,0 +1,8 @@
+{
+  "transport": "stdio",
+  "command": ["/Users/chillychili/Yantra/.venv/bin/python", "/Users/chillychili/Yantra/examples/v021/mcp_echo.py"],
+  "roles": ["finance"],
+  "timeout_seconds": 10,
+  "cost_cny": 0,
+  "cost_kind": "service"
+}

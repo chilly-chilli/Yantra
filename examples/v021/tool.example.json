@@ -1,0 +1,14 @@
+{
+  "description": "回传输入文本，用于验证本地 JSON 工具接入。",
+  "command": ["/Users/chillychili/Yantra/.venv/bin/python", "/Users/chillychili/Yantra/examples/v021/json_echo.py"],
+  "input_schema": {
+    "type": "object",
+    "properties": {"text": {"type": "string"}},
+    "required": ["text"],
+    "additionalProperties": false
+  },
+  "roles": ["finance"],
+  "timeout_seconds": 10,
+  "cost_cny": 0,
+  "cost_kind": "service"
+}

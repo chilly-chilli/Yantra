@@ -1,0 +1,13 @@
+{
+  "kind": "llm",
+  "provider": "openai-compatible",
+  "model_id": "replace-with-local-model-id",
+  "base_url": "http://localhost:1234/v1",
+  "api_key_env": "LOCAL_MODEL_API_KEY",
+  "pricing": {
+    "input_per_million": 0,
+    "output_per_million": 0,
+    "source": "template: replace with verified local inference pricing",
+    "as_of": "2026-10-13"
+  }
+}

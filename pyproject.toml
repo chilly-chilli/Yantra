@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "yantra-research"
+version = "0.2.1"
+description = "Evidence checked buy-side research prototype on Google ADK"
+requires-python = ">=3.11"
+dependencies = ["google-adk==2.11.0", "litellm==1.85.7", "pydantic==2.13.4", "python-dotenv==1.2.2", "sqlalchemy[asyncio]==2.1.4", "pdfplumber==0.11.9", "pypdfium2==4.30.0", "pytesseract==0.3.13", "openpyxl==3.1.5", "python-docx==1.2.0", "python-pptx==1.0.2", "beautifulsoup4==4.15.0", "ddgs==9.16.0", "httpx[socks]==0.28.1", "primp==2.0.1", "mcp==1.30.0", "jsonschema>=4.23,<5"]
+
+[project.scripts]
+yantra = "yantra.cli:main"
+
+[project.optional-dependencies]
+test = ["reportlab==4.5.1"]
+
+[tool.setuptools.packages.find]
+include = ["yantra*"]
+
+[tool.setuptools.package-data]
+yantra = ["materials/*.json", "materials/*.txt"]
