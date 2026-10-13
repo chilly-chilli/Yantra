@@ -1,6 +1,6 @@
 # Yantra
 
-实证研策：Google ADK 驱动的证据核验型买方投研原型。当前工作区版本为 **0.3.0**；发布与变更状态见[更新记录](CHANGELOG.md)。
+实证研策：Google ADK 驱动的证据核验型买方投研原型。当前工作区版本为 **0.3.1**；发布与变更状态见[更新记录](CHANGELOG.md)。
 
 研究接受公司／证券身份及原始文件、目录或网页链接，沿用 `finance → thesis → valuation → verification → report`，输出备忘录、结构化结果、计算凭证与原始来源快照。支持 DCF、PE、PB、EV/EBITDA、单阶段 DDM，以及跨 session 共享知识与混合检索。
 
@@ -45,6 +45,8 @@ python3 -m venv .venv
 .venv/bin/python -m pip install 'reportlab==4.5.1'
 .venv/bin/python -m unittest discover -s tests -v
 ```
+
+CLI优化的完整回归记录为 **111项通过**，最终偏好补充测试3项通过，见[CLI验收证据](docs/validation/v0.3/cli-agent-2026-10-13/README.md)；0.3.1版本检查见[版本记录](docs/validation/v0.3.1/README.md)。
 
 v0.3开发验收记录为 **95项测试通过**，其中65项既有回归、30项新增。见[验收记录及原始证据](docs/validation/v0.3/README.md)。记录中的实际ADK／SQLite执行与离线决策、embedding／联网响应分别说明；该轮未验证真实外部服务端到端研究。
 

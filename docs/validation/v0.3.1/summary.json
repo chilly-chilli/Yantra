@@ -1,0 +1,36 @@
+{
+  "date": "2026-10-13",
+  "version": "0.3.1",
+  "python": "3.12.6",
+  "base_commit": "cd730296044e8911f562f9cf119fa24106d66252",
+  "version_test": {
+    "passed": 1,
+    "elapsed_seconds": 5.842,
+    "command": ".venv/bin/python -m unittest discover -s tests -p test_cli_contract.py -k output_help_and_version_positions -v"
+  },
+  "checks": {
+    "text_and_json_version": "0.3.1",
+    "package_manifest_consistency": "passed",
+    "compileall": "passed",
+    "git_diff_check": "passed",
+    "local_links_and_anchors": {
+      "status": "passed",
+      "count": 69,
+      "files": 10
+    },
+    "current_guide_version_headers": "passed"
+  },
+  "full_regression": "Prior CLI record: 111 tests passed; final preference follow-up: 3 tests passed. Not rerun for version/documentation-only changes.",
+  "push_target": {
+    "remote": "origin",
+    "branch": "codex/agent-cli-contract",
+    "url": "https://github.com/chilly-chilli/Yantra.git"
+  },
+  "not_performed": [
+    "paid model or real research calls",
+    "external research service validation",
+    "merge to main",
+    "tag or GitHub Release"
+  ],
+  "record_stage": "pre-commit and pre-push validation"
+}

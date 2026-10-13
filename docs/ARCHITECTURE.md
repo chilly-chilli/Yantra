@@ -1,6 +1,6 @@
 # 架构说明
 
-适用版本：0.3.0。文档入口见[索引](README.md)。
+适用版本：0.3.1。文档入口见[索引](README.md)。
 
 `Engine` 保留 v0.1 固定材料执行保障，`RawEngine` 在同一控制器、Pydantic 合约及 ADK 执行路径上增加原始材料研究。`RawBackend` 通过原有 `LiteLlm` 作单次结构化决策；没有共享聊天历史，也没有隐藏工具循环。实际安装 ADK 2.11.0 的 `Runner`、`LlmAgent`、Session、`ToolContext`、原生工具事件及回调用于执行。未升级 ADK 或改用另一套 Agent 平台。
 

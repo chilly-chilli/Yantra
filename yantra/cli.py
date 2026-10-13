@@ -74,7 +74,8 @@ async def replay(storage, original):
 
 
 def parser():
-    p = Parser(prog="yantra", description="Yantra v0.3 — 检索、共享知识与证据核验投研")
+    from . import __version__
+    p = Parser(prog="yantra", description=f"Yantra v{__version__} — 检索、共享知识与证据核验投研")
     p.add_argument("--config",type=Path,help="能力配置文件，默认 .yantra/config.json 或 YANTRA_CONFIG")
     p.add_argument("--version", action=VersionAction, nargs=0, help="显示版本")
     commands = p.add_subparsers(dest="command", required=True)

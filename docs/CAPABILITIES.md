@@ -1,6 +1,6 @@
 # 模型与扩展配置
 
-适用版本：0.3.0。研究启动见[使用指南](USAGE.md)，embedding计费、索引与降级见[知识模块](KNOWLEDGE.md#模型费用和重建)。
+适用版本：0.3.1。研究启动见[使用指南](USAGE.md)，embedding计费、索引与降级见[知识模块](KNOWLEDGE.md#模型费用和重建)。
 
 这两个模块通过 CLI 与用户交互，并把已选择的能力接入 `RawEngine` 原始材料研究。运行配置位于 `.yantra/config.json`，可用环境变量 `YANTRA_CONFIG` 或命令前的 `--config /绝对路径/config.json` 指定另一个配置文件。
 

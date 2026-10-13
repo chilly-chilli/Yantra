@@ -2,14 +2,16 @@
 
 功能记录与Git发布状态分别说明；本地实现和测试通过不表示已经推送、合并或发布。
 
-## Unreleased — 0.3.0
+## Unreleased — 0.3.1
 
 - CLI增加统一text/JSON输出、schema_version=1响应、结构化解析／执行错误和`--version`；stdout与进度分流，处理函数返回数据。
 - 明确无TTY菜单、EOF退出、业务状态与操作退出码；取消区分请求接受／终态／已取消，恢复参数数组保留运行目录与配置上下文。
 - 长期要求应用前预检目标，保存后失败返回已完成修改与ID，避免盲目重试；查询暴露limit、context_bytes、summary_only及topics。
 - limits、pricing、parameters、changes、budget增加互斥JSON文件输入；新增真实子进程离线契约测试并保留PTY交互回归。
 
-CLI本轮验证与未执行范围见[验收记录](docs/validation/v0.3/cli-agent-2026-10-13/README.md)。CLI改动基于前序v0.3实现提交`a8a1538`；本轮单独提交，不push或发布。
+CLI实现验证见[验收记录](docs/validation/v0.3/cli-agent-2026-10-13/README.md)，0.3.1版本与推送前检查见[版本记录](docs/validation/v0.3.1/README.md)。CLI实现提交为`cd73029`，基于v0.3提交`a8a1538`；版本提交及推送按用户本轮指令单独执行，GitHub Release、合并与部署尚未执行。RSS／轮询等信源能力仍为预留，不因版本号更新而成为已实现功能。
+
+## 0.3.0
 
 - 新增原始文件＋SQLite正式知识存储、不可变修订、核验及固定session引用。
 - 新增元数据、中文FTS5及embedding混合检索，本地向量索引、增量更新和预算降级。

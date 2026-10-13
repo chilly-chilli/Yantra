@@ -120,8 +120,16 @@ class CLIContractTests(unittest.TestCase):
         self.assertIn("tesseract-auto", self.invoke("models", "list", output="text").stdout)
 
     def test_output_help_and_version_positions(self):
+        from yantra import __version__
+        import tomllib
+        self.assertEqual(tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["version"], __version__)
         for arguments in (("--version",), ("--help",), ("knowledge", "query", "--help")):
-            self.response(self.invoke(*arguments))
+            data = self.response(self.invoke(*arguments))["data"]
+            if arguments == ("--version",):
+                self.assertEqual(data["version"], __version__)
+            elif arguments == ("--help",):
+                self.assertIn(f"Yantra v{__version__}", data["help"])
+        self.assertEqual(self.invoke("--version", output="text").stdout.strip(), "yantra " + __version__)
         process = self.invoke("models", "list", "--output", "json", output="text")
         self.response(process, command="models list")
 
