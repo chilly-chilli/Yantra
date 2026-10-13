@@ -29,11 +29,72 @@ cp /opt/homebrew/share/tessdata/eng.traineddata .venv/share/tessdata/eng.trained
 
 ```sh
 .venv/bin/python -m yantra configure
-.venv/bin/python -m yantra models
-.venv/bin/python -m yantra extensions
+.venv/bin/python -m yantra models interactive
+.venv/bin/python -m yantra extensions interactive
 ```
 
 配置保存在`.yantra/config.json`；凭据通过环境变量或显式`--env-file`加载。模型、OCR、embedding、skills和MCP的完整命令见[能力配置](CAPABILITIES.md)。
+
+## Agent非交互调用与输出契约
+
+默认 `--output text` 保留运行摘要及终端菜单；所有命令及子命令均接受 `--output json`，选项可放在命令前或子命令后。Agent应使用明确子命令。`configure`、`models interactive`、`extensions interactive` 只接受文本模式和TTY；文本TTY中裸 `models/extensions` 仍兼容菜单。无TTY缺少子命令立即报错，不能靠输入管道隐式进入菜单。EOF中止未完成操作返回1，此前已明确保存的修改仍保留。
+
+```sh
+.venv/bin/python -m yantra --version
+.venv/bin/python -m yantra --output json --version
+.venv/bin/python -m yantra --output json models list
+.venv/bin/python -m yantra --output json extensions list
+.venv/bin/python -m yantra --output json start --company DEMO --mode offline-demo \
+  --materials-dir /absolute/path/synthetic-manifest-directory --runs-dir /absolute/path/agent-runs
+.venv/bin/python -m yantra --output json status RUN_ID --runs-dir /absolute/path/agent-runs
+.venv/bin/python -m yantra --output json resume RUN_ID --runs-dir /absolute/path/agent-runs \
+  --decision modify --parameters-file /absolute/path/parameters.json
+```
+
+`RUN_ID`和文件路径为待替换占位符；离线启动目录须含明确虚构的manifest与测试材料，原始研究仍需真实配置和授权。JSON模式stdout只输出一个UTF-8 JSON对象及换行；日志／进度写stderr，Agent应分别捕获两个流。`--help`和`--version`在JSON模式也使用相同包装。命令处理函数返回数据，公共输出层统一序列化；直接调用Python内部`execute()`不再负责打印。
+
+响应最小契约（`schema_version`为字符串`"1"`）：
+
+```json
+{"schema_version":"1","command":"models list","data":{"models":{},"selected":{},"env_llm":"MODEL_*"}}
+```
+
+```json
+{"schema_version":"1","command":"status","error":{"code":"run_not_found","message":"运行不存在，请检查run_id和 --runs-dir","retryable":false,"field":"run_id"}}
+```
+
+顶层只含 `schema_version`、`command` 和 `data/error` 之一；嵌套命令以空格连接，如 `knowledge query`。错误包含稳定 `code`、可读 `message` 和 `retryable`；可定位时有 `field`，字段校验的 `details.fields` 只列位置和校验类型，不输出输入值、凭据或任意服务异常正文。解析尚未识别命令时 `command` 为 `yantra`。参数名须完整拼写，不接受缩写；`resume --continue-research` 与 `--decision` 互斥。Agent应按code处理错误，不解析message；`retryable=true`仅表示可在条件改善后重试，不能推断重试安全或修改尚未发生。
+
+| 退出码 | 含义 |
+|---|---|
+| 0 | CLI操作成功；研究结果或探测就绪性另看data |
+| 2 | 参数解析、JSON输入、校验、对象缺失或状态约束失败；未执行所请求的研究操作 |
+| 1 | 本地I/O、意外执行失败、EOF中止或要求保存后应用失败；可能已有持久化副作用 |
+| 130 | 用户中断；检查已保存运行，不自动重放未完成请求 |
+
+常见code：`argument_error`、`invalid_json`、`input_file_error`、`validation_error`、`invalid_run_id`、`run_not_found`、`invalid_run_state`、`missing_parameters`、`subcommand_required`、`interactive_required`、`input_aborted`、`io_error`、`execution_error`、`interrupted`。模型／扩展未注册为 `model_not_found/extension_not_found`；知识、来源、要求缺失为 `knowledge_not_found/source_not_found/preference_not_found`；缺失或哈希不匹配的来源为 `source_unavailable`；运行锁冲突为 `run_busy`（退出1、可重试）。偏好应用错误见[知识说明](KNOWLEDGE.md#明确长期要求)。通用执行错误故意不转发服务正文。
+
+`start/resume/status/replay/cancel`的data包含 `run_id`、既有业务 `status`、`mode`、预算／限制、`stop_reasons`、`pending_user`、`hard_checks`、`issues`、报告路径及复现信息；未产生的字段为null。`status`查询到failed仍退出0，启动或恢复得到waiting/partial/failed/cancelled也不等于CLI失败。状态集合保持 `running/waiting/completed/partial/failed/cancelled`。`compare`返回比较结果，`replay`同时返回新运行与comparison。
+
+`next_actions`提供 `{action, argv}`，argv使用当前Python可执行文件及绝对 `--config`、`--runs-dir`，并保留本次指定的 `--env-file` 路径。直接以参数数组启动子进程即可，无需猜测shell转义；文本确认提示也保留上述上下文。跨调用使用不同环境文件时须自行明确提供。partial/failed原始研究的继续动作仍受原预算／截止约束；waiting确认动作仍需检查pending_user并取得明确授权。建议动作不是自动批准。
+
+`cancel`的 `data.cancellation` 为 `request_accepted`（请求已接受，调度边界才收束）、`already_terminal`（completed/partial/failed，无新请求）或 `cancelled`（已保存状态确认取消）。它们是操作结果，不是新增业务状态。请求接受后应查询status确认实际取消；状态响应是查询时的快照。`models/extensions check`的探测操作成功可返回 `ready:false`，不表示功能就绪；模型探测、MCP发现仍可能访问所配置服务，不是离线测试命令。
+
+### JSON文件输入
+
+以下选项继续支持内联JSON对象，并增加互斥的UTF-8文件方式：
+
+| 内联选项 | 文件选项 | 使用位置 |
+|---|---|---|
+| `--limits` | `--limits-file` | start |
+| `--pricing` | `--pricing-file` | start |
+| `--parameters` | `--parameters-file` | resume、preferences remember |
+| `--changes` | `--changes-file` | knowledge edit-fact |
+| `--budget` | `--budget-file` | knowledge query/rebuild |
+
+文件必须存在、可读，并包含JSON对象；数组、标量、非法JSON、NaN／Infinity及溢出数值均报错。两种输入不能同时指定；required选项可由任一种满足。文件方式不改变参数的业务校验、预算或权限。limits只覆盖已有默认值：原始研究默认7200秒/49元，固定演示沿用旧Limits默认值（900秒）。
+
+本轮未提供机器schema导出、JSONL事件流或启动幂等键。启动失败或中断后，尤其已经创建运行时，应先检查运行记录，不能假定重试没有副作用。离线验证范围与证据见[CLI验收记录](validation/v0.3/cli-agent-2026-10-13/README.md)。
 
 ## 原始材料研究
 

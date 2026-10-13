@@ -138,8 +138,8 @@ class RuntimeKnowledgeTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_cli_and_adk_explicit_remember_list_forget(self):
         arguments=parser().parse_args(["preferences","--knowledge-dir",str(self.root/"cli-library"),"remember","以后18个月","--meaning","默认18个月","--parameters",'{"horizon":"18个月"}'])
-        with patch("builtins.print") as printed:await execute(arguments)
-        saved=json.loads(printed.call_args[0][0]);self.assertEqual(saved["scope"],"global")
+        saved=await execute(arguments)
+        self.assertEqual(saved["scope"],"global")
         engine=self.create();root=YantraAgent(engine=engine)
         class Context:
             state={}

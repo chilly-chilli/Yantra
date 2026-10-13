@@ -1,0 +1,8 @@
+test_preferences_application_race_reports_durable_result (test_cli_contract.CLIContractTests.test_preferences_application_race_reports_durable_result) ... ok
+test_preferences_preflight_preserves_requirements (test_cli_contract.CLIContractTests.test_preferences_preflight_preserves_requirements) ... ok
+test_preferences_preflight_terminal_library_and_scope (test_cli_contract.CLIContractTests.test_preferences_preflight_terminal_library_and_scope) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 11.801s
+
+OK

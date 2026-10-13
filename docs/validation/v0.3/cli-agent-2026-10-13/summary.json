@@ -1,0 +1,50 @@
+{
+  "date": "2026-10-13",
+  "timezone": "Asia/Shanghai",
+  "version": "0.3.0 unreleased",
+  "base_commit": "a8a1538cb47e8157f5f16d4dc88bb51dd44a7bb7",
+  "python": "3.12.6",
+  "regression": {
+    "command": ".venv/bin/python -m unittest discover -s tests -v",
+    "passed": 111,
+    "elapsed_seconds": 130.134,
+    "new_cli_tests": 16
+  },
+  "checks": {
+    "compileall": "passed",
+    "json_help_version_and_models_list": "passed",
+    "invalid_inline_json_exit_2": "passed",
+    "documentation": {
+      "documented_cli_examples_parsed": 41,
+      "local_links_and_anchors_checked": 28,
+      "status": "passed"
+    },
+    "git_diff_check": "passed"
+  },
+  "scope": {
+    "real_python_subprocess": true,
+    "real_offline_adk": true,
+    "real_sqlite_and_fts": true,
+    "real_pty_menu": true,
+    "pricing_file_raw_engine_handoff": "controlled subprocess mock",
+    "application_write_failure": "controlled subprocess injection"
+  },
+  "not_performed": [
+    "paid model calls",
+    "live external research or remote service validation",
+    "deletion of user data"
+  ],
+  "remaining_limits": [
+    "no cross-store transaction for preference application",
+    "cancellation acceptance requires later status confirmation",
+    "schema export, JSONL and startup idempotency not implemented"
+  ],
+  "push_performed_by_this_task": false,
+  "previous_uncommitted_changes_included": false,
+  "additional_verification": {
+    "command": ".venv/bin/python -m unittest discover -s tests -p test_cli_contract.py -k preferences -v",
+    "passed": 3,
+    "elapsed_seconds": 11.801,
+    "reason": "After final review, classify unknown requirement before application preflight; existing preference cases and new unknown-ID assertion passed."
+  }
+}

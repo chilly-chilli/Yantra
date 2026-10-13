@@ -8,9 +8,12 @@ import logging
 from pathlib import Path
 import sys
 import tempfile
+import shlex
+from contextlib import redirect_stdout
 
-from .adk_app import run_engine
-from .engine import Engine
+from .cli_contract import (CLIError, Display, Parser, VersionAction, add_json_input,
+                           command_name, emit, exception_error, load_json_file,
+                           load_json_inputs, output_mode)
 
 
 def comparison(first, second):
@@ -36,13 +39,15 @@ def comparison(first, second):
 
 
 async def replay(storage, original):
+    from .adk_app import run_engine
+    from .engine import Engine
     if original.get("raw_materials"):
         from .replay import replay_raw
         return await replay_raw(storage, original)
     if not original["assumptions"]["confirmed"]:
-        raise ValueError("等待中的运行不能自动批准复测；请先明确确认原运行")
+        raise CLIError("invalid_run_state", "等待中的运行不能自动批准复测；请先明确确认原运行", field="run_id")
     if original["mode"] == "test":
-        raise ValueError("注入测试策略使用单元测试复测，CLI不冒充重放测试模型")
+        raise CLIError("invalid_run_state", "注入测试策略使用单元测试复测，CLI不能重放测试模型", field="run_id")
     # Reconstruct the saved input bytes rather than reading possibly edited files.
     snapshot = original["input_snapshot"]
     with tempfile.TemporaryDirectory(prefix="yantra-replay-") as temporary:
@@ -69,27 +74,36 @@ async def replay(storage, original):
 
 
 def parser():
-    p = argparse.ArgumentParser(prog="yantra", description="Yantra v0.3 — 检索、共享知识与证据核验投研")
+    p = Parser(prog="yantra", description="Yantra v0.3 — 检索、共享知识与证据核验投研")
     p.add_argument("--config",type=Path,help="能力配置文件，默认 .yantra/config.json 或 YANTRA_CONFIG")
+    p.add_argument("--version", action=VersionAction, nargs=0, help="显示版本")
     commands = p.add_subparsers(dest="command", required=True)
     for name in ("start", "resume", "status", "compare", "replay", "cancel"):
-        sub = commands.add_parser(name)
-        sub.add_argument("--runs-dir", type=Path, default=Path("runs"))
+        descriptions = {
+            "start": "创建并执行研究；默认固定离线演示，原始材料需 real-model；可能保存 waiting/partial/failed",
+            "resume": "沿用已保存预算及截止恢复；不指定 decision 不自动确认；modify 会提交或应用参数",
+            "status": "只读查询运行，失败研究仍是成功查询，不调用模型",
+            "compare": "只读比较两个保存运行，不调用模型",
+            "replay": "固定输入离线复算；不批准新假设，不重新调用远程判断",
+            "cancel": "提交取消请求；已结束任务不创建请求，实际取消须查询 status",
+        }
+        sub = commands.add_parser(name, help=descriptions[name], description=descriptions[name])
+        sub.add_argument("--runs-dir", type=Path, default=Path("runs"), help="运行存储目录，默认 runs；恢复时必须使用同一目录")
         sub.add_argument("--env-file", type=Path, help="明确加载模型环境文件；不保存真实密钥")
         if name == "start":
             sub.add_argument("--company", required=True)
-            sub.add_argument("--horizon", default=None)
+            sub.add_argument("--horizon", default=None, help="默认12个月；原始研究可继承明确长期要求")
             from datetime import datetime
             from zoneinfo import ZoneInfo
             sub.add_argument("--cutoff", default=datetime.now(ZoneInfo("Asia/Shanghai")).isoformat())
-            sub.add_argument("--mode", choices=("offline-demo", "real-model"), default="offline-demo")
+            sub.add_argument("--mode", choices=("offline-demo", "real-model"), default="offline-demo", help="默认 offline-demo；原始材料必须选择 real-model")
             sub.add_argument("--materials-dir", type=Path)
             sub.add_argument("--material", action="append", default=[], help="原始文件、目录或公开URL，可重复")
             sub.add_argument("--market", choices=("CN", "HK"))
             sub.add_argument("--security-code")
             sub.add_argument("--exchange")
             sub.add_argument("--trading-currency")
-            sub.add_argument("--confirmation-mode", choices=("autonomous", "manual"), default="autonomous")
+            sub.add_argument("--confirmation-mode", choices=("autonomous", "manual"), default="autonomous", help="默认 autonomous；manual 需要明确参数确认，等待仍消耗墙钟预算")
             sub.add_argument("--framework", default=None, help="auto/value/quality/change 或经独立核验的框架版本")
             sub.add_argument("--knowledge-dir", type=Path, default=Path(".yantra/knowledge"))
             sub.add_argument("--company-id", help="明确同一公司跨证券类别的身份")
@@ -98,18 +112,18 @@ def parser():
             sub.add_argument("--topic", action="append", default=[])
             sub.add_argument("--embedding",help="覆盖本次embedding模型配置")
             sub.add_argument("--framework-file", type=Path)
-            sub.add_argument("--pricing", type=json.loads, help="具来源和日期的模型单价JSON")
+            add_json_input(sub, "pricing", help="具来源和日期的模型单价JSON；与 --pricing-file 互斥")
             sub.add_argument("--llm",help="覆盖本次 LLM 配置选择")
             sub.add_argument("--ocr",help="覆盖本次 OCR 配置选择")
             sub.add_argument("--reference-price", type=float)
             sub.add_argument("--price-time")
             sub.add_argument("--price-source")
-            sub.add_argument("--limits", type=json.loads, default={}, help="JSON limits，例如 {\"total_tools\":10}")
+            add_json_input(sub, "limits", default={}, help="覆盖既有预算默认值的JSON对象；原始研究默认7200秒/49元，与 --limits-file 互斥")
         else:
             sub.add_argument("run_id")
         if name == "resume":
             sub.add_argument("--decision", choices=("confirm", "modify", "reject", "cancel"))
-            sub.add_argument("--parameters", type=json.loads)
+            add_json_input(sub, "parameters", help="modify 的JSON参数；与 --parameters-file 互斥")
             sub.add_argument("--continue-research", action="store_true", help="明确继续partial/failed的原始研究，保留原预算及截止")
         if name == "compare":
             sub.add_argument("second_run_id")
@@ -118,6 +132,7 @@ def parser():
     models=commands.add_parser("models",help="LLM/OCR 配置与选择")
     models.add_argument("--env-file",type=Path)
     model_actions=models.add_subparsers(dest="model_action")
+    model_actions.add_parser("interactive", help="明确进入交互菜单，需要文本模式和TTY")
     model_actions.add_parser("list")
     add=model_actions.add_parser("add");add.add_argument("name");add.add_argument("--file",type=Path,required=True)
     select=model_actions.add_parser("select");select.add_argument("kind",choices=("llm","ocr","embedding"));select.add_argument("name")
@@ -125,6 +140,7 @@ def parser():
     extensions=commands.add_parser("extensions",help="用户 skills、MCP 及 tools")
     extensions.add_argument("--env-file",type=Path)
     ext_actions=extensions.add_subparsers(dest="extension_action")
+    ext_actions.add_parser("interactive", help="明确进入交互菜单，需要文本模式和TTY")
     ext_actions.add_parser("list")
     add=ext_actions.add_parser("add");add.add_argument("kind",choices=("skills","mcp","tools"));add.add_argument("name")
     add.add_argument("--file",type=Path,help="MCP/tool JSON 描述文件")
@@ -134,47 +150,88 @@ def parser():
         command=ext_actions.add_parser(action);command.add_argument("kind",choices=("skills","mcp","tools"));command.add_argument("name")
     from .knowledge.cli import add_commands
     add_commands(commands)
+    def outputs(command, root=False):
+        command.add_argument("--output", choices=("text", "json"),
+                             default="text" if root else argparse.SUPPRESS,
+                             help="输出格式，默认 text；json 为 schema_version=1 的单个对象")
+        for action in command._actions:
+            if isinstance(action, argparse._SubParsersAction):
+                for child in action.choices.values():
+                    outputs(child)
+    outputs(p, root=True)
     return p
 
 
-def show(state):
-    print(f"运行：{state['run_id']}\n模式：{state['mode']}\n状态：{state['status']}")
-    b = state["budget"]
-    print(f"工具：{b['tool_calls']}/{state['limits']['total_tools']} · 决策：{b['model_calls']}/{state['limits']['max_models']} · 修复：{b['repair_rounds']}")
-    if state.get("raw_materials"):
-        print(f"模型费用核算／未结算预留：¥{b['model_cost_cny']:.4f} · 截止时点：{state['deadline']}")
+def run_result(state, args, settings):
+    keys = ("run_id", "mode", "status", "budget", "limits", "deadline", "pending_user",
+            "stop_reasons", "hard_checks", "issues", "report_path", "reproducibility")
+    result = {key: state.get(key) for key in keys}
+    prefix = [sys.executable, "-m", "yantra", "--output", "json", "--config", str(settings.path)]
+    context = ["--runs-dir", str(args.runs_dir.resolve())]
+    if args.env_file:
+        context += ["--env-file", str(args.env_file.resolve())]
+    actions = [{"action": "status", "argv": prefix + ["status", state["run_id"], *context]}]
     if state["status"] == "waiting":
-        print("\n等待确认，当前未执行正式估值：")
-        print(json.dumps(state["pending_user"], ensure_ascii=False, indent=2))
-        print(f"\n确认：python -m yantra resume {state['run_id']} --decision confirm")
-        print("modify 表示明确修改并确认提交的参数；不传 decision 持续等待。")
-    if state.get("report_path"):
-        print("\n备忘录：" + state["report_path"])
-    if state["stop_reasons"]:
-        print("停止原因：" + "；".join(state["stop_reasons"]))
+        actions.append({"action": "confirm", "argv": prefix + ["resume", state["run_id"], *context, "--decision", "confirm"]})
+    elif state.get("raw_materials") and state["status"] in {"partial", "failed"}:
+        actions.append({"action": "continue_research", "argv": prefix + ["resume", state["run_id"], *context, "--continue-research"],
+                        "notice": "仅在原预算及截止仍允许时可继续，不重置预算"})
+    result["next_actions"] = actions
+    return result
+
+
+def format_text(command, data):
+    if data.get("operation") == "interactive_finished":
+        return ""
+    messages = {"models add": "模型配置已保存。", "models select": "模型选择已保存。",
+                "extensions add": "扩展已导入并启用。", "extensions enable": "扩展状态已保存。",
+                "extensions disable": "扩展状态已保存。"}
+    if command in messages:
+        return messages[command] + "\n"
+    if "run_id" not in data:
+        return None
+    lines = [f"运行：{data['run_id']}", f"模式：{data['mode']}", f"状态：{data['status']}"]
+    b, limits = data["budget"], data["limits"]
+    lines.append(f"工具：{b['tool_calls']}/{limits['total_tools']} · 决策：{b['model_calls']}/{limits['max_models']} · 修复：{b['repair_rounds']}")
+    if data.get("deadline"):
+        lines.append(f"模型费用核算／未结算预留：¥{b.get('model_cost_cny', 0):.4f} · 截止时点：{data['deadline']}")
+    if data["status"] == "waiting":
+        lines += ["\n等待确认，当前未执行正式估值：", json.dumps(data["pending_user"], ensure_ascii=False, indent=2)]
+        action = next(a for a in data["next_actions"] if a["action"] == "confirm")
+        lines += ["\n确认：" + shlex.join(action["argv"]), "modify 表示明确修改并确认提交的参数；不传 decision 持续等待。"]
+    if data.get("report_path"):
+        lines.append("\n备忘录：" + data["report_path"])
+    if data.get("stop_reasons"):
+        lines.append("停止原因：" + "；".join(data["stop_reasons"]))
+    if data.get("message"):
+        lines.append(data["message"])
+    if data.get("comparison"):
+        lines.append(json.dumps(data["comparison"], ensure_ascii=False, indent=2))
+    return "\n".join(lines) + "\n"
 
 
 async def execute(args):
+    load_json_inputs(args)
     if getattr(args,"env_file",None):
         from dotenv import load_dotenv
         if not args.env_file.is_file():
-            raise ValueError("env file does not exist")
+            raise CLIError("input_file_error", "环境文件不存在", field="--env-file")
         load_dotenv(args.env_file, override=True)
     from .configuration import ConfigStore
     settings=ConfigStore(args.config)
     if args.command in {"knowledge","preferences"}:
         from .knowledge.cli import execute as knowledge_command
-        knowledge_command(args,settings)
-        return
+        return knowledge_command(args,settings)
     if args.command in {"configure","models","extensions"}:
-        await capability_command(args,settings)
-        return
+        return await capability_command(args,settings)
+    from .adk_app import run_engine
+    from .engine import Engine, TERMINAL
     if args.command == "start":
         research = {"company": args.company, "horizon": args.horizon or "12个月", "cutoff": args.cutoff,
                     "reference_price": args.reference_price, "price_time": args.price_time, "price_source": args.price_source}
         if args.material:
             if args.mode != "real-model":
-                raise ValueError("原始材料研究须用 --mode real-model；offline-demo保留固定演示语义")
+                raise CLIError("validation_error", "原始材料研究须用 --mode real-model", field="--mode")
             from .research import RawEngine
             research.update(market=args.market, security_code=args.security_code, exchange=args.exchange,
                             trading_currency=args.trading_currency, confirmation_mode=args.confirmation_mode,
@@ -195,25 +252,35 @@ async def execute(args):
         # Comparison and status read durable state without configuring/calling a model.
         first = read_state(args.runs_dir, args.run_id)
         second = read_state(args.runs_dir, args.second_run_id)
-        print(json.dumps(comparison(first, second), ensure_ascii=False, indent=2))
-        return
+        return comparison(first, second)
     elif args.command == "status":
         state = read_state(args.runs_dir, args.run_id)
     elif args.command == "cancel":
         state = read_state(args.runs_dir, args.run_id)
-        (Path(args.runs_dir) / args.run_id / "cancel.request").write_text("user requested cancellation\n")
-        print("已提交取消；活动任务将在下一个预算边界收束并保存。")
-        return
+        result = run_result(state, args, settings)
+        if state["status"] in TERMINAL:
+            result["cancellation"] = "cancelled" if state["status"] == "cancelled" else "already_terminal"
+            result["message"] = "任务已结束，无需提交取消请求。"
+        else:
+            (Path(args.runs_dir) / args.run_id / "cancel.request").write_text("user requested cancellation\n")
+            result["cancellation"] = "request_accepted"
+            result["message"] = "已提交取消；活动任务将在下一个预算边界收束并保存，请用status确认实际取消。"
+        return result
     elif args.command == "replay":
         engine, result = await replay(args.runs_dir, read_state(args.runs_dir, args.run_id))
-        show(engine.state)
-        print(json.dumps(result, ensure_ascii=False, indent=2))
-        return
+        return run_result(engine.state, args, settings) | {"comparison": result}
     else:
+        saved = read_state(args.runs_dir, args.run_id)
+        if args.decision == "modify" and not args.parameters:
+            raise CLIError("missing_parameters", "modify需要参数对象", field="--parameters")
+        if args.continue_research and args.decision:
+            raise CLIError("argument_error", "--continue-research与 --decision 不能同时使用", field="--decision")
+        if saved["status"] == "cancelled":
+            raise CLIError("invalid_run_state", "已取消研究不能恢复", field="run_id")
         engine = Engine.load(args.runs_dir, args.run_id)
         if args.continue_research:
             if not engine.state.get("raw_materials") or engine.state["status"] not in {"partial", "failed"}:
-                raise ValueError("continue-research requires partial/failed raw research")
+                raise CLIError("invalid_run_state", "继续研究需要partial/failed状态的原始研究", field="--continue-research")
             engine.run_budget.check()
             with engine._lock():
                 engine.state.setdefault("resume_history", []).append({"stop_reasons": engine.state["stop_reasons"], "status": engine.state["status"]})
@@ -221,15 +288,14 @@ async def execute(args):
                 engine._save()
         if engine.state.get("raw_materials") and engine.state["status"] == "running" and args.decision == "modify":
             if not args.parameters:
-                raise ValueError("modify requires parameters")
+                raise CLIError("missing_parameters", "modify需要参数对象", field="--parameters")
             target = engine.directory / "parameters.request.json"
             temporary = engine.directory / "parameters.request.tmp"
             temporary.write_text(json.dumps(args.parameters))
             temporary.replace(target)
-            print("参数修改已提交；下一个调度边界应用新版本、重算及核验。")
-            return
+            return run_result(engine.state, args, settings) | {"operation": "parameters_request_accepted", "message": "参数修改已提交；下一个调度边界应用新版本、重算及核验。"}
         state = await engine.respond(args.decision, args.parameters) if args.decision else await run_engine(engine)
-    show(state)
+    return run_result(state, args, settings)
 
 
 async def capability_command(args,store):
@@ -237,10 +303,17 @@ async def capability_command(args,store):
     from .models import ModelCatalog,interactive_models,check_model
     from .extensions import ExtensionCatalog,interactive_extensions,discover_mcp
     models,extensions=ModelCatalog(store),ExtensionCatalog(store)
+    action = getattr(args, "model_action", None) if args.command == "models" else getattr(args, "extension_action", None)
+    interactive = args.command == "configure" or action in {None, "interactive"}
+    if interactive:
+        if action is None and args.command != "configure" and (args.output == "json" or not sys.stdin.isatty()):
+            raise CLIError("subcommand_required", "请指定非交互子命令，或使用 interactive 进入菜单", field="subcommand")
+        if args.output == "json" or not sys.stdin.isatty():
+            raise CLIError("interactive_required", "交互入口需要文本输出和TTY；Agent请使用明确子命令")
     if args.command=="configure":
         while True:
             choice=ask("配置中心：models 模型 / extensions 能力扩展 / exit 退出","models")
-            if choice=="exit":return
+            if choice=="exit":return {"operation": "interactive_finished"}
             try:
                 if choice=="models":interactive_models(models)
                 elif choice=="extensions":await interactive_extensions(extensions)
@@ -248,10 +321,16 @@ async def capability_command(args,store):
             except ValueError as exc:print("配置未保存："+safe_validation_error(exc))
     elif args.command=="models":
         action=args.model_action
-        if action is None:interactive_models(models)
-        elif action=="list":print(json.dumps({"models":models.entries(),"selected":store.load()["selected"],"env_llm":"MODEL_*"},ensure_ascii=False,indent=2))
-        elif action=="add":models.add(args.name,json.loads(args.file.read_text()));print("模型配置已保存。")
-        elif action=="select":models.select(args.kind,args.name);print("模型选择已保存。")
+        if action in {None, "interactive"}:
+            interactive_models(models)
+            return {"operation": "interactive_finished"}
+        elif action=="list":return {"models":models.entries(),"selected":store.load()["selected"],"env_llm":"MODEL_*"}
+        elif action=="add":
+            models.add(args.name,load_json_file(args.file, "--file"))
+            return {"operation": "saved", "name": args.name}
+        elif action=="select":
+            models.select(args.kind,args.name)
+            return {"operation": "selected", "kind": args.kind, "name": args.name}
         else:
             profile=models.entries().get(args.name)
             if args.name=="env":
@@ -259,65 +338,76 @@ async def capability_command(args,store):
                 from .models import ModelProfile
                 profile=ModelProfile(kind="llm",provider="openai-compatible",model_id=os.getenv("MODEL_ID",""),
                                      base_url=os.getenv("MODEL_BASE_URL",""),api_key_env="MODEL_API_KEY").model_dump()
-            if profile is None:raise ValueError("模型未注册")
-            print(json.dumps(await check_model({"name":args.name,**profile}),ensure_ascii=False,indent=2))
+            if profile is None:raise CLIError("model_not_found", "模型未注册", field="name")
+            return await check_model({"name":args.name,**profile})
     else:
         action=args.extension_action
-        if action is None:await interactive_extensions(extensions)
-        elif action=="list":print(json.dumps({k:store.load()[k] for k in ("skills","mcp","tools")},ensure_ascii=False,indent=2))
+        if action in {None, "interactive"}:
+            await interactive_extensions(extensions)
+            return {"operation": "interactive_finished"}
+        elif action=="list":return {k:store.load()[k] for k in ("skills","mcp","tools")}
         elif action=="add":
             if args.kind=="skills":
-                if not args.path:raise ValueError("技能导入需要 --path")
+                if not args.path:raise CLIError("argument_error", "技能导入需要 --path", field="--path")
                 data={"path":str(args.path)}
             else:
-                if not args.file:raise ValueError("MCP/tool 导入需要 --file")
-                data=json.loads(args.file.read_text())
+                if not args.file:raise CLIError("argument_error", "MCP/tool导入需要 --file", field="--file")
+                data=load_json_file(args.file, "--file")
             data["roles"]=[r.strip() for r in args.roles.split(",")]
-            await extensions.add(args.kind,args.name,data);print("扩展已导入并启用。")
-        elif action in {"enable","disable"}:extensions.enable(args.kind,args.name,action=="enable");print("扩展状态已保存。")
+            await extensions.add(args.kind,args.name,data)
+            return {"operation": "saved", "kind": args.kind, "name": args.name, "enabled": True}
+        elif action in {"enable","disable"}:
+            extensions.enable(args.kind,args.name,action=="enable")
+            return {"operation": "saved", "kind": args.kind, "name": args.name, "enabled": action=="enable"}
         else:
             spec=store.load()[args.kind].get(args.name)
-            if spec is None:raise ValueError("扩展未注册")
+            if spec is None:raise CLIError("extension_not_found", "扩展未注册", field="name")
             if args.kind=="mcp":
                 tools=await discover_mcp(spec);store.update(lambda c:c["mcp"][args.name].__setitem__("tools",tools))
-                print(json.dumps({"ready":True,"tools":tools},ensure_ascii=False,indent=2))
-            elif args.kind=="skills":print(json.dumps({"ready":Path(spec["path"]).is_file(),"roles":spec["roles"]},ensure_ascii=False))
+                return {"ready":True,"tools":tools}
+            elif args.kind=="skills":return {"ready":Path(spec["path"]).is_file(),"roles":spec["roles"]}
             else:
                 import shutil
-                print(json.dumps({"ready":bool(shutil.which(spec["command"][0])),"input_schema":spec["input_schema"]},ensure_ascii=False))
+                return {"ready":bool(shutil.which(spec["command"][0])),"input_schema":spec["input_schema"]}
 
 
 def safe_validation_error(exc):
     from pydantic import ValidationError
     if isinstance(exc,ValidationError):return "；".join(".".join(map(str,e["loc"]))+": "+e["type"] for e in exc.errors())
-    return str(exc)
+    return str(exception_error(exc))
 
 
 def read_state(storage, run_id):
     if not run_id.startswith("run-") or any(c not in "abcdefghijklmnopqrstuvwxyz0123456789-" for c in run_id):
-        raise ValueError("invalid run id")
-    state = json.loads((Path(storage) / run_id / "state.json").read_text())
+        raise CLIError("invalid_run_id", "运行ID格式无效", field="run_id")
+    try:
+        state = json.loads((Path(storage) / run_id / "state.json").read_text())
+    except FileNotFoundError:
+        raise CLIError("run_not_found", "运行不存在，请检查run_id和 --runs-dir", field="run_id") from None
     marker = Path(storage)/run_id/"source-missing.json"
     if marker.exists():
         state["reproducibility"] = json.loads(marker.read_text())
     return state
 
 
-def main():
+def main(argv=None):
+    argv = list(sys.argv[1:] if argv is None else argv)
+    mode, args = output_mode(argv), None
     logging.getLogger("google.adk").setLevel(logging.ERROR)
-    args = parser().parse_args()
     try:
-        asyncio.run(execute(args))
-    except (ValueError, OSError) as exc:
-        print("无法运行：" + safe_validation_error(exc), file=sys.stderr)
-        return 2
-    except KeyboardInterrupt:
-        print("执行已中断；已保存的运行记录可检查，中断操作不会自动重放。", file=sys.stderr)
-        return 130
-    except EOFError:
-        print("交互已结束；尚未提交的输入没有保存。",file=sys.stderr)
-        return 0
-    except Exception as exc:
-        print("无法运行：" + type(exc).__name__ + "（请检查模型配置；未输出敏感服务响应）", file=sys.stderr)
-        return 2
+        args = parser().parse_args(argv)
+        mode = args.output
+        # Third-party progress/prints cannot contaminate the JSON response.
+        if mode == "json":
+            with redirect_stdout(sys.stderr):
+                result = asyncio.run(execute(args))
+        else:
+            result = asyncio.run(execute(args))
+        emit(command_name(args), mode, data=result, text=format_text(command_name(args), result) if mode == "text" else None)
+    except Display as display:
+        emit(getattr(display, "command", command_name(args, argv)), mode, data=display.data, text=display.text)
+    except (Exception, KeyboardInterrupt) as exc:
+        error = exception_error(exc)
+        emit(getattr(error, "command", command_name(args, argv)), mode, error=error)
+        return error.exit_code
     return 0

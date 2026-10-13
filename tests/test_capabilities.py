@@ -3,6 +3,7 @@ import asyncio
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 import json
 import os
+import pty
 from pathlib import Path
 import socket
 import subprocess
@@ -272,6 +273,20 @@ class ExtensionTests(unittest.IsolatedAsyncioTestCase):
 
 
 class CLITests(unittest.TestCase):
+    def interactive(self, arguments, text):
+        master, slave = pty.openpty()
+        try:
+            process = subprocess.Popen(arguments, stdin=slave, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            os.close(slave)
+            slave = None
+            os.write(master, text.encode())
+            stdout, stderr = process.communicate(timeout=45)
+            return subprocess.CompletedProcess(arguments, process.returncode, stdout, stderr)
+        finally:
+            os.close(master)
+            if slave is not None:
+                os.close(slave)
+
     def test_interactive_selection_and_json_registration(self):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d);config=root/"config.json";profile=root/"ocr.json"
@@ -279,7 +294,7 @@ class CLITests(unittest.TestCase):
             prefix=[sys.executable,"-m","yantra","--config",str(config)]
             added=subprocess.run(prefix+["models","add","english","--file",str(profile)],capture_output=True,text=True)
             self.assertEqual(added.returncode,0,added.stderr)
-            selected=subprocess.run(prefix+["models"],input="select\nocr\nenglish\nback\n",capture_output=True,text=True)
+            selected=self.interactive(prefix+["models", "interactive"], "select\nocr\nenglish\nback\n")
             self.assertEqual(selected.returncode,0,selected.stderr)
             self.assertEqual(ConfigStore(config).load()["selected"]["ocr"],"english")
             listed=subprocess.run(prefix+["models","list"],capture_output=True,text=True)
@@ -289,8 +304,8 @@ class CLITests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d);config=root/"config.json";descriptor=root/"tool.json"
             descriptor.write_text(json.dumps({"description":"CLI fixture","command":[sys.executable,"-c","print('{}')"]}))
-            result=subprocess.run([sys.executable,"-m","yantra","--config",str(config),"extensions"],
-                input=f"add\ntools\nexample\n{descriptor}\nfinance, verification\nlist\ndisable\ntools\nexample\nback\n",capture_output=True,text=True)
+            result=self.interactive([sys.executable,"-m","yantra","--config",str(config),"extensions", "interactive"],
+                f"add\ntools\nexample\n{descriptor}\nfinance, verification\nlist\ndisable\ntools\nexample\nback\n")
             self.assertEqual(result.returncode,0,result.stderr)
             spec=ConfigStore(config).load()["tools"]["example"]
             self.assertFalse(spec["enabled"]);self.assertEqual(spec["roles"],["finance","verification"])

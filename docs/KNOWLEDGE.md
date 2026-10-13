@@ -75,7 +75,8 @@ embedding注册沿用模型配置中心，密钥只填写环境变量名。示�
 
 ```sh
 .venv/bin/python -m yantra knowledge status
-.venv/bin/python -m yantra knowledge query '毛利率' --company-id COMPANY_ID --period FY2025 --kind fact --cutoff 2026-02-01
+.venv/bin/python -m yantra --output json knowledge query '毛利率' --company-id COMPANY_ID --period FY2025 --kind fact --cutoff 2026-02-01 \
+  --limit 12 --context-bytes 16000 --summary-only --topic 盈利质量
 .venv/bin/python -m yantra knowledge view KNOWLEDGE_ID --revision-id REVISION_ID
 .venv/bin/python -m yantra knowledge source SOURCE_ID
 .venv/bin/python -m yantra knowledge edit-fact KNOWLEDGE_ID \
@@ -85,6 +86,10 @@ embedding注册沿用模型配置中心，密钥只填写环境变量名。示�
 .venv/bin/python -m yantra knowledge delete-source SOURCE_ID --impact
 .venv/bin/python -m yantra knowledge delete-source SOURCE_ID --permanent --confirm '影响清单中的完整confirmation token'
 ```
+
+所有非交互命令支持[统一输出与错误契约](USAGE.md#agent非交互调用与输出契约)。默认text继续显示原有JSON形状；`--output json`增加统一响应包装，Agent须从data读取原结果。query透传已有 `KnowledgeQuery`：`--limit`默认12、范围1至100；`--context-bytes`默认16000、范围1至100000；`--summary-only`仅从来源条目省略原文text并保留固定版本读取提示；可重复 `--topic` 按任一主题过滤。字节上限约束服务的结果预览内容，不包含CLI响应包装，条目超过上限时可能返回空结果。CLI不另行实现检索或摘要。
+
+`--changes-file`、`--budget-file`及preferences的 `--parameters-file`读取UTF-8 JSON对象，与各自内联选项互斥；缺文件、非法对象或非有限数值报错。重建仍必需显式预算；不带预算的query保持元数据／关键词路径。索引session、查询日志和固定版本pin仍按既有服务保存，查询不是完全无副作用的数据库只读操作。
 
 view返回修订历史、原始证据及绑定hash的核验记录。编辑创建manual新版本并保留旧值、理由和出处，数值、单位、期间、币种、范围、主张和来源实质变化撤销旧核验资格。只改规范化空白不会创建实质修订；不能设置passed恢复资格。没有新的原文支持时人工输入仍是pending。禁止直接编辑数据库／文件并自动回写。
 
@@ -104,7 +109,9 @@ view返回修订历史、原始证据及绑定hash的核验记录。编辑创建
 
 只保存显式remember指令，不推断普通任务偏好。保存原话、含义、来源、范围、时间与版本，并回显scope及application。结构化defaults支持horizon、已核验内置framework、questions、topics、notes；其他明确要求可放notes供本次Agent参考，不能覆盖程序硬限制或否决。特定公司使用明确company ID，不能从多个同名公司猜测。
 
-优先级为本次显式参数＞公司要求＞全局默认。新默认在调度边界加载；显式参数保留。`remember/forget --apply-to RUN_ID --modify-this-task`明确允许修改本次对应字段，在边界应用并使相关论点、假设、估值和核验失效。撤销保留历史并重新计算默认值。保存和应用状态分别记录。
+优先级为本次显式参数＞公司要求＞全局默认。新默认在调度边界加载；显式参数保留。`remember/forget --apply-to RUN_ID --modify-this-task`明确允许修改本次对应字段，在边界应用并使相关论点、假设、估值和核验失效。撤销保留历史并重新计算默认值。保存和应用状态分别记录。CLI在remember/forget持久化之前预检目标是否为running/waiting的v0.3运行、知识库路径及公司范围。运行不存在为 `run_not_found`，其他目标约束为 `preference_target_invalid`（退出2），不修改长期要求。保存后再次检查，再写调度请求；成功只表示 `application=pending_at_scheduling_boundary`，不是研究已经应用。
+
+跨SQLite修改与运行请求文件没有联合事务。保存后若运行状态变化或请求写入失败，返回退出1及 `error.code=preference_application_failed`；`error.details.completed`列出已完成的保存／撤销、要求ID及保存版本，`error.details.application`列出失败目标与安全错误。`retryable=false`，不要重新新增；先用preferences list/list --history检查，再使用 `--id` 明确更新已有要求或在有效目标上重试应用。forget的已完成结果含id及revoked，撤销历史仍保留。不存在的要求返回 `preference_not_found`。
 
 ADK入口支持`/memories`、`/forget ID`及：
 
