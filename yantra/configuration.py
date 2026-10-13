@@ -60,5 +60,8 @@ def redact(value, secrets):
 
 
 def ask(label, default=None):
+    from .terminal_status import report
+    report("blocked", label, kind="question")
     value = input(label + (f" [{default}]" if default is not None else "") + "：").strip()
+    report("working", "正在配置")
     return value or (default if default is not None else "")

@@ -1,0 +1,173 @@
+{
+  "description": "AKShare只读信息：白名单函数查询个股资料、历史行情、新闻、财务摘要；保留中文字段和上游单位，limit控制返回行数并标记截断。",
+  "command": [
+    ".venv/bin/python",
+    "-m",
+    "yantra.information",
+    "akshare"
+  ],
+  "input_schema": {
+    "type": "object",
+    "oneOf": [
+      {
+        "type": "object",
+        "properties": {
+          "function": {
+            "const": "stock_individual_info_em"
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "symbol": {
+                "type": "string",
+                "pattern": "^[0-9]{6}$"
+              }
+            },
+            "required": [
+              "symbol"
+            ],
+            "additionalProperties": false
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          }
+        },
+        "required": [
+          "function",
+          "parameters"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "function": {
+            "const": "stock_news_em"
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "symbol": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "symbol"
+            ],
+            "additionalProperties": false
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          }
+        },
+        "required": [
+          "function",
+          "parameters"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "function": {
+            "const": "stock_financial_abstract"
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "symbol": {
+                "type": "string",
+                "pattern": "^[0-9]{6}$"
+              }
+            },
+            "required": [
+              "symbol"
+            ],
+            "additionalProperties": false
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          }
+        },
+        "required": [
+          "function",
+          "parameters"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "function": {
+            "const": "stock_zh_a_hist"
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "symbol": {
+                "type": "string",
+                "pattern": "^[0-9]{6}$"
+              },
+              "period": {
+                "enum": [
+                  "daily",
+                  "weekly",
+                  "monthly"
+                ]
+              },
+              "start_date": {
+                "type": "string",
+                "pattern": "^[0-9]{8}$"
+              },
+              "end_date": {
+                "type": "string",
+                "pattern": "^[0-9]{8}$"
+              },
+              "adjust": {
+                "enum": [
+                  "",
+                  "qfq",
+                  "hfq"
+                ]
+              }
+            },
+            "required": [
+              "symbol",
+              "start_date",
+              "end_date"
+            ],
+            "additionalProperties": false
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          }
+        },
+        "required": [
+          "function",
+          "parameters"
+        ],
+        "additionalProperties": false
+      }
+    ]
+  },
+  "env_refs": {},
+  "roles": [
+    "finance",
+    "thesis",
+    "verification"
+  ],
+  "timeout_seconds": 60,
+  "cost_cny": 0,
+  "cost_kind": "service",
+  "enabled": true
+}

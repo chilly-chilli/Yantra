@@ -1,0 +1,224 @@
+{
+  "description": "同花顺 Fuyao A股：标的检索、指定证券行情及估值快照、最近财务报表。证券代码须含 SH/SZ/BJ 后缀，返回供应商原始字段及口径。",
+  "command": [
+    ".venv/bin/python",
+    "-m",
+    "yantra.information",
+    "fuyao"
+  ],
+  "input_schema": {
+    "type": "object",
+    "oneOf": [
+      {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "const": "ticker-search"
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "q": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 50
+              }
+            },
+            "required": [
+              "q"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "operation",
+          "parameters"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "const": "prices-snapshot"
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "thscodes": {
+                "type": "string",
+                "pattern": "^[0-9]{6}\\.(SH|SZ|BJ)(,[0-9]{6}\\.(SH|SZ|BJ)){0,19}$"
+              }
+            },
+            "required": [
+              "thscodes"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "operation",
+          "parameters"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "const": "valuations-snapshot"
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "thscodes": {
+                "type": "string",
+                "pattern": "^[0-9]{6}\\.(SH|SZ|BJ)(,[0-9]{6}\\.(SH|SZ|BJ)){0,19}$"
+              }
+            },
+            "required": [
+              "thscodes"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "operation",
+          "parameters"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "const": "income-statements"
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "thscode": {
+                "type": "string",
+                "pattern": "^[0-9]{6}\\.(SH|SZ|BJ)$"
+              },
+              "period": {
+                "enum": [
+                  "annual",
+                  "quarterly"
+                ]
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 20
+              }
+            },
+            "required": [
+              "thscode",
+              "period"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "operation",
+          "parameters"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "const": "balance-sheets"
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "thscode": {
+                "type": "string",
+                "pattern": "^[0-9]{6}\\.(SH|SZ|BJ)$"
+              },
+              "period": {
+                "enum": [
+                  "annual",
+                  "quarterly"
+                ]
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 20
+              }
+            },
+            "required": [
+              "thscode",
+              "period"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "operation",
+          "parameters"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "const": "cash-flow-statements"
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "thscode": {
+                "type": "string",
+                "pattern": "^[0-9]{6}\\.(SH|SZ|BJ)$"
+              },
+              "period": {
+                "enum": [
+                  "annual",
+                  "quarterly"
+                ]
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 20
+              }
+            },
+            "required": [
+              "thscode",
+              "period"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "operation",
+          "parameters"
+        ],
+        "additionalProperties": false
+      }
+    ]
+  },
+  "env_refs": {
+    "FUYAO_API_KEY": "FUYAO_API_KEY"
+  },
+  "roles": [
+    "finance",
+    "thesis",
+    "verification"
+  ],
+  "timeout_seconds": 60,
+  "cost_cny": 0,
+  "cost_kind": "service",
+  "enabled": false
+}

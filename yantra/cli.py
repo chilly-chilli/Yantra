@@ -355,8 +355,8 @@ async def capability_command(args,store):
                 if not args.file:raise CLIError("argument_error", "MCP/tool导入需要 --file", field="--file")
                 data=load_json_file(args.file, "--file")
             data["roles"]=[r.strip() for r in args.roles.split(",")]
-            await extensions.add(args.kind,args.name,data)
-            return {"operation": "saved", "kind": args.kind, "name": args.name, "enabled": True}
+            spec = await extensions.add(args.kind,args.name,data)
+            return {"operation": "saved", "kind": args.kind, "name": args.name, "enabled": spec["enabled"]}
         elif action in {"enable","disable"}:
             extensions.enable(args.kind,args.name,action=="enable")
             return {"operation": "saved", "kind": args.kind, "name": args.name, "enabled": action=="enable"}
@@ -392,12 +392,16 @@ def read_state(storage, run_id):
 
 
 def main(argv=None):
+    from .terminal_status import TerminalStatus, current_status
     argv = list(sys.argv[1:] if argv is None else argv)
     mode, args = output_mode(argv), None
+    status = TerminalStatus()
+    token = current_status.set(status)
     logging.getLogger("google.adk").setLevel(logging.ERROR)
     try:
         args = parser().parse_args(argv)
         mode = args.output
+        status.report("working", "正在执行 " + command_name(args))
         # Third-party progress/prints cannot contaminate the JSON response.
         if mode == "json":
             with redirect_stdout(sys.stderr):
@@ -405,10 +409,15 @@ def main(argv=None):
         else:
             result = asyncio.run(execute(args))
         emit(command_name(args), mode, data=result, text=format_text(command_name(args), result) if mode == "text" else None)
+        status.finish(args.command, result)
     except Display as display:
         emit(getattr(display, "command", command_name(args, argv)), mode, data=display.data, text=display.text)
+        status.report("done", "命令已完成")
     except (Exception, KeyboardInterrupt) as exc:
         error = exception_error(exc)
         emit(getattr(error, "command", command_name(args, argv)), mode, error=error)
+        status.report("idle" if isinstance(exc, (KeyboardInterrupt, EOFError)) else "error", str(error))
         return error.exit_code
+    finally:
+        current_status.reset(token)
     return 0

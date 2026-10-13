@@ -1,6 +1,6 @@
 # 使用指南
 
-适用版本：0.3.1。本文维护当前安装、启动、预算、恢复和复测操作。高级配置见[能力配置](CAPABILITIES.md)，估值契约见[估值说明](VALUATION.md)，知识与用户要求见[知识说明](KNOWLEDGE.md)。
+适用版本：0.3.3。本文维护当前安装、启动、预算、恢复和复测操作。高级配置见[能力配置](CAPABILITIES.md)，估值契约见[估值说明](VALUATION.md)，知识与用户要求见[知识说明](KNOWLEDGE.md)。
 
 ## 安装
 
@@ -14,7 +14,7 @@ python3 -m venv .venv
 
 Python 3.11+；历史测试环境使用3.12，保持 `google-adk==2.11.0`。原始解析使用 pdfplumber、PDFium、Tesseract、openpyxl、python-docx、python-pptx 和 Beautiful Soup，保留页码、表格边界、工作表单元格、Word 文档块、幻灯片、图像区域及网页片段。CSV／JSON 保留行号／JSON Pointer。扫描 PDF 和图片执行真实 OCR；复杂表格、图表、嵌入图片及公式缺少缓存值会登记缺口。
 
-OCR 需本机 Tesseract 可执行文件及 `chi_sim`、`eng` 语言包。当前 macOS 已验证以下安装位置，其他系统可设置 `TESSDATA_PREFIX` 指向语言目录：
+默认本地 OCR 需本机 Tesseract 可执行文件及 `chi_sim`、`eng` 语言包；选择 PaddleOCR API 时扫描页上传至服务，不需要本机 Tesseract。API 配置见[能力配置](CAPABILITIES.md#paddleocr-任务-api)。当前 macOS 已验证以下本地安装位置，其他系统可设置 `TESSDATA_PREFIX` 指向语言目录：
 
 ```sh
 mkdir -p .venv/share/tessdata
@@ -36,6 +36,14 @@ cp /opt/homebrew/share/tessdata/eng.traineddata .venv/share/tessdata/eng.trained
 配置保存在`.yantra/config.json`；凭据通过环境变量或显式`--env-file`加载。模型、OCR、embedding、skills和MCP的完整命令见[能力配置](CAPABILITIES.md)。
 
 ## Agent非交互调用与输出契约
+
+### 终端状态协议
+
+CLI 按 [OSC 7501 规范 revision 0.4](https://www.superlogical.com/rex/docs/build/program-status)向 stderr 的 TTY 发送 `app=yantra` 根状态：执行为 `working`，菜单输入为 `blocked/kind=question`，研究确认等待为 `blocked/kind=permission`，成功操作为 `done`，执行错误或研究 partial/failed 为 `error`，中断／EOF／取消为 `idle`。`status` 成功查询到失败研究仍报告 `done`，CLI 退出码语义保持不变。
+
+消息采用单行 UTF-8 的 base64，清理控制字符并限制在 2048 字节；不报告虚构进度百分比。stderr 重定向或 `TERM=dumb` 时不发送控制序列；JSON stdout 始终保持一个响应对象。无需特性探测，未知 OSC 应由终端忽略；具体界面提示取决于终端实现。协议会在进程退出／下一 shell 提示时清理 blocked，因此持久的确认问题仍须查看 `state.json` 或 `status`。
+
+### 调用与响应
 
 默认 `--output text` 保留运行摘要及终端菜单；所有命令及子命令均接受 `--output json`，选项可放在命令前或子命令后。Agent应使用明确子命令。`configure`、`models interactive`、`extensions interactive` 只接受文本模式和TTY；文本TTY中裸 `models/extensions` 仍兼容菜单。无TTY缺少子命令立即报错，不能靠输入管道隐式进入菜单。EOF中止未完成操作返回1，此前已明确保存的修改仍保留。
 

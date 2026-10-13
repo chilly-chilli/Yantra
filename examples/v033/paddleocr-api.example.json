@@ -1,0 +1,10 @@
+{
+  "kind": "ocr",
+  "provider": "paddleocr-api",
+  "model_id": "PaddleOCR-VL-1.6",
+  "base_url": "https://paddleocr.aistudio-app.com/api/v2/ocr/jobs",
+  "api_key_env": "PADDLEOCR_API_TOKEN",
+  "call_cost_cny": 0,
+  "cost_source": "https://ai.baidu.com/ai-doc/AISTUDIO/Xmjclapam (API quota; requests stop when daily allowance is exhausted)",
+  "cost_as_of": "2026-10-13"
+}

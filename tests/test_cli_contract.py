@@ -119,6 +119,15 @@ class CLIContractTests(unittest.TestCase):
             self.response(self.invoke(*arguments), command=" ".join((arguments[0], arguments[-1])) if arguments[0] in {"models", "extensions"} else None)
         self.assertIn("tesseract-auto", self.invoke("models", "list", output="text").stdout)
 
+    def test_disabled_extension_registration_reports_actual_state(self):
+        specification = self.root / "tool.json"
+        specification.write_text(json.dumps({"description": "controlled synthetic disabled tool",
+            "command": [sys.executable, "-c", "print('{}')"], "enabled": False}))
+        data = self.response(self.invoke("extensions", "add", "tools", "disabled", "--file", specification))["data"]
+        self.assertFalse(data["enabled"])
+        saved = self.response(self.invoke("extensions", "list"))["data"]
+        self.assertFalse(saved["tools"]["disabled"]["enabled"])
+
     def test_output_help_and_version_positions(self):
         from yantra import __version__
         import tomllib

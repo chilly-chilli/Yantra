@@ -1,0 +1,2 @@
+# Optional read-only information extension; the main Yantra install does not require it.
+akshare==1.19.1

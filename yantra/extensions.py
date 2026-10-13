@@ -254,5 +254,5 @@ async def interactive_extensions(catalog):
             else:
                 path=Path(ask("扩展 JSON 描述文件路径"));data=json.loads(path.read_text())
             data["roles"]=[role.strip() for role in ask("可使用角色（逗号分隔）","finance,thesis,verification").split(",")]
-            await catalog.add(kind,name,data);print("已导入并启用。")
+            spec=await catalog.add(kind,name,data);print("已导入并启用。" if spec["enabled"] else "已导入，保持停用。")
         else:print("请输入 list、add、enable、disable 或 back。")

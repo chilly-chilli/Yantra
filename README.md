@@ -1,6 +1,6 @@
 # Yantra
 
-实证研策：Google ADK 驱动的证据核验型买方投研原型。当前工作区版本为 **0.3.1**；发布与变更状态见[更新记录](CHANGELOG.md)。
+实证研策：Google ADK 驱动的证据核验型买方投研原型。当前工作区版本为 **0.3.3**；发布与变更状态见[更新记录](CHANGELOG.md)。
 
 研究接受公司／证券身份及原始文件、目录或网页链接，沿用 `finance → thesis → valuation → verification → report`，输出备忘录、结构化结果、计算凭证与原始来源快照。支持 DCF、PE、PB、EV/EBITDA、单阶段 DDM，以及跨 session 共享知识与混合检索。
 
@@ -33,6 +33,7 @@ python3 -m venv .venv
 |---|---|
 | 安装、启动、预算、取消、恢复与复测 | [使用指南](docs/USAGE.md) |
 | LLM、OCR、embedding、skills、MCP与工具配置 | [能力配置](docs/CAPABILITIES.md) |
+| 扶摇、东方财富、AKShare、98dou 信息工具 | [信息来源配置](docs/INFORMATION_SOURCES.md) |
 | 估值参数、来源、授权与数学复算 | [估值说明](docs/VALUATION.md) |
 | 共享知识、索引、编辑删除与长期要求 | [知识说明](docs/KNOWLEDGE.md) |
 | 模块职责、权限和数据流 | [架构说明](docs/ARCHITECTURE.md) |
@@ -50,4 +51,6 @@ CLI优化的完整回归记录为 **111项通过**，最终偏好补充测试3�
 
 v0.3开发验收记录为 **95项测试通过**，其中65项既有回归、30项新增。见[验收记录及原始证据](docs/validation/v0.3/README.md)。记录中的实际ADK／SQLite执行与离线决策、embedding／联网响应分别说明；该轮未验证真实外部服务端到端研究。
 
-RSS／官方数据渠道只预留统一发现与获取接口，订阅、轮询、自动监控、新行情／一致预期服务留待后续版本。SOTP、正常化盈利仍是独立原型。旧研究和历史验收保留当时结果；新版不会自动导入workspace旧材料。
+统一信源管道的 RSS／专用官方披露渠道仍是预留接口，订阅、轮询、自动监控和通用一致预期服务留待后续版本。信息命令扩展可按需查询行情与资料。SOTP、正常化盈利仍是独立原型。旧研究和历史验收保留当时结果；新版不会自动导入 workspace 旧材料。
+
+v0.3.3 新增 OSC 7501 终端状态、四类信息命令扩展及 PaddleOCR 任务 API。版本检查与实际验证边界见[v0.3.3 记录](docs/validation/v0.3.3/README.md)。

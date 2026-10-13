@@ -1,0 +1,35 @@
+{
+  "description": "东方财富妙想金融资讯搜索：按 query 检索新闻、研报、公告或政策；原始结果需继续核验。",
+  "command": [
+    ".venv/bin/python",
+    "-m",
+    "yantra.information",
+    "eastmoney"
+  ],
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2000
+      }
+    },
+    "required": [
+      "query"
+    ],
+    "additionalProperties": false
+  },
+  "env_refs": {
+    "EASTMONEY_APIKEY": "EASTMONEY_APIKEY"
+  },
+  "roles": [
+    "finance",
+    "thesis",
+    "verification"
+  ],
+  "timeout_seconds": 60,
+  "cost_cny": 0,
+  "cost_kind": "service",
+  "enabled": false
+}

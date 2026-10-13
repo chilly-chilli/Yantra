@@ -1,0 +1,25 @@
+{
+  "description": "觅知API聚合的财联社全部实时电报。无参数；第三方转发来源，事件结论需查原文核验。",
+  "command": [
+    ".venv/bin/python",
+    "-m",
+    "yantra.information",
+    "cls"
+  ],
+  "input_schema": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  },
+  "env_refs": {},
+  "roles": [
+    "finance",
+    "thesis",
+    "verification"
+  ],
+  "timeout_seconds": 60,
+  "cost_cny": 0,
+  "cost_kind": "service",
+  "enabled": true
+}

@@ -1,6 +1,6 @@
 # 架构说明
 
-适用版本：0.3.1。文档入口见[索引](README.md)。
+适用版本：0.3.3。文档入口见[索引](README.md)。
 
 `Engine` 保留 v0.1 固定材料执行保障，`RawEngine` 在同一控制器、Pydantic 合约及 ADK 执行路径上增加原始材料研究。`RawBackend` 通过原有 `LiteLlm` 作单次结构化决策；没有共享聊天历史，也没有隐藏工具循环。实际安装 ADK 2.11.0 的 `Runner`、`LlmAgent`、Session、`ToolContext`、原生工具事件及回调用于执行。未升级 ADK 或改用另一套 Agent 平台。
 
@@ -36,8 +36,10 @@ flowchart TD
 ## 模块与状态
 
 - `configuration.py`：项目能力配置、原子写入、环境变量引用与扩展响应脱敏。CLI 提供 `configure`、`models`、`extensions` 的交互及脚本入口。
-- `models.py`：LLM／OCR 配置和选择；兼容 API LLM、Tesseract、视觉 OCR 及 JSON OCR 命令。OCR 在初始解析与后续获取中沿用所选适配器，模型 OCR 共用费用账本。
+- `models.py`：LLM／OCR 配置和选择；兼容 API LLM、Tesseract、视觉 OCR、JSON OCR 命令及 `paddle_api.py` 的异步任务适配。OCR 在初始解析与后续获取中沿用所选适配器，模型 OCR 共用费用账本。
 - `extensions.py`：技能及资源复制、MCP SDK 连接与工具发现、命令工具执行、参数 schema、角色授权和运行快照。扩展原响应作为来源凭证保存；不是确定性财务计算凭证。
+- `terminal_status.py`：仅在 CLI stderr 终端上报告 OSC 7501 状态；不改变引擎业务状态、退出码或 JSON 响应。
+- `information.py`：扶摇、东方财富、AKShare 与 98dou 的只读 JSON 命令工具；按既有扩展入口注册，配置见[信息来源](INFORMATION_SOURCES.md)。
 - `knowledge/`：SQLite正式记录、不可变修订、来源字节、可恢复文件提交、核验内容哈希、基准版本CAS、固定引用、FTS5／本地向量及明确要求。`runtime.py`仅由现有控制器管理归档、独立核验和提交。
 - `sources.py`：发现与获取分离的统一合约；现有web_search使用同一入口，支持不透明cursor／checkpoint存储，无新信源服务或订阅调度。
 - `materials.py`：原始字节、格式解析、来源日期依据、原文 anchors、公开发现与获取；目录自动建立内部 index，不要求用户准备 manifest。

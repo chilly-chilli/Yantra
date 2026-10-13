@@ -22,7 +22,7 @@ from .schemas import Contract, Pricing
 
 class ModelProfile(Contract):
     kind: Literal["llm", "ocr", "embedding"]
-    provider: Literal["openai-compatible", "tesseract", "vision", "command"]
+    provider: Literal["openai-compatible", "tesseract", "vision", "command", "paddleocr-api"]
     model_id: str = ""
     base_url: str = ""
     api_key_env: str = "MODEL_API_KEY"
@@ -42,8 +42,8 @@ class ModelProfile(Contract):
         if self.kind in {"llm", "embedding"} and self.provider != "openai-compatible":
             raise ValueError("LLM/embedding 使用 openai-compatible 适配器")
         if self.kind == "ocr" and self.provider == "openai-compatible":
-            raise ValueError("OCR 请选择 tesseract、vision 或 command")
-        if self.provider in {"openai-compatible", "vision"}:
+            raise ValueError("OCR 请选择 tesseract、vision、command 或 paddleocr-api")
+        if self.provider in {"openai-compatible", "vision", "paddleocr-api"}:
             url = urlparse(self.base_url)
             if not self.model_id or url.scheme not in {"http", "https"} or not url.hostname or url.username or url.password or url.query:
                 raise ValueError("模型需要 model_id 及不含凭据的 HTTP(S) base_url")
@@ -53,6 +53,8 @@ class ModelProfile(Contract):
             raise ValueError("视觉 OCR 需配置单价与供应商声明的单图 token 上界")
         if self.provider == "command" and not self.command:
             raise ValueError("command OCR 需提供命令参数数组")
+        if self.provider == "paddleocr-api" and not (self.cost_source and self.cost_as_of):
+            raise ValueError("PaddleOCR API 需声明单次图像费用上界的来源和日期，包括免费配额")
         if self.call_cost_cny and not (self.cost_source and self.cost_as_of):
             raise ValueError("收费 OCR 需声明费用上界的来源和日期")
         return self
@@ -172,6 +174,22 @@ class OCRRecognizer:
         engine, profile = self.engine, self.profile
         if engine.state["budget"]["model_calls"] >= engine.state["limits"]["max_models"]:
             raise ValueError("模型调用预算耗尽")
+        if profile["provider"] == "paddleocr-api":
+            from .paddle_api import recognize
+            stream = io.BytesIO(); image.save(stream, format="PNG")
+            # Resolve credentials before reserving a job or recording an attempted call.
+            values = environment_values({"api_key": profile["api_key_env"]})
+            if values["api_key"].startswith("YOUR_"):
+                raise ValueError(f"请填写环境变量 {profile['api_key_env']} 的真实令牌")
+            receipt = engine.run_budget.reserve_fixed(profile["call_cost_cny"], "ocr_paddle_api",
+                {"source": profile["cost_source"], "as_of": profile["cost_as_of"]})
+            engine.state["budget"]["model_calls"] += 1
+            engine._save()
+            try:
+                return await recognize(stream.getvalue(), profile, values["api_key"], image.size,
+                    min(timeout, engine.run_budget.remaining()), engine.run_budget.check)
+            finally:
+                engine.run_budget.settle(receipt, None)
         if profile["provider"] == "command":
             stream = io.BytesIO(); image.save(stream, format="PNG")
             import base64
@@ -200,6 +218,11 @@ class OCRRecognizer:
 
 
 async def check_model(profile):
+    if profile["provider"] == "paddleocr-api":
+        token = os.getenv(profile["api_key_env"], "")
+        return {"ready": bool(token) and not token.startswith("YOUR_"), "provider": "paddleocr-api",
+                "check": "credential_presence_only", "live_api_verified": False, "api_key_env": profile["api_key_env"],
+                "message": "仅检查本地凭据配置；未提交 OCR 任务或验证服务端令牌"}
     if profile["provider"] == "tesseract":
         import pytesseract
         languages=pytesseract.get_languages(config=tesseract_config(profile))
@@ -235,8 +258,14 @@ def interactive_models(catalog):
             catalog.select(kind,name); print("已保存选择。")
         elif action == "add":
             name=ask("配置名称"); kind=ask("类型 llm/ocr/embedding", "llm")
-            provider="openai-compatible" if kind in {"llm", "embedding"} else ask("OCR 适配器 tesseract/vision/command", "tesseract")
+            provider="openai-compatible" if kind in {"llm", "embedding"} else ask("OCR 适配器 tesseract/vision/command/paddleocr-api", "tesseract")
             data={"kind":kind,"provider":provider}
+            if provider == "paddleocr-api":
+                data.update(model_id=ask("模型 ID", "PaddleOCR-VL-1.6"),
+                    base_url=ask("异步 jobs URL", "https://paddleocr.aistudio-app.com/api/v2/ocr/jobs"),
+                    api_key_env=ask("令牌环境变量名", "PADDLEOCR_API_TOKEN"),
+                    call_cost_cny=float(ask("单次图像人民币费用上界（免费配额填 0）")),
+                    cost_source=ask("费用上界／免费配额来源"), cost_as_of=ask("核对日期 YYYY-MM-DD"))
             if provider in {"openai-compatible","vision"}:
                 data.update(model_id=ask("模型 ID"),base_url=ask("API base URL"),api_key_env=ask("密钥环境变量名", "MODEL_API_KEY"))
                 data["pricing"]={"input_per_million":float(ask("每百万输入 tokens 人民币单价")),"output_per_million":float(ask("每百万输出 tokens 人民币单价")),"source":ask("单价来源"),"as_of":ask("单价日期 YYYY-MM-DD")}

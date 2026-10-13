@@ -1,0 +1,47 @@
+test_two_sessions_reuse_verified_fact_not_historical_conclusion (test_knowledge.KnowledgeTests.test_two_sessions_reuse_verified_fact_not_historical_conclusion) ... ok
+test_two_actual_adk_sessions_reuse_compare_and_replay_fixed_revisions (test_knowledge_runtime.RuntimeKnowledgeTests.test_two_actual_adk_sessions_reuse_compare_and_replay_fixed_revisions) ... App "yantra" can transfer between agents but has no context_cache_config. Every transfer swaps the system instruction and the tool set, so the request prefix changes and the whole prompt is re-sent uncached after each transfer. Set context_cache_config on the app to give each agent its own cache.
+Executing <Task pending name='Task-2' coro=<RuntimeKnowledgeTests.test_two_actual_adk_sessions_reuse_compare_and_replay_fixed_revisions() running at /Users/chillychili/Yantra/tests/test_knowledge_runtime.py:68> wait_for=<Future pending cb=[Task.task_wakeup()] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:449> cb=[_run_until_complete_cb() at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:182] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/runners.py:100> took 0.425 seconds
+/Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/tools/transfer_to_agent_tool.py:106: UserWarning: [EXPERIMENTAL] feature FeatureName.JSON_SCHEMA_FOR_FUNC_DECL is enabled.
+  function_decl = super()._get_declaration()
+Executing <Task pending name='Task-6' coro=<Context._run_node_standalone() running at /Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/agents/context.py:886> wait_for=<_GatheringFuture pending cb=[Task.task_wakeup()] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/tasks.py:712> cb=[Task.task_wakeup()] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/tasks.py:420> took 0.945 seconds
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_6706496d5655 and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_6706496d5655 and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Executing <Task pending name='Task-11' coro=<run_node_async.<locals>._run.<locals>._drive_root_node() running at /Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/workflow/_node_runner_utils.py:250> wait_for=<Future pending cb=[Task.task_wakeup()] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:449> created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/tasks.py:420> took 0.187 seconds
+Skipping missing token usage metadata for agent child_task_78be6de81ae3 and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_78be6de81ae3 and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent thesis_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent valuation_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent verification_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent verification_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent yantra and model yantra_research_controller
+Skipping missing token usage metadata for agent yantra and model yantra_research_controller
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_ef5b692802d2 and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_ef5b692802d2 and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_632fb0d0019f and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_632fb0d0019f and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent thesis_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent valuation_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent verification_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent verification_worker and model yantra_budgeted_decision_backend
+Executing <Task finished name='Task-180' coro=<_execute_single_prepared_call_async() done, defined at /Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/flows/llm_flows/tools/_caller.py:912> result=Event(model_v...907405.000693) created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/tasks.py:420> took 0.147 seconds
+Skipping missing token usage metadata for agent yantra and model yantra_research_controller
+Skipping missing token usage metadata for agent yantra and model yantra_research_controller
+Executing <Task finished name='Task-2' coro=<RuntimeKnowledgeTests.test_two_actual_adk_sessions_reuse_compare_and_replay_fixed_revisions() done, defined at /Users/chillychili/Yantra/tests/test_knowledge_runtime.py:67> result=None created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/runners.py:100> took 0.108 seconds
+ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 3.872s
+
+OK
