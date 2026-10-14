@@ -50,18 +50,26 @@ class Research(Contract):
     topics: list[str] = Field(default_factory=list)
 
 
+class SafetyMarginSelection(Contract):
+    ratio: float = Field(ge=0, lt=1, strict=True)
+    rationale: str = Field(min_length=1)
+    benchmark: Literal["base_per_share_value"] = "base_per_share_value"
+    evidence_refs: list[str] = Field(default_factory=list)
+
+
 class ModelAssumptions(Contract):
     model: ValuationMethod = "dcf"  # Missing identity in historical snapshots means legacy DCF.
     version: int = Field(default=1, ge=1)
     confirmed: bool = False
     parameters: dict[str, Any] = Field(default_factory=dict)
     basis: dict[str, Any] = Field(default_factory=dict)
-    authorization_source: Literal["none", "user", "controller", "provisional"] = "none"
+    authorization_source: Literal["none", "user", "controller", "provisional", "default_policy"] = "none"
     authorization_version: int | None = None
+    safety_margin: SafetyMarginSelection | None = None
 
     @property
     def calculation_permitted(self):
-        return self.confirmed or self.authorization_source == "provisional"
+        return self.confirmed or self.authorization_source in {"provisional", "default_policy"}
 
 
 class Assumptions(ModelAssumptions):
@@ -69,13 +77,13 @@ class Assumptions(ModelAssumptions):
 
 
 class AutonomyAuthorization(Contract):
-    status: Literal["granted", "refused"]
+    status: Literal["granted", "refused", "unspecified"]
     scope: list[ChoiceKind]
 
     @model_validator(mode="after")
     def explicit_scope(self):
-        if len(set(self.scope)) != len(self.scope) or (self.status == "refused" and self.scope) or (self.status == "granted" and not self.scope):
-            raise ValueError("grant requires an explicit scope; refusal requires an empty scope")
+        if len(set(self.scope)) != len(self.scope) or (self.status in {"refused", "unspecified"} and self.scope) or (self.status == "granted" and not self.scope):
+            raise ValueError("grant requires an explicit scope; refusal or unspecified requires an empty scope")
         return self
 
 
@@ -87,6 +95,12 @@ class ResearchSetup(Contract):
     questions: list[str] = Field(default_factory=list)
     topics: list[str] = Field(default_factory=list)
     notes: str = ""
+
+    @model_validator(mode="after")
+    def explicit_authorization(self):
+        if self.authorization.status == "unspecified":
+            raise ValueError("setup requires an explicit grant or refusal")
+        return self
 
 
 class Task(Contract):
@@ -392,6 +406,7 @@ class ModelProposal(Contract):
 
 
 class ValuationProposal(ModelProposal):
+    safety_margin: SafetyMarginSelection | None = None
     auxiliary_models: list[ModelProposal] = Field(default_factory=list)
     unused_models: dict[ValuationMethod, str] = Field(default_factory=dict)
 
@@ -473,12 +488,19 @@ class ValuationArguments(Contract):
     basis: dict[str, Any] = Field(default_factory=dict)
 
 
+class ConflictAssessment(Contract):
+    conflict_hash: str = Field(min_length=1)
+    reason: str = Field(min_length=1)
+    evidence_refs: list[str] = Field(min_length=1)
+
+
 class CheckArguments(Contract):
     results: list[dict[str, Any]] | dict[str, Any]
     assumptions: Assumptions
     research: Research | None = None
     report: dict[str, Any] | None = None
     user_overrides: list[str] = Field(default_factory=list)
+    conflict_assessments: list[ConflictAssessment] = Field(default_factory=list)
 
 
 class MultipleObservation(Contract):

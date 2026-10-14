@@ -44,10 +44,16 @@ class RuntimeTests(unittest.IsolatedAsyncioTestCase):
             inputs = test_materials(Path(temporary) / "inputs")
             backend = RealModelBackend("test", "https://unused.invalid/v1", "test-only")
             with patch.dict(os.environ, {"YANTRA_RUNS_DIR": str(Path(temporary) / "runs"),
-                "YANTRA_MODE": "real-model", "YANTRA_MATERIALS_DIR": str(inputs)}), \
-                    patch.object(RealModelBackend, "from_env", return_value=backend):
+                "YANTRA_MODE": "real-model", "YANTRA_MATERIALS_DIR": str(inputs),
+                "YANTRA_CONFIG": str(Path(temporary) / "config.json"),
+                "YANTRA_KNOWLEDGE_DIR": str(Path(temporary) / "knowledge"),
+                "MODEL_INPUT_CNY_PER_MILLION": "1", "MODEL_OUTPUT_CNY_PER_MILLION": "2",
+                "MODEL_PRICE_SOURCE": "synthetic-price", "MODEL_PRICE_AS_OF": "2026-10-14"}, clear=True), \
+                    patch.object(RealModelBackend, "from_env", return_value=backend), \
+                    patch("socket.socket.connect", side_effect=AssertionError("unmocked external network")):
                 engine = create_adk_engine()
                 self.assertEqual(engine.state["mode"], "real-model")
+                self.assertTrue(engine.state["raw_materials"])
                 self.assertIs(engine.backend, backend)
                 self.assertEqual(create_adk_engine(run_id=engine.state["run_id"]).state["mode"], "real-model")
 

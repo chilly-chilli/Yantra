@@ -91,7 +91,7 @@ def load_json_file(path, field):
 
 
 def load_json_inputs(args):
-    for name in ("limits", "pricing", "parameters", "changes", "budget"):
+    for name in ("limits", "pricing", "parameters", "changes", "budget", "authorization"):
         path = getattr(args, name + "_file", None)
         if path is not None:
             setattr(args, name, load_json_file(path, "--" + name + "-file"))
@@ -106,7 +106,7 @@ def command_name(args=None, argv=()):
     if "--version" in argv:
         return "version"
     # Only known command tokens are copied into the error envelope.
-    commands = {"start", "resume", "status", "compare", "replay", "cancel", "configure",
+    commands = {"start", "demo", "resume", "status", "compare", "replay", "cancel", "configure",
                 "models", "extensions", "knowledge", "preferences"}
     return next((value for value in argv if value in commands), "yantra")
 
@@ -127,6 +127,11 @@ def exception_error(exc):
     from pydantic import ValidationError
     if isinstance(exc, CLIError):
         return exc
+    from .backend import BackendError
+    if isinstance(exc, BackendError):
+        if exc.code == "configuration":
+            return CLIError("model_configuration_required", "正式研究需配置模型及凭据：运行 configure，或设置 MODEL_ID、MODEL_BASE_URL、MODEL_API_KEY 并用 --env-file 加载", field="model")
+        return CLIError("model_service_error", "模型服务调用未完成；请检查保存状态及已核算预算（服务响应未输出）", retryable=False, exit_code=1)
     if isinstance(exc, ValidationError):
         fields = [{"field": ".".join(map(str, e["loc"])), "reason": e["type"]} for e in exc.errors()]
         return CLIError("validation_error", "输入字段未通过校验", details={"fields": fields})
@@ -137,7 +142,18 @@ def exception_error(exc):
     if isinstance(exc, json.JSONDecodeError):
         return CLIError("invalid_json", "保存的JSON数据无效")
     if isinstance(exc, ValueError):
+        credential = re.fullmatch(r"缺少环境变量 ([A-Za-z_][A-Za-z0-9_]*)；请配置后用 --env-file 加载", str(exc))
+        if credential:
+            return CLIError("model_credentials_required", "所选配置缺少凭据环境变量 " + credential.group(1) + "；请配置后用 --env-file 加载", field="--env-file")
+        if str(exc).startswith(("未注册 llm 模型配置：", "未注册 ocr 模型配置：", "未注册 embedding 模型配置：")):
+            return CLIError("model_configuration_invalid", "所选模型配置不存在或类型不符；请用 models list 检查并重新选择", field="model")
         known = {
+            "真实研究需配置人民币输入/输出单价、价格来源和日期（或 --pricing JSON）；不使用固定每调用费用":
+                ("model_pricing_required", "正式研究须配置模型单价及其来源和日期：设置 MODEL_INPUT_CNY_PER_MILLION、MODEL_OUTPUT_CNY_PER_MILLION、MODEL_PRICE_SOURCE、MODEL_PRICE_AS_OF，或提供 --pricing JSON", "--pricing", False),
+            "identity selection not found or ambiguous":
+                ("invalid_identity_choice", "候选选择不存在或有歧义；请使用返回的候选ID或序号", "--select-identity", False),
+            "identity selection required":
+                ("identity_choice_required", "当前等待证券选择；请提交候选ID、序号或唯一证券代码", "--select-identity", False),
             "run is being executed by another process": ("run_busy", "另一进程正在执行此运行", None, True),
             "no proposal available to confirm": ("invalid_run_state", "运行没有可确认的参数提案", "--decision", False),
             "run is not awaiting confirmation": ("invalid_run_state", "运行未处于等待确认状态", "--decision", False),

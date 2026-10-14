@@ -46,6 +46,9 @@ def controller_projection(state, task_id=None):
             "actual_bill_available": False, "deadline": state.get("deadline"),
             "budget": {key: state["budget"][key] for key in keys if numeric(state["budget"].get(key))},
             "model_receipts": receipts, "preparation_searches": searches,
+            "identity": {key: state.get("research", {}).get(key) for key in
+                         ("market", "exchange", "security_code", "trading_currency", "share_class")},
+            "pending_choice_kind": (state.get("pending_user") or {}).get("kind"),
             "preference_version": state.get("preference_snapshot", {}).get("version"),
             "choices": [{k: choice.get(k) for k in ("id", "kind", "status", "preference_version", "assumptions_version")}
                         for choice in state.get("choices", [])] if task_id in {None, "main"} else []}

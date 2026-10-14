@@ -1,0 +1,197 @@
+{
+  "description": "Yahoo Finance，通过非官方 yfinance 访问：指定证券报价、未调整历史行情及财务三表。保留完整安全返回与字段，聚合财务须定位原始披露；仅个人研究使用。",
+  "command": [
+    ".venv/bin/python",
+    "-m",
+    "yantra.information",
+    "yahoo"
+  ],
+  "input_schema": {
+    "type": "object",
+    "oneOf": [
+      {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "const": "quote"
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "symbol": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9.\\-]{0,19}$"
+              }
+            },
+            "required": [
+              "symbol"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "operation",
+          "parameters"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "const": "history"
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "symbol": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9.\\-]{0,19}$"
+              },
+              "start": {
+                "type": "string",
+                "format": "date"
+              },
+              "end": {
+                "type": "string",
+                "format": "date"
+              },
+              "interval": {
+                "enum": [
+                  "1d",
+                  "1wk",
+                  "1mo"
+                ]
+              },
+              "auto_adjust": {
+                "const": false
+              },
+              "back_adjust": {
+                "const": false
+              }
+            },
+            "required": [
+              "symbol",
+              "start",
+              "end"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "operation",
+          "parameters"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "const": "income-statement"
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "symbol": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9.\\-]{0,19}$"
+              },
+              "frequency": {
+                "enum": [
+                  "yearly",
+                  "quarterly"
+                ]
+              }
+            },
+            "required": [
+              "symbol"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "operation",
+          "parameters"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "const": "balance-sheet"
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "symbol": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9.\\-]{0,19}$"
+              },
+              "frequency": {
+                "enum": [
+                  "yearly",
+                  "quarterly"
+                ]
+              }
+            },
+            "required": [
+              "symbol"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "operation",
+          "parameters"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "const": "cash-flow"
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "symbol": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9.\\-]{0,19}$"
+              },
+              "frequency": {
+                "enum": [
+                  "yearly",
+                  "quarterly"
+                ]
+              }
+            },
+            "required": [
+              "symbol"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "operation",
+          "parameters"
+        ],
+        "additionalProperties": false
+      }
+    ]
+  },
+  "env_refs": {},
+  "roles": [
+    "finance",
+    "thesis",
+    "verification"
+  ],
+  "timeout_seconds": 60,
+  "cost_cny": 0,
+  "cost_kind": "service",
+  "enabled": false,
+  "information_provider": "yahoo",
+  "cost_status": "unknown"
+}

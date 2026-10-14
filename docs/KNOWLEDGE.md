@@ -1,10 +1,10 @@
 # 检索、共享知识与长期要求
 
-适用版本：0.4.0（Unreleased）。通用安装与研究操作见[使用指南](USAGE.md)，模型与扩展配置见[能力配置](CAPABILITIES.md)。ADK为2.11.0。既有估值方法、授权、否决、费用预留及恢复语义保留，历史运行不迁移、不扫描、不自动导入。新库只收集新版session明确输入和实际取得的资料。
+适用版本：0.4.2（Unreleased）。通用安装与研究操作见[使用指南](USAGE.md)，模型与扩展配置见[能力配置](CAPABILITIES.md)。ADK为2.11.0。既有估值方法、授权、否决、费用预留及恢复语义保留，历史运行不迁移、不扫描、不自动导入。新库只收集新版session明确输入和实际取得的资料。
 
 ## 正式数据与派生索引
 
-CLI默认`.yantra/knowledge/`；`start --knowledge-dir PATH`可指定，API默认`<runs-dir>/knowledge/`。共享库不同于每次运行的`runs/run-ID/`工作档案。公司身份由证券身份或明确company ID关联，不能仅用同名公司合并；市场、交易所、证券代码和股份类别属于单独security ID。
+CLI默认`.yantra/knowledge/`；`start --knowledge-dir PATH`可指定，ADK/API入口使用 `YANTRA_KNOWLEDGE_DIR` 或同一 `.yantra/knowledge/` 默认路径。共享库不同于每次运行的 `runs/run-ID/` 工作档案。公司身份由证券身份或明确company ID关联，不能仅用同名公司合并；市场、交易所、证券代码和股份类别属于单独security ID。
 
 ```text
 .yantra/knowledge/
@@ -127,15 +127,17 @@ ADK入口支持`/memories`、`/forget ID`及：
 
 元数据包括adapter/source ID、external ID、原URL／canonical URL、标题、发布时间及依据、内容类型、原内容引用、获取状态及失败。web_search的DDGS发现与HTTP/primp原文获取已接入；离线适配器测试同一入口。不透明cursor/checkpoint保存在SQLite，未来分页／RSS进度可复用。
 
-此统一信源管道尚未接入 RSS/Atom 订阅、轮询、自动唤醒、专用官方披露或第三方数据服务；通用插件平台未实现。摘要及接口元数据不能取得原文证据资格，多渠道同一 hash 仍是同一份证据。
+此统一信源管道未接入RSS/Atom订阅、轮询、自动唤醒或全市场专用披露服务；通用插件平台未实现。信息命令的完整响应沿用来源字节与JSON定位保存，搜索返回的原文URL通过 `ingest_information` 进入既有网页获取路径。摘要及仅证明获取行为的元数据不能取得数值原文依据资格，多渠道同一hash仍是同一份证据。
 
-v0.3.3 的扶摇、东方财富、AKShare 与 98dou 信息工具通过[命令扩展](INFORMATION_SOURCES.md)接入，保存响应凭证；未接入此处预留的订阅／checkpoint 调度，也不因搜索摘要而获得原文证据资格。
+扶摇、东方财富、AKShare、98dou及新增Tushare、Tavily、Yahoo信息工具通过[命令扩展](INFORMATION_SOURCES.md)接入，保存响应凭证；未接入此处预留的订阅／checkpoint调度。聚合财务仍需定位原始披露，不因供应商或工具数量而增加独立原始依据。
 
 ## 首次设置与自主选择授权
 
-新建原始材料研究（包括通过 ADK/API 启动）必须先在同一知识库执行 `preferences setup`。固定虚构演示及历史运行保持原契约。设置复用 `preferences` 版本表，不新增用户画像；未选择授权状态时返回 `research_setup_required`，在材料获取或模型调用之前结束。
+新正式研究（包括ADK/API）可直接使用本次默认自主策略，首次偏好问卷不阻塞启动。未保存设置时 `preference_snapshot` 为 `id=null/version=0/active=false/source=run_default`，其 `authorization.status=unspecified/scope=[]`；研究选择使用 `default_policy`，不会创建preferences行、伪造用户确认或授予永久权限。固定虚构演示及历史运行保持原契约；旧 `setup_snapshot` 的缺设置错误继续保留用于历史接口。
 
-以下是明确拒绝自主调整、仍默认自主交付的可执行设置例子：
+默认策略的估值假设仍保存`confirmed=false`，其`authorization_source=default_policy`单独允许计算；通过来源、数学及独立核验时报告的`valuation_status=default_policy`。它与用户已确认的`confirmed`状态及拒绝／手动的`provisional`状态分别展示。
+
+`preferences setup` 是可选的明确长期设置。以下是拒绝自主选择、以暂定情景继续可开展研究的可执行例子：
 
 ```sh
 .venv/bin/python -m yantra preferences --knowledge-dir .yantra/knowledge setup \
@@ -143,10 +145,10 @@ v0.3.3 的扶摇、东方财富、AKShare 与 98dou 信息工具通过[命令扩
 .venv/bin/python -m yantra preferences --knowledge-dir .yantra/knowledge list --history
 ```
 
-`authorization.status` 必须为 `granted` 或 `refused`。拒绝的 `scope` 必须为空；授予的范围必须显式列出，可选 `perspective / models / assumptions / risk / disconfirmation / tracking / expectations`。正式自主估值同时需要 `models` 和 `assumptions`，每个模型再通过来源及口径硬门槛。单家公司预测参数不作为永久默认。`confirmation_mode=manual` 表示希望逐节点选择，未回复仍采用暂定情景交付。
+用户显式setup及本次覆盖的 `authorization.status` 必须为 `granted/refused`；`unspecified` 仅是无设置时的运行快照，不能提交为已确认设置。拒绝的scope必须为空；授予范围显式列出，可选 `perspective/models/assumptions/risk/disconfirmation/tracking/expectations`。显式自主估值授权须包含models和assumptions，每个模型仍通过来源和口径硬门槛。`default_policy` 是独立的本次策略来源，不记成granted。单家公司预测参数不作为永久默认；manual未回复、已有明确拒绝或撤销均以 `provisional/confirmed=false` 交付，价格比较保持条件性，详情见[估值说明](VALUATION.md#首轮模型选择与暂定情景)。
 
 再次执行 setup 形成 `research-setup` 新版本；明确拒绝或 `preferences forget research-setup` 撤销长期授权并保留历史。每次运行保存 `preference_snapshot`、实际 `fixed_preferences` 和应用记录。普通偏好修改不会静默改变新运行的固定版本；授权版本已修改或撤销时，旧版本不能继续批准新选择，后续计算降为暂定并失效旧估值、重新核验。历史报告保留当时的授权状态。
 
-`start --authorization '{"status":"refused","scope":[]}'`（或 `--authorization-file`）仅覆盖本次；显式授予也使用相同对象形状，不改长期版本。正常恢复沿用固定版本与原预算。研究视角、模型及假设、风险、反证、跟踪和市场来源的默认建议、备选、理由、影响及 `controller / user / provisional` 状态在报告和 CLI `status` 的 `choices` 中可审阅。
+`start --authorization '{"status":"refused","scope":[]}'`（或 `--authorization-file`）仅覆盖本次；显式授予也使用相同对象形状，不改长期版本。正常恢复沿用固定版本与原预算。研究视角、模型及假设、风险、反证、跟踪和市场来源的默认建议、备选、理由、影响及 `default_policy/controller/user/provisional` 状态在报告和CLI status的choices中可审阅。证券身份待选择属于研究状态，由同一run保存，不写入长期授权；选择方法见[使用指南](USAGE.md#原始材料研究)。
 
-ADK 首次设置使用 `/setup {完整ResearchSetup对象}`，在启动研究前提交；`/memories` 同时列出设置和其他长期要求。API 中的 `/setup` 和普通研究操作共用已有 `execute_research` 原生入口，不引入另一套 Session 或账本。
+ADK可用 `/setup {完整ResearchSetup对象}` 明确保存长期设置，无须在每次研究前提交；`/memories`列出实际保存的设置和长期要求，空首次策略不冒充已保存条目。API的setup、普通研究和 `/select-identity` 共用已有 `execute_research` 原生入口，不引入另一套Session或账本。

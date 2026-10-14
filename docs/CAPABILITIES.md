@@ -1,8 +1,8 @@
 # 模型与扩展配置
 
-适用版本：0.4.0（Unreleased）。研究启动见[使用指南](USAGE.md)，embedding计费、索引与降级见[知识模块](KNOWLEDGE.md#模型费用和重建)。
+适用版本：0.4.2（Unreleased）。研究启动见[使用指南](USAGE.md)，embedding计费、索引与降级见[知识模块](KNOWLEDGE.md#模型费用和重建)。
 
-这两个模块通过 CLI 与用户交互，并把已选择的能力接入 `RawEngine` 原始材料研究。运行配置位于 `.yantra/config.json`，可用环境变量 `YANTRA_CONFIG` 或命令前的 `--config /绝对路径/config.json` 指定另一个配置文件。
+这两个模块通过CLI配置能力，并把已选择的能力接入 `RawEngine` 正式研究；初始材料可为空。运行配置位于 `.yantra/config.json`，可用环境变量 `YANTRA_CONFIG` 或命令前的 `--config /绝对路径/config.json` 指定另一个配置文件。正式start缺模型、凭据或有依据的定价时返回可操作错误，不回退虚构演示。
 
 ## 交互与命令
 
@@ -135,7 +135,7 @@ stdio 的 `command` 是参数数组，`env_refs` 可传入服务要求的变量�
 
 tool 描述包括 `description`、`command`、`input_schema`、roles 和可选 env_refs。输入经 JSON Schema 校验后以一个 JSON 对象写入 stdin；命令向 stdout 输出一个 JSON 对象，日志应写 stderr。以参数数组启动，不通过 shell 插值；不是对用户程序的进程沙箱。最多接收 1 MB 输出，超时会终止所启动的命令进程组。只导入你打算授权执行的程序和服务。
 
-扩展 timeout 默认 30 秒，至多 120 秒，执行时还受任务及全局剩余时间约束。工具调用计入原有工具限额；`cost_kind=model` 的扩展额外计入模型调用次数及共享人民币费用账本。`cost_cny` 是每次调用声明上界，非零须有 cost_source／cost_as_of。`cost_kind=service` 的声明费用单独统计，不冒充供应商账单。即使调用失败，已预留的费用也保留。
+扩展timeout默认30秒，至多120秒，执行时还受任务及全局剩余时间约束。工具调用计入原有工具限额；`cost_kind=model` 的扩展额外计入模型调用次数及共享人民币费用账本。`cost_cny` 是每次调用声明上界，非零须有 `cost_source/cost_as_of`。新信息工具还要求 `cost_status=known`，零费用也必须有已核实的来源和日期；`unknown` 为未就绪，不表示免费。`cost_kind=service` 的声明费用单独统计，不冒充供应商账单。即使调用失败，已预留的费用也保留。
 
 成功的 MCP／tool JSON 响应经所引用凭据脱敏后保存为原始扩展来源，附哈希和引用位置；后续核验可检查返回内容。这里固定的是SDK响应结构的脱敏JSON字节，不是完整网络帧。保存调用凭证不等于第三方数据已被独立证实，也不产生估值计算凭证。接口不覆盖已有财务计算工具，扩展名会加命名空间。
 
@@ -143,7 +143,11 @@ tool 描述包括 `description`、`command`、`input_schema`、roles 和可选 e
 
 ## 信息获取扩展
 
-v0.3.3 提供扶摇 REST、东方财富妙想金融数据／资讯搜索直接 API、AKShare 查询和 98dou 财联社聚合工具，沿用 tools 的角色授权、超时和原始响应凭证。接口、Key 申请、可移植注册命令及费用声明见[信息来源配置](INFORMATION_SOURCES.md)。这些工具是命令扩展，妙想无需技能包；订阅／轮询仍未实现，第三方结果仍须独立核验。
+现有扶摇REST、东方财富妙想金融数据／资讯搜索、AKShare和98dou工具继续可用；v0.4.2补充Tushare直连、Tavily公开搜索、Yahoo Finance（yfinance）。它们沿用tools角色授权、冻结快照、超时、费用预留和原始响应保存，通过 `information_provider` 与实际需求关联；已注册的原有标准命令可识别来源，不另建供应商注册平台。
+
+三个新模板均 `enabled=false/cost_status=unknown`。注册、凭据变量、具体接口权限、费用确认和白名单见[信息来源配置](INFORMATION_SOURCES.md#本轮新增服务)。Tushare和Tavily分别需用户自己的 `TUSHARE_TOKEN/TAVILY_API_KEY`；Yahoo需可选 `yfinance==0.2.66`，本轮未安装或验证真实覆盖。就绪检查记录 `cost_unknown/credential_missing:变量/dependency_missing:yfinance`，单项缺失不阻塞其他已就绪来源。`extensions check tools` 仍只检查命令存在，不能证明账号权限或实时数据可用。
+
+自动准备过程只调用已启用、就绪且获finance授权的适用工具。搜索结果通过既有网页获取流程读取公告原文；查询行情要求证券、报价时间、币种和未复权属性明确。数据内容与访问方式分别记录，搜索、网页获取和已有知识检索是不同能力；HTTP/primp不等于交互浏览器。订阅、轮询及登录浏览器未实现，聚合财务仍须定位原始披露。
 
 ## 新建与恢复
 
@@ -155,12 +159,12 @@ v0.3.3 提供扶摇 REST、东方财富妙想金融数据／资讯搜索直接 A
 
 启动参数只覆盖当前研究，默认选择保存在项目配置中。`models select embedding 配置名`设置默认向量模型；`start --embedding 配置名`覆盖本次选择。模型端点、标识、单价、环境变量名、扩展描述和角色固定在 `state.json` 的 capabilities 中；技能文件及资源固定到运行目录。恢复沿用快照，即使用户改变默认模型或停用扩展；密钥值仍从恢复进程环境取得。修改默认模型／启停扩展仅影响新研究。实际命令程序、远端服务代码及模型权重没有冻结，离线 replay 不重复调用扩展或 OCR 模型。
 
-新建原始研究继续使用 2 小时总墙钟上限和 30 秒收尾预留；收费 OCR 与扩展模型不另起预算。v0.1 固定演示使用原工具集，新能力用于原始研究及 `YANTRA_RAW_MATERIALS` ADK 入口。
+新建正式研究继续使用2小时总墙钟上限和30秒收尾预留；收费OCR与扩展模型不另起预算。`start`及ADK/API默认使用正式配置，原始材料参数可省略；显式demo使用固定离线策略和原工具集。恢复保留历史模式和能力快照，迁移命令见[使用指南](USAGE.md#原始材料研究)。
 
 示例 LLM／vision 描述是待填写的本地端点模板，模型 ID、密钥、费用与图片上界必须按所用服务修改。示例 tool／MCP 描述使用当前工作目录 `/Users/chillychili/Yantra` 的绝对路径，移动项目后需调整。回传示例仅验证接入，不提供真实行情或研究数据。
 
 实现协议依据：[MCP 传输规范](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports)、[官方 Python SDK](https://github.com/modelcontextprotocol/python-sdk/tree/v1.x)。历史接入验证见 [v0.2.1 记录](validation/v0.2.1/README.md)。
 
-当前版本的验证范围见[v0.3验收](validation/v0.3/README.md)；模型列表探测和离线响应不等于真实推理验收。
+当前与历史验证范围见[验证索引](validation/README.md)；模型列表探测和离线响应不等于真实推理或信息服务验收。
 
-首轮投资逻辑整合在thesis角色增加只读确定性 `compare_expectations`，与已有valuation价格基准分开；输入、来源和预测差异保存计算凭证。没有新增收费服务、模型、PS、订阅或自动监控。权限、公式及报告契约见[估值说明](VALUATION.md#经营预测比较与清单)。
+thesis角色的只读确定性 `compare_expectations` 与valuation价格基准分开；输入、来源和预测差异保存计算凭证。新增信息适配器不会自动开户、启用未知费用服务或增加模型、订阅、自动监控。权限、公式及报告契约见[估值说明](VALUATION.md#经营预测比较与清单)。

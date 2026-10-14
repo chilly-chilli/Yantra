@@ -246,10 +246,19 @@ async def execute_research(tool_context: ToolContext) -> dict[str, Any]:
             if run_id:
                 require_session_scope(engine, tool_context)
                 decision = {"确认": "confirm", "拒绝": "reject", "取消": "cancel"}.get(message, message)
+                if (engine.state.get("pending_user") or {}).get("kind") == "identity" and (
+                    decision in {"confirm", "reject"} or message.startswith(("modify ", "修改 "))
+                ):
+                    raise ValueError("identity selection required")
                 if decision in {"confirm", "reject", "cancel"}:
                     await engine.respond(decision)
                 elif message.startswith("modify ") or message.startswith("修改 "):
                     await engine.respond("modify", json.loads(message.split(" ", 1)[1]))
+        if message.startswith(("/select-identity ", "select_identity ", "选择证券 ")):
+            require_session_scope(engine, tool_context)
+            if (engine.state.get("pending_user") or {}).get("kind") != "identity":
+                raise ValueError("identity selection not found or ambiguous")
+            await engine.select_identity(message.split(" ", 1)[1].strip())
         TraceStore(engine.directory).bind(tool_context.session)
         with execution_scope(engine, kind="entry"):
             state = await engine.advance()
@@ -258,19 +267,35 @@ async def execute_research(tool_context: ToolContext) -> dict[str, Any]:
             publish_outputs(engine)
     except (FileNotFoundError, ValueError, BackendError) as exc:
         # Do not expose provider messages, credentials or arbitrary file paths.
-        return {"status": "error", "error_code": getattr(exc, "code", type(exc).__name__), "message": (
-            "缺少本地研究材料，请设置 YANTRA_MATERIALS_DIR（含 manifest.json）。"
+        from .cli_contract import exception_error
+        safe = exception_error(exc)
+        if safe.error["code"] in {"model_pricing_required", "model_credentials_required", "model_configuration_invalid",
+                                  "model_configuration_required", "model_service_error", "identity_choice_required"}:
+            return {"status": "error", "error_code": safe.error["code"], "message": safe.error["message"]}
+        identity_error = str(exc) == "identity selection not found or ambiguous"
+        return {"status": "error", "error_code": "invalid_identity_choice" if identity_error else getattr(exc, "code", type(exc).__name__), "message": (
+            "候选选择不存在或有歧义；请使用返回的候选ID或序号。"
+            if identity_error else "本地研究文件不存在；请检查材料路径和已保存运行。离线演示须设置含虚构 manifest.json 的 YANTRA_MATERIALS_DIR。"
             if isinstance(exc, FileNotFoundError) else
-            "真实模型模式需配置 MODEL_ID、MODEL_BASE_URL、MODEL_API_KEY。"
-            if isinstance(exc, BackendError) else "首次研究前请用 /setup JSON记录偏好，明确选择授权或拒绝授权。"
+            "首次研究前请用 /setup JSON记录偏好，明确选择授权或拒绝授权。"
             if getattr(exc, "code", None) == "research_setup_required" else "研究配置或用户操作无效，请检查当前状态与参数。"
         )}
     snapshot = {key: state.get(key) for key in ("run_id", "status", "stage", "pending_user", "report")}
+    snapshot["research"] = state.get("research")
+    judgment = (state.get("report") or {}).get("投资结论摘要", {}).get("buy_judgment")
+    if state.get("raw_materials") and judgment is not None:
+        snapshot["buy_judgment"] = judgment
     if snapshot["status"] == "waiting":
-        snapshot["resume_instruction"] = (
-            '阅读假设后输入 confirm/确认、reject/拒绝、cancel/取消，'
-            '或 modify {"growth_rate":0.03} 修改并确认；未输入时持续等待。'
-        )
+        if (state.get("pending_user") or {}).get("kind") == "identity":
+            snapshot["resume_instruction"] = "输入 /select-identity 候选ID、从1起的序号或唯一证券代码；未选择时持续等待，保留原预算及截止。"
+            snapshot["next_actions"] = [{"action": "select_identity", "candidate_id": candidate["candidate_id"],
+                                          "message": "/select-identity " + candidate["candidate_id"]}
+                                         for candidate in state["pending_user"].get("candidates", [])]
+        else:
+            snapshot["resume_instruction"] = (
+                '阅读假设后输入 confirm/确认、reject/拒绝、cancel/取消，'
+                '或 modify {"growth_rate":0.03} 修改并确认；未输入时持续等待。'
+            )
     tool_context.state["run_id"] = state["run_id"]
     tool_context.state["status"] = state["status"]
     return snapshot

@@ -1,0 +1,78 @@
+{
+  "date": "2026-10-14",
+  "timezone": "Asia/Shanghai",
+  "version": "0.4.2",
+  "python": "3.12.6",
+  "google_adk": "2.11.0",
+  "scope": "controlled offline responses and actual native ADK/SQLite/localhost execution",
+  "checks": {
+    "final-regression": {
+      "tests": 265,
+      "elapsed_seconds": 222.35,
+      "status": "passed"
+    },
+    "information": {
+      "tests": 17,
+      "elapsed_seconds": 1.389,
+      "status": "passed"
+    },
+    "sources": {
+      "tests": 19,
+      "elapsed_seconds": 0.863,
+      "status": "passed"
+    },
+    "final-evidence": {
+      "tests": 9,
+      "elapsed_seconds": 0.075,
+      "status": "passed"
+    },
+    "final-investment": {
+      "tests": 23,
+      "elapsed_seconds": 23.333,
+      "status": "passed"
+    },
+    "final-formal": {
+      "tests": 7,
+      "elapsed_seconds": 18.143,
+      "status": "passed"
+    },
+    "final-judgment": {
+      "tests": 15,
+      "elapsed_seconds": 0.006,
+      "status": "passed"
+    },
+    "final-budget-legacy": {
+      "tests": 19,
+      "elapsed_seconds": 12.036,
+      "status": "passed"
+    },
+    "final-budget-formal": {
+      "tests": 7,
+      "elapsed_seconds": 17.712,
+      "status": "passed"
+    },
+    "delivery-formal-fixed": {
+      "tests": 7,
+      "elapsed_seconds": 17.602,
+      "status": "passed"
+    }
+  },
+  "external_provider_calls": 0,
+  "paid_model_calls": 0,
+  "live_generation": "not_executed",
+  "judge": "not_executed",
+  "yfinance_installed": false,
+  "push": "not_performed",
+  "corrected_failures": [
+    {
+      "scope": "information preparation task result closure",
+      "cause": "used run status completed instead of Result status complete",
+      "initial_tests": 7,
+      "initial_failures": 6,
+      "initial_errors": 4,
+      "resolution": "corrected literal and all 7 tests passed in 17.602 seconds",
+      "original_log_sha256": "d22cec485629a50a1c5cd9747621e78c40af6629be1dda2817bab84d793c1cc0",
+      "archive": "delivery-formal-initial-failure.log.gz"
+    }
+  ]
+}

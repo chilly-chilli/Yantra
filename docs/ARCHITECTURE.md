@@ -1,15 +1,17 @@
 # 架构说明
 
-适用版本：0.4.0（Unreleased）。文档入口见[索引](README.md)。
+适用版本：0.4.2（Unreleased）。文档入口见[索引](README.md)。
 
-`Engine` 保留 v0.1 固定材料执行保障，`RawEngine` 在同一控制器、Pydantic 合约及 ADK 执行路径上增加原始材料研究。`RawBackend` 通过原有 `LiteLlm` 作单次结构化决策；没有共享聊天历史，也没有隐藏工具循环。Unreleased 的 Worker 在自身 ADK 生命周期中调用一次 BaseLlm 请求，不再逐行动创建内部 Runner／Session；主协调、提取和独立审查仍采用隔离决策 Runner。实际安装 ADK 2.11.0 的 `Runner`、`LlmAgent`、Session、`ToolContext`、原生工具事件及回调用于执行。未升级 ADK 或改用另一套 Agent 平台。
+`start`及ADK/API默认进入 `RawEngine` 正式研究，初始材料可为空；显式demo使用 `Engine` 的固定离线策略，历史运行按原快照加载。两者复用现有公共控制器、Pydantic合约及ADK执行路径，未删除旧引擎。`RawBackend` 通过原有LiteLlm作单次结构化决策，没有共享聊天历史或隐藏工具循环。Worker在自身ADK生命周期中调用一次BaseLlm请求，不再逐行动创建内部Runner／Session；主协调、提取和独立审查仍采用隔离决策Runner。实际安装ADK 2.11.0的Runner、LlmAgent、Session、ToolContext、原生工具事件及回调用于执行；未升级ADK或改用另一套平台。
 
 ```mermaid
 flowchart TD
-  CLI[公司/代码 + 原始文件/目录/URL] --> Raw[RawEngine 控制器]
+  CLI[start 公司名称/证券 + 可选材料] --> Raw[RawEngine 控制器]
+  Demo[demo 固定虚构材料] --> Legacy[Engine 离线策略]
   Configure[CLI 模型/扩展配置] --> Snapshot[运行能力快照]
   Snapshot --> Raw
   ADK[标准 ADK 入口] --> Raw
+  Raw --> Identity[唯一身份继续/候选选择持久等待]
   Raw --> Ingest[格式解析/表格/OCR 原始定位]
   Raw --> Knowledge[共享知识：权限/截止/适用性/固定引用]
   Knowledge --> SQLite[正式SQLite修订、核验及关系]
@@ -27,10 +29,11 @@ flowchart TD
   Finance & Thesis & Value & Audit --> Extensions[获准的 MCP/JSON 命令工具]
   Extensions --> Sources
   Children --> Gate[第四层及越权禁止]
-  Value --> Auth[自主授权或人工明确确认]
+  Value --> Auth[本次默认策略/明确授权/暂定情景]
   Auth --> Calc[确定性计算及情景/敏感性]
   Audit --> Veto[独立否决 + 程序硬检查]
-  Veto --> Output[八部分备忘录/JSON/计算凭证/缺口]
+  Veto --> Judgment[确定性安全边际价格比较]
+  Judgment --> Output[三类判断 + 八部分报告/凭证/缺口]
 ```
 
 ## 模块与状态
@@ -40,17 +43,18 @@ flowchart TD
 - `extensions.py`：技能及资源复制、MCP 原生工具集连接与分页发现、命令工具执行、参数 schema、角色授权和运行快照。扩展原响应作为来源凭证保存；不是确定性财务计算凭证。
 - `adk_mcp.py`：固定 McpToolset／McpTool／MCPSessionManager 生命周期适配，同任务连接复用、冻结定义过滤和核对、退出清理。保留业务别名、禁止隐式ADC和重定向凭据转发，不开放 UI 动作或资源权限。
 - `terminal_status.py`：仅在 CLI stderr 终端上报告 OSC 7501 状态；不改变引擎业务状态、退出码或 JSON 响应。
-- `information.py`：扶摇、东方财富、AKShare 与 98dou 的只读 JSON 命令工具；按既有扩展入口注册，配置见[信息来源](INFORMATION_SOURCES.md)。
+- `information.py`：现有信息工具及Tushare、Tavily、Yahoo/yfinance只读适配，具体操作白名单、实际来源／访问方式元数据和安全完整响应；按既有扩展入口注册，配置见[信息来源](INFORMATION_SOURCES.md)。
 - `knowledge/`：SQLite正式记录、不可变修订、来源字节、可恢复文件提交、核验内容哈希、基准版本CAS、固定引用、FTS5／本地向量及明确要求。`runtime.py`仅由现有控制器管理归档、独立核验和提交。
-- `sources.py`：发现与获取分离的统一合约；现有web_search使用同一入口，支持不透明cursor／checkpoint存储，无新信源服务或订阅调度。
+- `sources.py`：发现与获取分离的统一合约；web_search及信息工具返回的原文地址使用同一获取、截止和归档路径，支持不透明cursor／checkpoint；没有订阅调度或交互浏览器。
 - `materials.py`：原始字节、格式解析、来源日期依据、原文 anchors、公开发现与获取；目录自动建立内部 index，不要求用户准备 manifest。
 - `financial_analysis.py`：固定科目、指标、可比期间、平均余额、数据质量与统一异常调查信号；不推算分部或定义行业阈值。
 - `investment_logic.py`：结构化清单兼容、纯数学经营预期比较及各模型差异；不写业务状态。
+- `judgment.py`：读取既有事实、报价、假设版本、计算凭证和独立核验，确定性核对安全边际及三类判断；不选择比例、不创建另一套授权或费用状态，历史／演示保持旧语义。
 - `v2_tools.py`：原文数值校验、提取登记、冲突保留、EBIT桥接、单一valuation入口按方法分派、统一凭证及独立程序复核。
 - `valuation/`：PE/PB/EV-EBITDA/单阶段DDM的纯数学、方法输入门槛与结构化基准比较；不批准参数、不改变运行状态、不发布报告。Pydantic契约统一在`schemas.py`。
 - `budget.py`：一个完整研究任务的原子费用预留、用量核算及总墙钟截止；新建任务默认上限 2 小时，其中预留 30 秒收尾。等待、重试、第三层及恢复不另起预算。
 - `frameworks.py`：三个内置基线、原文与草稿、不可变规则快照、独立核验后可选择的版本。
-- `research.py`：原始调度、阶段和方法适用性、自主授权、第三层创建、共享读取／消息及主 Agent 批准转派；v0.2.1 将冻结的技能指令和扩展工具接入此路径。
+- `research.py`：正式调度、身份候选等待／选择、适用来源换源、行情绑定、阶段和方法适用性、默认策略及明确授权、第三层创建、共享读取／消息和主Agent批准转派；仍是业务state.json的唯一写入者。
 - `adk_app.py`：隔离任务的原生工具执行和回调；每个动态角色创建新的 ADK Agent／Session，避免修改共享网页 Agent 的任务上下文或子 Agent 列表。
 - `adk_runtime.py`：固定 ADK 2.11.0 的 App／生命周期插件工厂，覆盖外部入口、Worker 和独立决策 Runner。持久化脱敏事件投影，关联 run／task／parent task／Session／invocation；不修改业务状态或结算费用。
 - `api.py`：原生 ADK ApiServer 和持久 SQLite Session，增加所属 Session 的研究轨迹读取；不是认证或多租户服务器。`fast_api_app.py` 为本地入口。
@@ -62,6 +66,10 @@ flowchart TD
 运行、任务、假设、框架与研究标准有独立标识和版本。子任务记录父任务、发起方、执行角色、深度、工具及共享引用、完成条件；费用账本记录任务归属、方法、版本、预留、用量、价格及价格时点。原始资料、提取结果、任务和报告保存在同一运行目录。
 
 `state.capabilities` 固定模型标识、端点、价格、凭据变量名、扩展 schema 与角色。技能资源复制到 `capabilities/skills/` 并记录哈希；恢复不读取新的默认选择。命令程序、远端模型权重和 MCP 服务实现本身不由 Yantra 冻结。v0.1 固定演示沿用原有工具集；详情见 [能力模块说明](CAPABILITIES.md)。
+
+新正式运行记录 `research_flow_version=2`。`pending_user.kind=identity` 保存已定位原文的候选及稳定ID，CLI的 `resume --select-identity` 与API同Session的 `/select-identity` 调用同一控制器恢复方法；等待和选择不重置预算、截止或既有费用。身份未定时不估值，后续来源、财务及报价绑定同一证券、交易币种和股类。新接口不替换历史status、resume或固定replay。
+
+准备获取仅调用冻结快照中已启用、费用／凭据／依赖就绪且获finance权限的适用工具，并记录 `information_attempts`；同一请求不自动重试，必要的新查询仍可补查。搜索命中进入既有网页抓取与材料归档，discovery与实际原文分开；缺浏览器、登录限制或服务不可用均保留缺口。新服务模板停用且费用unknown，不隐式启用。原账本承担逐次预留与结果未知时的保留，换源不能绕过角色或额度。
 
 ## 权限与协作
 
@@ -83,7 +91,9 @@ Worker 的 `WorkerDecisionModel` 仍将经过预算和结构校验的业务行�
 
 ## 估值、核验与失效
 
-新研究首次设置和实际偏好版本复用知识偏好存储；长期授权、单次覆盖与交付方式分别记录。显式范围内自主选择为 `controller`，人工确认为 `user`，未确认但可计算的条件情景为 `provisional`（confirmed=false）。主／辅助模型各自有完整参数、依据、授权状态和凭证，独立核验；首页通过授权及核验后才显示正式每股结论。授权及工具请求核对方法＋参数＋版本和当前任务快照，按方法核验来源、日期、币种、证券类别、期间及财务口径。整体权益换算每股需要匹配总股数；EPS×PE/BVPS×PB核验每股指标。新原始材料DCF要求EBIT桥接及明确少数股东权益；OCF倒推尚未开放给新研究，旧快照与固定演示保留旧算法。不具备有效方法时保留not_applicable和研究partial。三个研究框架与估值方法分别选择，保持finance→thesis→valuation→verification→report。
+空首次偏好仅产生本次版本0／unspecified快照，不写入长期偏好或用户同意，选择来源为 `default_policy`。实际已保存设置复用知识偏好版本；长期授权、本次覆盖和交付方式分别记录。显式范围内自主选择为controller，人工确认为user，拒绝、撤销或manual未回复为provisional（confirmed=false）。主／辅助模型各自保存参数、依据、版本和凭证，分别核验；默认自主选择不豁免来源或数学门槛。授权及工具请求核对方法、参数、版本和任务快照，按方法核验证券、股类、币种、期间及财务口径。整体权益换算每股需要匹配总股数；新DCF要求EBIT桥接及明确少数股东权益，OCF倒推仍未开放给新研究。旧快照和演示保留原算法；没有适用方法时以not_applicable和缺口交付已有研究。
+
+单一可靠来源可支持初步判断，不以外部来源数量代替独立核验。接口JSON定位、原始披露定位和抓取日志的证明范围不同；财务聚合数据须有原始披露依据，报价完整响应核对实际时间及未复权属性。冲突及解释保留原记录；关键冲突／否决阻止受影响判断。主估值保存安全边际ratio及理由，judgment按基准每股价值计算阈值并输出“值得买／暂不值得买／目前无法判断”，嵌入既有投资结论摘要；研究status与判断分开，规则见[估值说明](VALUATION.md#安全边际与买入判断)。
 
 新增方法复用calc:<hash>凭证。重放重建输入并数学计算，不读取outputs充当复算，未知类型和数值篡改明确失败。缺市场基准保留unresolved；thesis保留解释，工具与报告使用同一结构化基准。细节与历史映射见[估值运行说明](USAGE.md)。
 
@@ -109,4 +119,4 @@ Vision OCR 的独立决策 Runner 也通过统一 App／插件。初始解析和
 
 正式数据、派生索引、编辑删除与要求优先级详见[知识契约及命令](KNOWLEDGE.md)。
 
-首次设置、暂定选择与后续编辑继续由 RawEngine 写入 state.json。已核对 ADK 2.11.0 的 ToolContext.request_confirmation：原生确认服务于暂停／响应流程，不提供投资授权版本、撤销、暂定情景发布和证据依赖失效。沿用既有业务控制器补充这些业务契约；执行、Session、工具／插件生命周期和只读 Artifact 仍由现有原生工厂提供。API 轨迹只读显示偏好版本和选择状态，不复制选择正文到脱敏轨迹。
+默认策略快照、身份等待、暂定选择和后续编辑继续由RawEngine写入state.json。已核对ADK 2.11.0的ToolContext.request_confirmation：原生确认服务于暂停／响应流程，不提供投资授权版本、撤销、暂定情景发布和证据依赖失效。沿用既有业务控制器补充这些契约；执行、Session、工具／插件生命周期和只读Artifact仍由现有原生工厂提供。API轨迹只读显示证券身份、等待种类、偏好版本和选择状态，不复制候选原文或选择正文到脱敏轨迹。

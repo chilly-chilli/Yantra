@@ -1,0 +1,20 @@
+test_any_model_selected_margin_has_same_definition (test_judgment.JudgmentTests.test_any_model_selected_margin_has_same_definition) ... ok
+test_dcf_scenarios_keep_existing_values_and_inputs (test_judgment.JudgmentTests.test_dcf_scenarios_keep_existing_values_and_inputs) ... ok
+test_financial_date_and_source_veto (test_judgment.JudgmentTests.test_financial_date_and_source_veto) ... ok
+test_historical_demo_and_fictional_runs_do_not_receive_labels (test_judgment.JudgmentTests.test_historical_demo_and_fictional_runs_do_not_receive_labels) ... ok
+test_key_conflict_blocks_and_explained_or_minor_difference_preserves_analysis (test_judgment.JudgmentTests.test_key_conflict_blocks_and_explained_or_minor_difference_preserves_analysis) ... ok
+test_manual_and_refused_scenarios_stay_conditional (test_judgment.JudgmentTests.test_manual_and_refused_scenarios_stay_conditional) ... ok
+test_missing_or_invalid_margin_does_not_invent_default (test_judgment.JudgmentTests.test_missing_or_invalid_margin_does_not_invent_default) ... ok
+test_missing_quote_or_no_financial_data_never_produces_buy (test_judgment.JudgmentTests.test_missing_quote_or_no_financial_data_never_produces_buy) ... ok
+test_original_quote_price_and_time_cannot_be_replaced_by_fetch_time (test_judgment.JudgmentTests.test_original_quote_price_and_time_cannot_be_replaced_by_fetch_time) ... ok
+test_price_boundary_is_deterministic (test_judgment.JudgmentTests.test_price_boundary_is_deterministic) ... ok
+test_raw_financial_conflict_and_restated_resolution_keep_history (test_judgment.JudgmentTests.test_raw_financial_conflict_and_restated_resolution_keep_history) ... ok
+test_report_starts_with_answer_and_keeps_eight_sections (test_judgment.JudgmentTests.test_report_starts_with_answer_and_keeps_eight_sections) ... ok
+test_single_reliable_source_sufficient_even_when_run_partial (test_judgment.JudgmentTests.test_single_reliable_source_sufficient_even_when_run_partial) ... ok
+test_source_identity_currency_adjustment_and_cutoff_veto (test_judgment.JudgmentTests.test_source_identity_currency_adjustment_and_cutoff_veto) ... ok
+test_verification_and_calculation_veto_preserve_values (test_judgment.JudgmentTests.test_verification_and_calculation_veto_preserve_values) ... ok
+
+----------------------------------------------------------------------
+Ran 15 tests in 0.006s
+
+OK

@@ -77,6 +77,21 @@ def numeric(value):
 
 def source_number_present(raw, text):
     """Require a complete original numeric token, not a digit inside a code/date/value."""
+    if raw and text.lstrip().startswith(("{", "[")):
+        try:
+            value = json.loads(text)
+            def contains(item):
+                if isinstance(item, dict):
+                    return any(contains(v) for v in item.values())
+                if isinstance(item, list):
+                    return any(contains(v) for v in item)
+                if isinstance(item, bool) or item is None:
+                    return False
+                return str(item) == raw
+            if contains(value):
+                return True
+        except (ValueError, TypeError):
+            pass
     return bool(raw and re.search(r"(?<![\d.,+\-(（])" + re.escape(raw) + r"(?![\d.,)）])", text))
 
 
@@ -211,9 +226,13 @@ def parse_file(path, check=lambda: None, timeout=30, recognizer=None):
         data = json.loads(path.read_text(encoding="utf-8-sig"))
         def walk(value, pointer=""):
             if isinstance(value, dict):
+                if value and all(not isinstance(v, (dict, list)) for v in value.values()):
+                    add(json.dumps(value, ensure_ascii=False), {"json_pointer": pointer, "record": True})
                 for k, v in value.items():
                     walk(v, pointer + "/" + str(k).replace("~", "~0").replace("/", "~1"))
             elif isinstance(value, list):
+                if value and all(not isinstance(v, (dict, list)) for v in value):
+                    add(json.dumps(value, ensure_ascii=False), {"json_pointer": pointer, "record": True})
                 for i, v in enumerate(value):
                     walk(v, pointer + "/" + str(i))
             else:
@@ -350,7 +369,9 @@ class RawMaterialAdapter:
                             raise ValueError("material exceeds 40 MB limit")
                     mime = response.headers.get("content-type", "")
                     final_url = str(response.url)
-        except (httpx.HTTPStatusError, httpx.TransportError):
+        except (httpx.HTTPStatusError, httpx.TransportError) as exc:
+            if getattr(self, "no_retry", False) or (isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in {401, 402, 403}):
+                raise ValueError("公开来源访问受限或失败，请使用其他公开来源") from None
             # Some disclosure sites reject Python's TLS/client fingerprint.
             # DDGS already depends on primp; use its browser-compatible HTTP client once.
             import primp
@@ -364,6 +385,11 @@ class RawMaterialAdapter:
             mime = response.headers.get("content-type", "")
             final_url = url
         suffix = Path(urlparse(final_url).path).suffix.lower()
+        if "html" in mime:
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(bytes(content), "html.parser")
+            if soup.find("input", attrs={"type": "password"}):
+                raise ValueError("公开页面需要登录；请寻找公开替代资料")
         if bytes(content).startswith(b"%PDF"):
             suffix = ".pdf"
         elif "html" in mime or suffix not in FORMATS:

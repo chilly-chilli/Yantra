@@ -46,6 +46,12 @@ class MultiModelBackend(SyntheticBackend):
 
 class ResearchFixtures:
     def setUp(self):
+        for target in ("socket.create_connection", "socket.socket.connect",
+                       "httpx.HTTPTransport.handle_request", "httpx.AsyncHTTPTransport.handle_async_request",
+                       "yantra.sources.public_search", "primp.Client.get"):
+            blocker = patch(target, side_effect=AssertionError("unmocked external network in offline fixture"))
+            blocker.start()
+            self.addCleanup(blocker.stop)
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
         self.runs = self.root/"runs"
@@ -70,10 +76,16 @@ class ResearchFixtures:
             return await run_engine(engine)
 
 class ResearchContractTests(ResearchFixtures, unittest.IsolatedAsyncioTestCase):
-    def test_first_setup_requires_explicit_grant_or_refusal(self):
-        with self.assertRaisesRegex(ValueError, "preferences setup"):
-            self.create()
-        self.assertFalse(self.runs.exists())
+    async def test_missing_setup_uses_default_without_saving_permanent_consent(self):
+        engine = self.create()
+        state = await self.run_fixture(engine)
+        self.assertEqual(state["preference_snapshot"]["version"], 0)
+        self.assertEqual(state["preference_snapshot"]["parameters"]["authorization"]["status"], "unspecified")
+        self.assertEqual(state["assumptions"]["authorization_source"], "default_policy")
+        self.assertFalse(state["assumptions"]["confirmed"])
+        self.assertEqual(self.preferences.list(history=True), [])
+        self.assertFalse(state["research_policy"]["permanent_consent"])
+        self.assertNotIn("error_code", state)
         for invalid in ({"horizon": "12个月", "framework": "auto", "confirmation_mode": "autonomous"},
                         {"horizon": "12个月", "framework": "auto", "confirmation_mode": "autonomous", "authorization": {"status": "granted", "scope": []}}):
             self.assertRaises(ValueError, self.preferences.setup, invalid)
@@ -263,7 +275,7 @@ class ResearchContractTests(ResearchFixtures, unittest.IsolatedAsyncioTestCase):
         engine._validate_thesis_sources(thesis, task)
         self.assertEqual(engine.state["artifacts"]["finance"]["data"]["metrics"]["financial_screening"]["monitoring"], "checklist_only")
 
-    def test_real_api_setup_gate_provisional_delivery_and_restart_confirmation(self):
+    def test_real_api_default_provisional_delivery_and_restart_confirmation(self):
         from yantra.api import create_app
         def factory(company="unused", run_id=None):
             return Engine.load(self.runs, run_id, backend=SyntheticBackend()) if run_id else self.create()
@@ -277,10 +289,13 @@ class ResearchContractTests(ResearchFixtures, unittest.IsolatedAsyncioTestCase):
         with patch.dict(os.environ, environment), patch("yantra.engine.create_adk_engine", factory), patch("yantra.materials.RawMaterialAdapter.search", no_search):
             with TestClient(create_app()) as client:
                 session = client.post("/apps/yantra/users/synthetic/sessions", json={}).json()["id"]
-                missing = send(client, session, "合成公司")
-                self.assertEqual(missing["error_code"], "research_setup_required")
+                default = send(client, session, "合成公司")
+                self.assertNotIn("error_code", default)
+                self.assertEqual(default["report"]["财务分析与估值"]["assumptions"]["authorization_source"], "default_policy")
+                self.assertEqual(self.preferences.list(history=True), [])
                 values = {"horizon": "18个月", "framework": "quality", "confirmation_mode": "autonomous", "authorization": {"status": "refused", "scope": []}}
                 self.assertEqual(send(client, session, "/setup "+json.dumps(values))["version"], 1)
+                session = client.post("/apps/yantra/users/synthetic/sessions", json={}).json()["id"]
                 first = send(client, session, "合成公司")
                 self.assertEqual(first["report"]["投资结论摘要"]["valuation_status"], "provisional")
                 run_id = first["run_id"]

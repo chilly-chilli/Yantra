@@ -33,10 +33,12 @@ class TerminalStatus:
             self.enabled = False
 
     def finish(self, command, result):
-        if command in {"start", "resume", "replay"}:
+        if command in {"start", "demo", "resume", "replay"}:
             status = result.get("status")
             if status == "waiting":
-                self.report("blocked", "等待研究参数确认；请使用 resume", kind="permission")
+                identity = (result.get("pending_user") or {}).get("kind") == "identity"
+                self.report("blocked", "等待证券选择；请使用 resume --select-identity" if identity else
+                            "等待研究参数确认；请使用 resume", kind="question" if identity else "permission")
                 return
             if status == "cancelled":
                 self.report("idle", "研究已取消")

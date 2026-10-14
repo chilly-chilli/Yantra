@@ -105,6 +105,20 @@ class TerminalStatusTests(unittest.TestCase):
             self.assertNotIn("SECRET_SENTINEL", stdout + errors)
             self.assertEqual(records[-1]["state"], expected)
 
+    def test_identity_choice_is_question_and_demo_retains_waiting_status(self):
+        for command, pending, kind in (("start", {"kind": "identity"}, "question"),
+                                        ("demo", {"question": "confirm synthetic inputs"}, "permission")):
+            bootstrap = ("import yantra.cli as cli\n"
+                         f"async def execute(args): return {{'status':'waiting', 'pending_user':{pending!r}}}\n"
+                         "cli.execute = execute\nraise SystemExit(cli.main())")
+            arguments = ["--output", "json", command]
+            arguments += ["--company", "synthetic"] if command == "start" else ["--materials-dir", "/unused/synthetic"]
+            code, stdout, errors, records = self.invoke(arguments, bootstrap=bootstrap)
+            self.assertEqual(code, 0, errors)
+            self.assertEqual(json.loads(stdout)["data"]["status"], "waiting")
+            self.assertEqual(records[-1]["state"], "blocked")
+            self.assertEqual(records[-1]["kind"], kind)
+
     def test_messages_are_bounded_utf8_and_no_control_characters(self):
         stream = io.StringIO()
         stream.isatty = lambda: True

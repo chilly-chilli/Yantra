@@ -18,6 +18,13 @@ from yantra import information
 
 
 class InformationTests(unittest.TestCase):
+    def setUp(self):
+        # Python HTTP and socket paths must be mocked, including optional SDKs.
+        for target in ('socket.create_connection', 'socket.socket.connect', 'httpx.HTTPTransport.handle_request'):
+            blocker = patch(target, side_effect=AssertionError('unmocked external call forbidden'))
+            blocker.start()
+            self.addCleanup(blocker.stop)
+
     def test_interactive_import_keeps_disabled_status(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'disabled.json'
@@ -36,7 +43,13 @@ class InformationTests(unittest.TestCase):
             with self.subTest(provider=name):
                 ToolSpec.model_validate(spec)
                 path = Path(__file__).parents[1] / 'examples/v033/information' / (name+'.example.json')
-                self.assertEqual(json.loads(path.read_text()), spec)
+                if name not in information.SERVICE_METADATA:
+                    self.assertEqual(json.loads(path.read_text()), spec)
+                else:
+                    path = Path(__file__).parents[1] / 'examples/v042/information' / (name+'.example.json')
+                    self.assertEqual(json.loads(path.read_text()), spec)
+                    self.assertFalse(spec['enabled'])
+                    self.assertEqual(spec['cost_status'], 'unknown')
         self.assertFalse(information.extension_specs()['fuyao']['enabled'])
         self.assertFalse(information.extension_specs()['eastmoney']['enabled'])
 
@@ -107,6 +120,10 @@ class InformationTests(unittest.TestCase):
                 spec['enabled'] = True
                 # Run the real command entry with a controlled HTTP replacement in the child.
                 bootstrap = ("from yantra import information\n"
+                    "import socket\n"
+                    "def blocked(*args, **kwargs): raise AssertionError('unmocked external call forbidden')\n"
+                    "socket.create_connection = blocked\n"
+                    "socket.socket.connect = blocked\n"
                     "def mock(url, **kwargs):\n"
                     "    assert url.endswith('/api/claw/query')\n"
                     "    assert kwargs['method'] == 'POST'\n"

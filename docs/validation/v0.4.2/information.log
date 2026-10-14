@@ -1,0 +1,24 @@
+/Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/features/_feature_decorator.py:71: UserWarning: [EXPERIMENTAL] feature FeatureName.PLUGGABLE_AUTH is enabled.
+  check_feature_enabled()
+test_akshare_dates_and_missing_installation (test_information.InformationTests.test_akshare_dates_and_missing_installation) ... ok
+test_akshare_null_serialization_truncation_and_stdout (test_information.InformationTests.test_akshare_null_serialization_truncation_and_stdout) ... ok
+test_cls_explicit_failure_is_not_success (test_information.InformationTests.test_cls_explicit_failure_is_not_success) ... ok
+test_cls_requires_no_credential (test_information.InformationTests.test_cls_requires_no_credential) ... ok
+test_eastmoney_official_post_contract (test_information.InformationTests.test_eastmoney_official_post_contract) ... ok
+test_extension_registration_and_subprocess_invalid_input (test_information.InformationTests.test_extension_registration_and_subprocess_invalid_input) ... ok
+test_fuyao_business_error_is_not_success (test_information.InformationTests.test_fuyao_business_error_is_not_success) ... ok
+test_fuyao_header_query_and_original_units (test_information.InformationTests.test_fuyao_header_query_and_original_units) ... ok
+test_http_redirect_error_and_size_limit (test_information.InformationTests.test_http_redirect_error_and_size_limit) ... ok
+test_interactive_import_keeps_disabled_status (test_information.InformationTests.test_interactive_import_keeps_disabled_status) ... ok
+test_invalid_arguments_rejected_before_network_or_import (test_information.InformationTests.test_invalid_arguments_rejected_before_network_or_import) ... ok
+test_legacy_search_snapshot_credential_and_new_tools_require_mx_key (test_information.InformationTests.test_legacy_search_snapshot_credential_and_new_tools_require_mx_key) ... ok
+test_miaoxiang_business_errors_and_wrong_fields_rejected (test_information.InformationTests.test_miaoxiang_business_errors_and_wrong_fields_rejected) ... ok
+test_miaoxiang_command_receives_key_and_redacts_echoed_response (test_information.InformationTests.test_miaoxiang_command_receives_key_and_redacts_echoed_response) ... ok
+test_miaoxiang_data_payload_preserves_response (test_information.InformationTests.test_miaoxiang_data_payload_preserves_response) ... ok
+test_missing_and_placeholder_credentials (test_information.InformationTests.test_missing_and_placeholder_credentials) ... ok
+test_specs_validate_and_examples_match (test_information.InformationTests.test_specs_validate_and_examples_match) ... ok
+
+----------------------------------------------------------------------
+Ran 17 tests in 1.389s
+
+OK

@@ -1,0 +1,10 @@
+{
+  "status": "passed",
+  "checked_files": 13,
+  "checked_local_links": 139,
+  "errors": [],
+  "currently_untracked_link_targets": [
+    "docs/prompts/v0.5-host-integration.md"
+  ],
+  "note": "Host prompt migration is independent local work; do not bundle its target."
+}

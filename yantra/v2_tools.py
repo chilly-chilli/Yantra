@@ -256,6 +256,14 @@ class RawToolRegistry(ToolRegistry):
                 gaps.append(f"拒绝无原始出处财务字段：{row.field}")
                 continue
             text = pair[0]["text"]
+            if any(a.get("evidence_kind") == "discovery" for a in pair[1].get("acquisitions", [])):
+                gaps.append(f"搜索摘要不能作为原始财务依据：{row.field}")
+                continue
+            if any(a.get("original_disclosure_required") or a.get("adapter_id") == "yahoo" or a.get("information_provider") == "yahoo" for a in pair[1].get("acquisitions", [])):
+                original = anchors.get(row.disclosure_source_ref)
+                if not original or not row.disclosure_quote or row.disclosure_quote not in original[0]["text"] or not source_number_present(row.raw_value, original[0]["text"]) or any(a.get("adapter_id") == "yahoo" for a in original[1].get("acquisitions", [])):
+                    gaps.append(f"Yahoo财务聚合值缺少原始披露定位：{row.field}")
+                    continue
             if not row.disclosure_date and pair[1].get("date"):
                 row.disclosure_date = pair[1]["date"]
             if not source_number_present(row.raw_value, text):
@@ -289,6 +297,9 @@ class RawToolRegistry(ToolRegistry):
             if not pair or row.source_hash != pair[1]["source_hash"] or row.quote not in pair[0]["text"]:
                 gaps.append("拒绝无法定位的研究证据")
                 continue
+            if any(a.get("evidence_kind") == "discovery" for a in pair[1].get("acquisitions", [])):
+                gaps.append("搜索摘要仅作线索，不能成为原始研究事实")
+                continue
             if not row.disclosure_date and pair[1].get("date"):
                 row.disclosure_date = pair[1]["date"]
             if not row.disclosure_date or cutoff_time(row.disclosure_date) > cutoff_time(cutoff):
@@ -307,9 +318,30 @@ class RawToolRegistry(ToolRegistry):
             key = (row["field"], row["period"], row["currency"], row["consolidated"], row.get("security_code"), row.get("share_class"), row.get("accounting_scope"),row.get("business_scope"))
             groups.setdefault(key, []).append(row)
         conflicts = [list(rows) for rows in groups.values() if len({(x["value"], x["unit"], x["restatement"]) for x in rows}) > 1]
-        if conflicts:
+        resolutions = []
+        for rows in conflicts:
+            normalized = [Decimal(str(r["value"])) if r["unit"] == "ratio" or r["unit"].endswith("/share") or r["unit"] == "元/股"
+                          else _convert(r["value"], r["unit"], "million shares" if r["field"] == "shares" else "million") for r in rows]
+            if len(set(normalized)) == 1:
+                resolutions.append({"conflict_hash": _hash(rows), "selected_source_ref": rows[0]["source_ref"],
+                    "explanation": "原始单位换算后数值相同，采用匹配口径并保留两条原始记录。",
+                    "evidence_refs": sorted({r["source_ref"] for r in rows})})
+                continue
+            newest = max(rows, key=lambda r: cutoff_time(r["disclosure_date"]))
+            source = anchors[newest["source_ref"]]
+            text = source[0]["text"]
+            dated = newest["disclosure_date"] == source[1].get("date") or newest["disclosure_date"] in text
+            if dated and newest.get("restatement") and newest["restatement"] in text and re.search(r"重述|修订|更正|restat|corrected", text, re.I) and all(cutoff_time(newest["disclosure_date"]) > cutoff_time(r["disclosure_date"]) for r in rows if r is not newest):
+                resolutions.append({"conflict_hash": _hash(rows), "selected_source_ref": newest["source_ref"],
+                    "explanation": "采用有原文修订说明及更晚披露日期的重述版本；此前候选保存在冲突记录中。",
+                    "evidence_refs": sorted({r["source_ref"] for r in rows})})
+                records = [r for r in records if r not in rows or r == newest]
+        if len(resolutions) != len(conflicts):
             gaps.append("存在未调节的财务口径或重述冲突，保留候选值")
-        accepted = {"financials": records, "evidence": evidence, "gaps": list(dict.fromkeys(gaps)), "conflicts": conflicts}
+        accepted = {"financials": records, "evidence": evidence, "gaps": list(dict.fromkeys(gaps)), "conflicts": conflicts,
+                    "conflict_resolutions": resolutions,
+                    "conflict_refs": [{"conflict_hash": _hash(rows), "field": rows[0]["field"], "period": rows[0]["period"],
+                                       "evidence_refs": sorted({r["source_ref"] for r in rows})} for rows in conflicts]}
         self.extraction_path.write_text(json.dumps(accepted, ensure_ascii=False, indent=2))
         return accepted
 
@@ -414,6 +446,30 @@ class RawToolRegistry(ToolRegistry):
         anchors = self.anchors()
         issues, refs, calcs = [], set(), set()
         original = json.loads(self.extraction_path.read_text()) if self.extraction_path.exists() else {"financials": [], "evidence": []}
+        used_refs = {ref for entry in entries if entry.get("target") == "valuation" for ref in entry.get("evidence_refs", [])}
+        def source_refs(item):
+            if isinstance(item, dict):
+                for key, content in item.items():
+                    if key == "source_ref" and isinstance(content, str):
+                        used_refs.add(content)
+                    elif key in {"source_refs", "evidence_refs"} and isinstance(content, list):
+                        used_refs.update(content)
+                    else:
+                        source_refs(content)
+            elif isinstance(item, list):
+                for content in item:
+                    source_refs(content)
+        source_refs(value.assumptions.model_dump())
+        for entry in entries:
+            if entry.get("target") == "thesis":
+                source_refs(entry.get("data", {}))
+        groups = {_hash(rows): rows for rows in original.get("conflicts", [])}
+        assessments = []
+        for assessment in value.conflict_assessments:
+            group = groups.get(assessment.conflict_hash)
+            group_refs = {row["source_ref"] for row in group} if group else set()
+            if group_refs and not group_refs.intersection(used_refs) and group_refs <= set(assessment.evidence_refs) and all(ref in anchors for ref in assessment.evidence_refs):
+                assessments.append(assessment.model_dump())
 
         def issue(target, message, severity="major"):
             issues.append({"id": f"issue-{len(issues)+1}", "target": target, "message": message, "severity": severity, "requirement": "repair_original_evidence"})
@@ -498,8 +554,17 @@ class RawToolRegistry(ToolRegistry):
                 else:
                     calcs.add(ref)
             if data.get("conflicts"):
-                issue("finance", "财务冲突尚未调节")
+                permitted = {canonical(r)["conflict_hash"] for r in original.get("conflict_resolutions", [])
+                             if canonical(r) in [canonical(x) for x in data.get("conflict_resolutions", [])]}
+                if any(_hash(rows) not in permitted for rows in data["conflicts"]):
+                    for rows in data["conflicts"]:
+                        if _hash(rows) in permitted:
+                            continue
+                        noncritical = next((a for a in assessments if a["conflict_hash"] == _hash(rows)), None)
+                        issue("finance", "非关键财务差异：" + noncritical["reason"] if noncritical else "财务冲突尚未调节",
+                              "minor" if noncritical else "major")
         if not original["financials"] or not original["evidence"]:
             issue("finance", "真实研究缺少可定位财务记录或定性研究证据")
-        return ToolResponse(ok=True, data={"passed": not issues, "issues": issues,
+        return ToolResponse(ok=True, data={"passed": not any(i["severity"] in {"major", "critical"} for i in issues), "issues": issues,
+            "conflict_assessments": assessments,
             "business_checks": {"scope": "原文定位、数字、计算及版本通过程序校验；经济判断由独立核验Agent判断"}}, evidence_refs=sorted(refs), calculation_refs=sorted(calcs))

@@ -62,6 +62,17 @@ class Preferences:
             result["parameters"] = result["parameters"] | {"authorization": {"status": "refused", "scope": []}}
         return result
 
+    def research_snapshot(self):
+        """Use a per-run policy when no user choice exists; never save consent."""
+        try:
+            return self.setup_snapshot()
+        except SetupRequired:
+            return {"id": None, "version": 0, "active": False, "recorded_at": None,
+                    "source": "run_default", "parameters": {
+                        "horizon": "12个月", "framework": "auto", "confirmation_mode": "autonomous",
+                        "authorization": {"status": "unspecified", "scope": []},
+                        "questions": [], "topics": [], "notes": ""}}
+
     def list(self, history=False):
         with self.store.connect() as db:
             rows = db.execute("SELECT * FROM preferences ORDER BY version DESC").fetchall()

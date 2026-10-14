@@ -42,7 +42,8 @@ class RunBudget:
             amount = (input_bound * pricing.input_per_million + output_limit * pricing.output_per_million) * pricing.cny_per_currency / 1_000_000
             ledger = self.state["model_ledger"]
             committed = sum(x.get("cost_cny", x["reserved_cny"]) for x in ledger)
-            if committed + amount >= self.state["limits"]["max_cost_cny"]:
+            service_cost = self.state["budget"].get("external_service_cost_cny", 0) if self.state.get("research_flow_version", 0) >= 2 else 0
+            if committed + service_cost + amount >= self.state["limits"]["max_cost_cny"]:
                 raise BudgetExceeded("共享人民币模型预算不足")
             receipt = {"id": uuid4().hex, "reserved_cny": amount, "input_token_bound": input_bound,
                        "output_token_bound": output_limit, "status": "reserved", "pricing": pricing.model_dump()}
@@ -55,7 +56,8 @@ class RunBudget:
         with self.lock:
             self.check()
             committed = sum(x.get("cost_cny", x["reserved_cny"]) for x in self.state["model_ledger"])
-            if amount < 0 or committed+amount >= self.state["limits"]["max_cost_cny"]:
+            service_cost = self.state["budget"].get("external_service_cost_cny", 0) if self.state.get("research_flow_version", 0) >= 2 else 0
+            if amount < 0 or committed+service_cost+amount >= self.state["limits"]["max_cost_cny"]:
                 raise BudgetExceeded("声明的扩展模型费用上界超出剩余预算")
             receipt={"id":uuid4().hex,"reserved_cny":amount,"status":"reserved","method":method,
                      "basis":basis,"actual_bill_available":False}

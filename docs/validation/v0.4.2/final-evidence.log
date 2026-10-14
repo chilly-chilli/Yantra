@@ -1,0 +1,14 @@
+test_discovery_snippets_and_yahoo_aggregates_require_original (test_evidence_acquisition.EvidenceAcquisitionTests.test_discovery_snippets_and_yahoo_aggregates_require_original) ... ok
+test_equivalent_units_preserve_conflict_and_explanation (test_evidence_acquisition.EvidenceAcquisitionTests.test_equivalent_units_preserve_conflict_and_explanation) ... ok
+test_independent_review_retains_noncritical_unused_conflict_as_notice (test_evidence_acquisition.EvidenceAcquisitionTests.test_independent_review_retains_noncritical_unused_conflict_as_notice) ... ok
+test_json_record_anchor_preserves_price_and_actual_time_together (test_evidence_acquisition.EvidenceAcquisitionTests.test_json_record_anchor_preserves_price_and_actual_time_together) ... ok
+test_later_dated_raw_correction_selects_new_value_preserves_old (test_evidence_acquisition.EvidenceAcquisitionTests.test_later_dated_raw_correction_selects_new_value_preserves_old) ... ok
+test_login_document_is_not_added_as_financial_evidence (test_evidence_acquisition.EvidenceAcquisitionTests.test_login_document_is_not_added_as_financial_evidence) ... ok
+test_new_formal_fetch_failure_does_not_retry_identical_url (test_evidence_acquisition.EvidenceAcquisitionTests.test_new_formal_fetch_failure_does_not_retry_identical_url) ... ok
+test_single_original_source_is_sufficient_for_financial_acceptance (test_evidence_acquisition.EvidenceAcquisitionTests.test_single_original_source_is_sufficient_for_financial_acceptance) ... ok
+test_unexplained_conflict_or_fabricated_correction_is_not_selected (test_evidence_acquisition.EvidenceAcquisitionTests.test_unexplained_conflict_or_fabricated_correction_is_not_selected) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.075s
+
+OK

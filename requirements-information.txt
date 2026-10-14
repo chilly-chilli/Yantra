@@ -1,2 +1,3 @@
 # Optional read-only information extension; the main Yantra install does not require it.
 akshare==1.19.1
+yfinance==0.2.66

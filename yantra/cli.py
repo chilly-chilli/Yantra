@@ -79,9 +79,10 @@ def parser():
     p.add_argument("--config",type=Path,help="能力配置文件，默认 .yantra/config.json 或 YANTRA_CONFIG")
     p.add_argument("--version", action=VersionAction, nargs=0, help="显示版本")
     commands = p.add_subparsers(dest="command", required=True)
-    for name in ("start", "resume", "status", "compare", "replay", "cancel"):
+    for name in ("start", "demo", "resume", "status", "compare", "replay", "cancel"):
         descriptions = {
-            "start": "创建并执行研究；默认固定离线演示，原始材料需 real-model；可能保存 waiting/partial/failed",
+            "start": "创建正式研究；可只给公司名称，使用已配置模型与预算；可能保存 waiting/partial/failed",
+            "demo": "固定虚构材料的离线演示；不联网、不调用真实模型",
             "resume": "沿用已保存预算及截止恢复；不指定 decision 不自动确认；modify 会提交或应用参数",
             "status": "只读查询运行，失败研究仍是成功查询，不调用模型",
             "compare": "只读比较两个保存运行，不调用模型",
@@ -90,15 +91,16 @@ def parser():
         }
         sub = commands.add_parser(name, help=descriptions[name], description=descriptions[name])
         sub.add_argument("--runs-dir", type=Path, default=Path("runs"), help="运行存储目录，默认 runs；恢复时必须使用同一目录")
-        sub.add_argument("--env-file", type=Path, help="明确加载模型环境文件；不保存真实密钥")
+        if name != "demo":
+            sub.add_argument("--env-file", type=Path, help="明确加载模型环境文件；不保存真实密钥")
         if name == "start":
             sub.add_argument("--company", required=True)
             sub.add_argument("--horizon", default=None, help="默认12个月；原始研究可继承明确长期要求")
             from datetime import datetime
             from zoneinfo import ZoneInfo
             sub.add_argument("--cutoff", default=datetime.now(ZoneInfo("Asia/Shanghai")).isoformat())
-            sub.add_argument("--mode", choices=("offline-demo", "real-model"), default="offline-demo", help="默认 offline-demo；原始材料必须选择 real-model")
-            sub.add_argument("--materials-dir", type=Path)
+            sub.add_argument("--mode", choices=("offline-demo", "real-model"), default="real-model", help="兼容显式 real-model；旧 offline-demo 请迁移到 demo")
+            sub.add_argument("--materials-dir", type=Path, help=argparse.SUPPRESS)
             sub.add_argument("--material", action="append", default=[], help="原始文件、目录或公开URL，可重复")
             sub.add_argument("--market", choices=("CN", "HK"))
             sub.add_argument("--security-code")
@@ -121,10 +123,20 @@ def parser():
             sub.add_argument("--price-time")
             sub.add_argument("--price-source")
             add_json_input(sub, "limits", default={}, help="覆盖既有预算默认值的JSON对象；原始研究默认7200秒/49元，与 --limits-file 互斥")
+        elif name == "demo":
+            sub.add_argument("--company", default="DEMO", help="manifest内明确标记的虚构公司")
+            sub.add_argument("--horizon", default="12个月")
+            sub.add_argument("--cutoff", default="2025-12-31", help="固定演示资料的研究截止日")
+            sub.add_argument("--materials-dir", type=Path, required=True, help="含 fictional=true manifest.json 的固定虚构材料目录")
+            sub.add_argument("--reference-price", type=float)
+            sub.add_argument("--price-time")
+            sub.add_argument("--price-source")
+            add_json_input(sub, "limits", default={}, help="固定离线演示预算的JSON对象")
         else:
             sub.add_argument("run_id")
         if name == "resume":
             sub.add_argument("--decision", choices=("confirm", "modify", "reject", "cancel"))
+            sub.add_argument("--select-identity", help="选择等待中的证券：候选ID、从1起的序号，或唯一匹配的证券代码")
             add_json_input(sub, "parameters", help="modify 的JSON参数；与 --parameters-file 互斥")
             sub.add_argument("--continue-research", action="store_true", help="明确继续partial/failed的原始研究，保留原预算及截止")
         if name == "compare":
@@ -169,13 +181,23 @@ def run_result(state, args, settings):
     keys = ("run_id", "mode", "status", "budget", "limits", "deadline", "pending_user",
             "stop_reasons", "hard_checks", "issues", "report_path", "reproducibility", "preference_snapshot", "choices")
     result = {key: state.get(key) for key in keys}
+    result["research"] = state.get("research")
+    judgment = (state.get("report") or {}).get("投资结论摘要", {}).get("buy_judgment")
+    if state.get("raw_materials") and judgment is not None:
+        result["buy_judgment"] = judgment
     prefix = [sys.executable, "-m", "yantra", "--output", "json", "--config", str(settings.path)]
     context = ["--runs-dir", str(args.runs_dir.resolve())]
-    if args.env_file:
+    if getattr(args, "env_file", None):
         context += ["--env-file", str(args.env_file.resolve())]
     actions = [{"action": "status", "argv": prefix + ["status", state["run_id"], *context]}]
     if state["status"] == "waiting":
-        actions.append({"action": "confirm", "argv": prefix + ["resume", state["run_id"], *context, "--decision", "confirm"]})
+        pending = state.get("pending_user") or {}
+        if pending.get("kind") == "identity":
+            actions.extend({"action": "select_identity", "candidate_id": candidate["candidate_id"],
+                            "argv": prefix + ["resume", state["run_id"], *context, "--select-identity", candidate["candidate_id"]]}
+                           for candidate in pending.get("candidates", []))
+        else:
+            actions.append({"action": "confirm", "argv": prefix + ["resume", state["run_id"], *context, "--decision", "confirm"]})
     elif state.get("raw_materials") and state["status"] in {"partial", "failed"}:
         actions.append({"action": "continue_research", "argv": prefix + ["resume", state["run_id"], *context, "--continue-research"],
                         "notice": "仅在原预算及截止仍允许时可继续，不重置预算"})
@@ -196,15 +218,32 @@ def format_text(command, data):
         return messages[command] + "\n"
     if "run_id" not in data:
         return None
-    lines = [f"运行：{data['run_id']}", f"模式：{data['mode']}", f"状态：{data['status']}"]
+    lines = []
+    if data.get("buy_judgment"):
+        judgment = data["buy_judgment"]
+        lines.append(judgment.get("statement") or judgment["label"])
+    elif data["mode"] == "offline-demo":
+        lines.append("虚构材料离线演示")
+    lines += [f"运行：{data['run_id']}", f"模式：{data['mode']}", f"状态：{data['status']}"]
     b, limits = data["budget"], data["limits"]
     lines.append(f"工具：{b['tool_calls']}/{limits['total_tools']} · 决策：{b['model_calls']}/{limits['max_models']} · 修复：{b['repair_rounds']}")
     if data.get("deadline"):
         lines.append(f"模型费用核算／未结算预留：¥{b.get('model_cost_cny', 0):.4f} · 截止时点：{data['deadline']}")
     if data["status"] == "waiting":
-        lines += ["\n等待确认，当前未执行正式估值：", json.dumps(data["pending_user"], ensure_ascii=False, indent=2)]
-        action = next(a for a in data["next_actions"] if a["action"] == "confirm")
-        lines += ["\n确认：" + shlex.join(action["argv"]), "modify 表示明确修改并确认提交的参数；不传 decision 持续等待。"]
+        pending = data.get("pending_user") or {}
+        if pending.get("kind") == "identity":
+            lines += ["\n等待选择公司／上市市场，当前未执行估值：", pending.get("question", "请选择具体证券。")]
+            for index, candidate in enumerate(pending.get("candidates", []), 1):
+                name = candidate.get("legal_name") or candidate.get("company") or ""
+                lines.append(f"{index}. {name} · {candidate.get('market', '')} {candidate.get('security_code', '')} · {candidate.get('trading_currency', '')} · {candidate['candidate_id']}")
+            selections = [a for a in data["next_actions"] if a["action"] == "select_identity"]
+            if selections:
+                lines.append("\n选择示例：" + shlex.join(selections[0]["argv"]))
+            lines.append("不提交选择时持续等待；预算与原截止时点保持不变。")
+        else:
+            lines += ["\n等待确认，当前未执行正式估值：", json.dumps(pending, ensure_ascii=False, indent=2)]
+            action = next(a for a in data["next_actions"] if a["action"] == "confirm")
+            lines += ["\n确认：" + shlex.join(action["argv"]), "modify 表示明确修改并确认提交的参数；不传 decision 持续等待。"]
     if data.get("report_path"):
         lines.append("\n备忘录：" + data["report_path"])
     if data.get("stop_reasons"):
@@ -233,29 +272,36 @@ async def execute(args):
     from .adk_app import run_engine
     from .engine import Engine, TERMINAL
     if args.command == "start":
+        if args.mode == "offline-demo":
+            raise CLIError("demo_command_required", "start 仅启动正式研究；旧 --mode offline-demo 请改用 demo --materials-dir 虚构材料目录", field="--mode")
+        if args.materials_dir is not None:
+            raise CLIError("demo_argument", "--materials-dir 属于 demo；正式研究可用 --material 文件或目录，也可只提供公司名称", field="--materials-dir")
         research = {"company": args.company, "horizon": args.horizon or "12个月", "cutoff": args.cutoff,
                     "reference_price": args.reference_price, "price_time": args.price_time, "price_source": args.price_source}
-        if args.material:
-            if args.mode != "real-model":
-                raise CLIError("validation_error", "原始材料研究须用 --mode real-model", field="--mode")
-            from .research import RawEngine
-            research.update(market=args.market, security_code=args.security_code, exchange=args.exchange,
-                            trading_currency=args.trading_currency,
-                            company_id=args.company_id,share_class=args.share_class,questions=args.question,topics=args.topic)
-            explicit = {k:v for k,v in {"horizon":args.horizon,"framework":args.framework,"questions":args.question or None,"topics":args.topic or None}.items() if v is not None}
-            if args.framework_file:
-                explicit["framework"] = args.framework or "auto"
-            if args.confirmation_mode is not None:
-                research["confirmation_mode"] = args.confirmation_mode
-                explicit["confirmation_mode"] = args.confirmation_mode
-            engine = RawEngine.create_raw(args.runs_dir, research, args.material, limits=args.limits, pricing=args.pricing,
-                                          framework=args.framework or "auto", framework_file=args.framework_file,settings=settings,
-                                          llm_profile=args.llm,ocr_profile=args.ocr,embedding_profile=args.embedding,
-                                          knowledge_dir=args.knowledge_dir,explicit_parameters=explicit, authorization_override=args.authorization)
-        else:
-            # Preserve explicit v0.1 demonstration behavior, including manual confirmation.
-            research["cutoff"] = research["cutoff"][:10]
-            engine = Engine.create(args.runs_dir, research, mode=args.mode, limits=args.limits, materials_dir=args.materials_dir)
+        from .research import RawEngine
+        research.update(market=args.market, security_code=args.security_code, exchange=args.exchange,
+                        trading_currency=args.trading_currency,
+                        company_id=args.company_id,share_class=args.share_class,questions=args.question,topics=args.topic)
+        explicit = {k:v for k,v in {"horizon":args.horizon,"framework":args.framework,"questions":args.question or None,"topics":args.topic or None}.items() if v is not None}
+        if args.framework_file:
+            explicit["framework"] = args.framework or "auto"
+        if args.confirmation_mode is not None:
+            research["confirmation_mode"] = args.confirmation_mode
+            explicit["confirmation_mode"] = args.confirmation_mode
+        engine = RawEngine.create_raw(args.runs_dir, research, args.material, limits=args.limits, pricing=args.pricing,
+                                      framework=args.framework or "auto", framework_file=args.framework_file,settings=settings,
+                                      llm_profile=args.llm,ocr_profile=args.ocr,embedding_profile=args.embedding,
+                                      knowledge_dir=args.knowledge_dir,explicit_parameters=explicit, authorization_override=args.authorization)
+        state = await run_engine(engine)
+    elif args.command == "demo":
+        manifest = args.materials_dir / "manifest.json"
+        if not manifest.is_file():
+            raise CLIError("demo_materials_missing", "离线演示材料目录须包含 manifest.json", field="--materials-dir")
+        if load_json_file(manifest, "--materials-dir").get("fictional") is not True:
+            raise CLIError("demo_materials_invalid", "demo 仅接受 manifest 中明确标记 fictional=true 的虚构材料", field="--materials-dir")
+        research = {"company": args.company, "horizon": args.horizon, "cutoff": args.cutoff,
+                    "reference_price": args.reference_price, "price_time": args.price_time, "price_source": args.price_source}
+        engine = Engine.create(args.runs_dir, research, mode="offline-demo", limits=args.limits, materials_dir=args.materials_dir)
         state = await run_engine(engine)
     elif args.command == "compare":
         # Comparison and status read durable state without configuring/calling a model.
@@ -280,6 +326,16 @@ async def execute(args):
         return run_result(engine.state, args, settings) | {"comparison": result}
     else:
         saved = read_state(args.runs_dir, args.run_id)
+        if args.select_identity:
+            if args.decision or args.continue_research or args.parameters:
+                raise CLIError("argument_error", "--select-identity 不能与估值确认、参数修改或继续研究同时使用", field="--select-identity")
+            if saved["status"] != "waiting" or (saved.get("pending_user") or {}).get("kind") != "identity":
+                raise CLIError("invalid_run_state", "运行未在等待公司或证券选择", field="--select-identity")
+            engine = Engine.load(args.runs_dir, args.run_id)
+            state = await engine.select_identity(args.select_identity)
+            return run_result(state, args, settings)
+        if args.decision in {"confirm", "modify", "reject"} and (saved.get("pending_user") or {}).get("kind") == "identity":
+            raise CLIError("identity_choice_required", "当前等待证券选择；请用 --select-identity 候选ID、序号或唯一证券代码", field="--select-identity")
         if args.decision == "modify" and not args.parameters:
             raise CLIError("missing_parameters", "modify需要参数对象", field="--parameters")
         if args.continue_research and args.decision:

@@ -1,0 +1,17 @@
+{
+  "status": "failed",
+  "checked_files": 13,
+  "checked_local_links": 135,
+  "errors": [
+    "docs/prompts/README.md: missing ../prompt/v0.5-host-integration.md"
+  ],
+  "currently_untracked_link_targets": [
+    "docs/prompts/v0.4.2-implementation-plan.md",
+    "docs/prompts/v0.5-host-integration.md",
+    "docs/validation/v0.4.2/README.md",
+    "docs/validation/v0.4.2/offline-trace.json",
+    "docs/validation/v0.4.2/regression.log",
+    "docs/validation/v0.4.2/verification.json"
+  ],
+  "note": "Task-owned new validation/plan/templates will be staged; unrelated host/proposal links are local reference material."
+}

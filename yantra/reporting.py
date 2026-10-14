@@ -14,6 +14,7 @@ def memo_markdown(state, directory):
     thesis = a.get("thesis", {}).get("data", {})
     finance = a.get("finance", {}).get("data", {})
     valuation = a.get("valuation", {}).get("data", {})
+    judgment = report["投资结论摘要"].get("buy_judgment")
     snapshot = state["input_snapshot"]
     version = assumptions["version"]
     model = valuation.get("model", assumptions.get("model", "dcf"))
@@ -45,16 +46,25 @@ def memo_markdown(state, directory):
                 items.append("- " + str(value))
         return items or ["- 证据不足，待补查。"]
 
-    lines = ["# Yantra 投资备忘录", f"运行：{state['run_id']} · 模式：{state['mode']} · 状态：**{state['status']}**",
-             f"对象：{research['company']} · 研究期限：{research['horizon']} · 资料截止：{research['cutoff']}"]
+    lines = ["# Yantra 投资备忘录"]
+    if judgment:
+        lines += ["[判断] " + judgment["statement"]]
+    lines += [f"运行：{state['run_id']} · 模式：{state['mode']} · 状态：**{state['status']}**",
+              f"对象：{research['company']} · 研究期限：{research['horizon']} · 资料截止：{research['cutoff']}"]
+    if judgment:
+        lines += [f"证券：{research.get('market')} · {research.get('exchange')} · {research.get('security_code')} · {research.get('share_class')} · 交易币种：{research.get('trading_currency')}"]
     if snapshot["fictional"]:
         lines += ["**材料声明：本报告使用明确标注的虚构固定材料，不是真实公司研究或实时行情。**"]
     if state["mode"] == "offline-demo":
         lines += ["行动由脚本化演示策略选择，用于验证执行闭环；不代表真实模型推理。"]
     lines += ["## 1. 投资结论摘要", "[判断] " + report["投资结论摘要"]["statement"]]
-    if valuation.get("per_share_value") is not None and report["投资结论摘要"].get("valuation_status", "confirmed") == "confirmed":
+    if valuation.get("per_share_value") is not None and report["投资结论摘要"].get("valuation_status", "confirmed") in {"confirmed", "default_policy"}:
         lines += [f"[预测] 当前授权参数下，{method_label} 每股价值为 **{valuation['per_share_value']:.6f} {valuation.get('currency', 'CNY')}**。该结果是条件性模型输出。"]
-    if research["reference_price"] is None:
+    if judgment and judgment.get("quote"):
+        quote = judgment["quote"]
+        lines += [f"实际股价：{quote.get('price', '缺失')} {quote.get('currency')}；报价时间：{quote.get('price_time') or '缺失'}；获取时间：{quote.get('acquired_at') or '未记录'}；复权：{quote.get('adjustment') or '未知'}。",
+                  "行情原始响应：" + source(quote.get("source_ref") or "未取得")]
+    elif research["reference_price"] is None:
         lines += ["用户参考价格及价格时点缺失；相对现价差异须使用下方已核对的计算基准。"]
     else:
         lines += [f"用户提供参考价格：{research['reference_price']}，时点：{research['price_time']}，来源：{research.get('price_source')}。"]
@@ -82,6 +92,8 @@ def memo_markdown(state, directory):
         setup = state["preference_snapshot"]
         lines += [f"使用偏好：{setup['id']} v{setup['version']} · 长期授权：{setup['parameters']['authorization']['status']} · 本次覆盖：{state.get('authorization_override')}",
                   "关键节点选择：" + json.dumps(state.get("choices", []), ensure_ascii=False)]
+        if judgment and setup.get("source") == "run_default":
+            lines += ["本次采用默认自主研究策略；未记录用户长期授权，也未将沉默标为确认。"]
     if not finance.get("financials"):
         lines += ["未取得可用财务底表，不补造数字。"]
     lines += ["## 4. 财务分析与估值"]
@@ -117,6 +129,22 @@ def memo_markdown(state, directory):
         lines += [f"| {key} | {value} | {basis} |"]
     if valuation.get("per_share_value") is not None:
         lines += [f"[情景计算] {method_label} 每股价值：{valuation['per_share_value']:.6f} {valuation.get('currency', 'CNY')}；状态：{assumptions.get('authorization_source', 'none')}。"]
+    if judgment:
+        margin = judgment.get("safety_margin")
+        if margin:
+            lines += [f"[假设] 本次安全边际：{margin['ratio']:.2%}；理由：{margin['rationale']}。",
+                      "比例定义：(基准每股价值−实际股价)/基准每股价值；比较基准为当前主模型基准每股价值。"]
+            if margin.get("buy_price_ceiling") is not None:
+                available = f"{margin['available_ratio']:.2%}" if margin.get("available_ratio") is not None else "缺少实际股价，无法计算"
+                lines += [f"[计算] 满足安全边际的价格上限 = {margin['benchmark_value']:.6f} × (1−{margin['ratio']:.6f}) = {margin['buy_price_ceiling']:.6f} {valuation.get('currency')}；实际安全边际：{available}。"]
+        if judgment["conditional"]:
+            lines += ["当前选择仅作条件性情景；价格比较不能冒充已批准的买入判断。"]
+        if model != "dcf" and judgment["scenarios"]:
+            lines += ["三种情景沿用当前方法区间及基准，区间相同表示已有输入尚未给出不同情景；不补造额外增长或盈利假设。",
+                      "| 情景 | 每股价值 | 计算依据 |", "|---|---:|---|"]
+            for scenario in judgment["scenarios"]:
+                lines += [f"| {scenario['label']} | {scenario.get('per_share_value')} | {scenario.get('basis', '')} |"]
+        lines += ["口径差异说明：" + notice for notice in judgment.get("notices", [])]
     if valuation.get("auxiliary_models"):
         for method, output in valuation["auxiliary_models"].items():
             lines += ["辅助模型："+method+" · "+json.dumps({k: output.get(k) for k in ("per_share_value", "value_range", "currency", "basis", "calculation_ref")}, ensure_ascii=False)]

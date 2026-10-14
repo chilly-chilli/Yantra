@@ -42,12 +42,16 @@ class ToolSpec(ScopedExtension):
     cost_kind: Literal["model","service"] = "service"
     cost_source: str | None = None
     cost_as_of: str | None = None
+    cost_status: Literal["known", "unknown"] = "known"
+    information_provider: Literal["fuyao", "eastmoney", "eastmoney_data", "akshare", "cls", "tushare", "tavily", "yahoo"] | None = None
 
     @model_validator(mode="after")
     def contract(self):
         jsonschema.Draft202012Validator.check_schema(self.input_schema)
         if self.input_schema.get("type") != "object":raise ValueError("工具参数 schema 必须是 object")
         if self.cost_cny and not (self.cost_source and self.cost_as_of):raise ValueError("收费工具需声明费用上界来源和日期")
+        if self.information_provider in {"tushare", "tavily", "yahoo"} and self.cost_status == "known" and not (self.cost_source and self.cost_as_of):
+            raise ValueError("新增信息工具需声明费用上界来源和日期，零费用也需核实")
         return self
 
 
@@ -175,6 +179,13 @@ class ExtensionRuntime:
     def __init__(self,snapshot):
         self.snapshot=snapshot;self.bindings={};self.mcp_servers={};self.native_mcp={}
         for name,spec in snapshot.get("tools",{}).items():
+            command = spec.get("command", [])
+            if not spec.get("information_provider") and len(command) >= 3:
+                from .information import SCHEMAS
+                module = "-m" in command and "yantra.information" in command
+                script = str(Path(__file__).with_name("information.py").resolve()) in command
+                if (module or script) and command[-1] in SCHEMAS:
+                    spec = dict(spec, information_provider=command[-1])
             alias="ext_"+name if len(name)<=60 else "ext_"+name[:40]+"_"+hashlib.sha256(name.encode()).hexdigest()[:8]
             self.bindings[alias]=(spec,None)
         for server,spec in snapshot.get("mcp",{}).items():
@@ -186,13 +197,31 @@ class ExtensionRuntime:
                 self.mcp_servers[alias]=server
 
     def contracts(self):
-        return {name:{"description":(tool or spec)["description"],"arguments_schema":(tool or spec)["input_schema"]} for name,(spec,tool) in self.bindings.items()}
+        return {name:{"description":(tool or spec)["description"],"arguments_schema":(tool or spec)["input_schema"]} for name,(spec,tool) in self.bindings.items() if self.readiness(name)["ready"]}
 
     def permissions(self,role):
-        return [name for name,(spec,_) in self.bindings.items() if role in spec["roles"]]
+        return [name for name,(spec,_) in self.bindings.items() if role in spec["roles"] and self.readiness(name)["ready"]]
+
+    def readiness(self, name):
+        spec, _ = self.bindings[name]
+        reasons = []
+        if spec.get("cost_status", "known") != "known":reasons.append("cost_unknown")
+        provider = spec.get("information_provider")
+        if provider in {"tushare", "tavily", "yahoo"} and not (spec.get("cost_source") and spec.get("cost_as_of")) and "cost_unknown" not in reasons:
+            reasons.append("cost_unknown")
+        if provider == "yahoo":
+            import importlib.util
+            if importlib.util.find_spec("yfinance") is None:reasons.append("dependency_missing:yfinance")
+        if spec.get("information_provider"):
+            from .information import credential
+            for reference in spec.get("env_refs", {}).values():
+                try:credential(reference)
+                except ValueError:reasons.append("credential_missing:" + reference)
+        return {"ready": not reasons, "reasons": reasons}
 
     async def call(self,name,arguments,timeout):
         spec,tool=self.bindings[name]
+        if not self.readiness(name)["ready"]:raise ValueError("信息工具未就绪：凭据或费用声明未核实")
         try:jsonschema.validate(arguments,(tool or spec)["input_schema"])
         except jsonschema.ValidationError:raise ValueError("扩展工具参数未通过 JSON Schema") from None
         timeout=min(timeout,spec["timeout_seconds"])

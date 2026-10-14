@@ -27,7 +27,8 @@ RAW_PERMISSIONS = {
 }
 
 RAW_MAIN = MAIN_INSTRUCTION + """
-本轮为原始材料研究，按 raw-v2 规则覆盖旧演示要求：首次使用偏好和明确授权已在启动前校验。完成后默认自主交付，关键节点未确认采用暂定情景，ask_user不暂停交付。
+本轮为正式研究，按 raw-v2 规则覆盖旧演示要求：输入可仅含公司名称，首次偏好为空时使用本次默认自主策略，不代表用户长期授权。明确拒绝、撤销或手动模式用暂定情景。完成后默认交付，ask_user不暂停交付；证券身份待选择由控制器暂停。
+公开搜索及HTTP原文获取可以自主进行；缺资料时按同一问题换源。HTTP获取不是可交互浏览器，未接入的浏览器不能宣称可用。登录、付费或提交信息必须先记录限制并寻找公开替代，确需这些操作时提交用户选择，不自动执行。
 主Agent可approve_transfer（给transfer_id），revise_framework（给framework_text及rationale）或revise_standard（给standard_changes及rationale）。转派只有批准后才执行；框架修订经独立核验后供以后运行选择，本次始终固定快照。标准修改不得移除程序保障。
 框架及主体证券见输入。每次都已主动独立检索，还可按缺口补查。估值提案 model 可以为 not_applicable、parameters={}，说明真实FCFF口径、正现金流、周期性、股数或价格缺口；此时继续核验及研究，不能拒绝整项研究。
 核验无需强制存在估值。有财务及定性证据时可交付 partial。主框架选择写入结果；不强迫不适用公司做DCF。
@@ -47,8 +48,11 @@ finance的financial_screening是统一阈值的确定性调查信号。thesis以
 经营预期比较使用compare_expectations，own_forecasts须依据、原始引用和兑现条件；外部预测须原始FinancialRecord、来源日期、机构、样本范围及consensus/research_sample分类。未取得外部基准仍可展示有依据的本方预测，不造差值；不得声称市场已经定价，不生成价格隐含假设。估值对当前价格差异只放财务估值模块。
 valuation propose: model可为dcf/pe/pb/ev_ebitda/ddm/not_applicable。先按方法检查来源、身份、币种、期间、股本类别、合并/归母口径及截止时点。PE/PB以每股EPS/BVPS乘同类同期间同日可比倍数；EV/EBITDA须明确净债务、少数股东权益和总股数才能发布每股结论；DDM为年度D0*(1+g)/(k-g)。新方法parameters按MethodInputs合约（见valuation工具description），每项来源保存FinancialRecord或MultipleObservation；basis解释参数与相关论点。框架与方法为两个维度。不适用时not_applicable并保留缺口；不能强制绕过条件、补造证据或把PB叫NAV。市场基准缺失保持unresolved。
 模型选择由实际业务、盈利及现金流证据决定，selection_reason说明依据，unused_models解释未采用方法。auxiliary_models可选，各含独立model/parameters/basis/scope/selection_reason，逐个满足来源硬条件；不强制辅助、不自动平均。calculate任务用valuation分别计算主模型和获准辅助模型；可用use_receipts返回，控制器组装凭证。
+新正式研究估值提案填写safety_margin={ratio,rationale,benchmark:"base_per_share_value",evidence_refs}，0<=ratio<1；根据经营风险、预测难度与资料质量解释选择，不使用强制比例。比较基准为一般情景每股估值，买入阈值=该值*(1-ratio)，控制器确定性计算。可靠单一原始来源可以支持初步判断，独立核验仍必须完成；新闻或搜索摘要不能冒充原始财务/报价。三情景及12个月空间不是保证收益。
 confirmed=false且authorization_source=provisional可计算明确标记的暂定情景，不能称用户已批准。授权只由控制器检查当前长期权限/单次覆盖/用户明确输入，basis保留依据和对结果的影响。首次设置完成后的manual同样不无限等待。
+authorization_source=default_policy且confirmed=false表示本次默认策略允许计算，用户未确认；不要求或写入长期授权。报告可在硬条件及独立核验通过后形成初步判断，不能称用户已经批准。
 verification: 程序一致性通过仍要独立审查经济判断、财务口径、事实与预测、风险及方法适用性。可否决 passed，不能删除程序问题；否决须写具体 Issue。不同公司能形成不同摘要。
+非关键财务差异可以在check_consistency中传conflict_assessments=[{conflict_hash,reason,evidence_refs}]，使用finance.conflict_refs已给定的hash、引用覆盖全部候选，说明为何不影响判断；实际用于主/辅助估值输入或论点引用的冲突仍不能降级，不选择未调节的数值。关键冲突应继续定位最新官方披露，无法解释时否决受影响判断。
 v0.3 knowledge_search/read 提供历史线索，knowledge_propose 只提议；knowledge_review 仅独立核验角色可用。历史论点不能作为本次已确认结论，问题获准只表示有核查价值。事实复用必须检查哈希、期间、证券、币种及口径。比较业务和集团指标时不得跨口径推出论点状态；先固定本次判断，再比较、补查、修订和独立核验。重点条目记录R1-R4及具体理由。
 """
 
@@ -132,6 +136,7 @@ class RawEngine(Engine):
         self.tools.research_context = state["research"]
         self.tools.screening_version = state.get("investment_logic_version", 0)
         self.tools.adapter.timeout = lambda: min(45, self.run_budget.remaining())
+        self.tools.adapter.no_retry = state.get("research_flow_version", 0) >= 2
         self.knowledge = None
         if state.get("knowledge"):
             from .knowledge.runtime import ResearchKnowledge, CONTRACTS
@@ -159,8 +164,10 @@ class RawEngine(Engine):
         from .schemas import AutonomyAuthorization
         knowledge_root = Path(knowledge_dir or Path(storage)/"knowledge").resolve()
         preferences = Preferences(KnowledgeStore(knowledge_root))
-        setup = preferences.setup_snapshot()
+        setup = preferences.research_snapshot()
         override = AutonomyAuthorization.model_validate(authorization_override).model_dump() if authorization_override is not None else None
+        if override and override["status"] == "unspecified":
+            raise ValueError("本次授权须明确授予或拒绝")
         research = dict(research)
         provided_mode = research.get("confirmation_mode")
         research.setdefault("confirmation_mode", setup["parameters"]["confirmation_mode"])
@@ -187,8 +194,6 @@ class RawEngine(Engine):
         chosen_embedding=catalog.resolve("embedding",embedding_profile) if catalog else None
         selected = backend or (create_backend(chosen_llm,RawBackend) if chosen_llm else RawBackend.from_env(timeout_seconds=90))
         price = Pricing.model_validate(pricing or (chosen_llm or {}).get("pricing") or pricing_from_env()).model_dump()
-        if not inputs:
-            raise ValueError("provide --material file/directory/URL; no manifest required")
         run_id = "run-" + uuid4().hex[:12]
         directory = Path(storage).resolve() / run_id
         directory.mkdir(parents=True)
@@ -203,11 +208,15 @@ class RawEngine(Engine):
         state = {"run_id": run_id, "status": "running", "mode": "real-model" if backend is None else "test",
             "raw_materials": True, "research": r, "created_at": datetime.fromtimestamp(started, timezone.utc).isoformat(),
             "valuation_schema": 2,
-            "investment_logic_version": 1, "preference_snapshot": setup,
+            "investment_logic_version": 1, "research_flow_version": 2, "preference_snapshot": setup,
+            "research_policy": {"source": "run_default" if setup["version"] == 0 else "explicit_preferences",
+                                "permanent_consent": False, "default_autonomous": setup["version"] == 0},
             "authorization_override": override, "choices": [], "choice_history": [], "preference_history": [],
             "deadline": end, "limits": config.model_dump(), "pricing": price, "model_ledger": [],
             "program_version": __version__, "config": selected.config_summary() if hasattr(selected, "config_summary") else {"backend": "injected-test"},
-            "capabilities":{"models":{"llm":chosen_llm,"ocr":chosen_ocr,"embedding":chosen_embedding},"extensions":extensions,"worker_context":"exact_receipts_v1"},
+            "capabilities":{"models":{"llm":chosen_llm,"ocr":chosen_ocr,"embedding":chosen_embedding},"extensions":extensions,"worker_context":"exact_receipts_v1",
+                            "public_access": {"http_fetch": True, "interactive_browser": False,
+                                              "browser_gap": "未内建可交互浏览器；公开搜索及HTTP获取仍可使用"}},
             "knowledge":{"root":str(Path(knowledge_dir or Path(storage)/"knowledge").resolve()),"archived":{},"proposals":[],"startup":[],"fixed_refs":[],"snapshots":[],"comparisons":[],"reused":[]},
             "explicit_parameters": explicit_parameters if explicit_parameters is not None else {"horizon":r["horizon"],"framework":framework, **({"confirmation_mode": provided_mode} if provided_mode else {})},
             "input_source_ids": [m["id"] for m in registry.load_manifest()["materials"]],
@@ -308,6 +317,8 @@ class RawEngine(Engine):
             with self._lock():
                 self.run_budget.state = self.state
                 self.run_budget.check()
+                if self.state["status"] == "waiting" and (self.state.get("pending_user") or {}).get("kind") == "identity":
+                    return self.state
                 if self.state.get("in_flight_tool"):
                     raise StopRun("上次外部工具操作中断，结果未知；保留费用和工具预算，不自动重放")
                 if self.state.get("normalization_policy") != "raw-unit-v2":
@@ -336,6 +347,8 @@ class RawEngine(Engine):
                         self._log("raw_unit_normalization_revalidated", {"financials": len(accepted["financials"]), "model_calls": 0})
                     self.state["normalization_policy"] = "raw-unit-v2"
                     self._save()
+                if self.state.get("research_flow_version", 0) >= 2:
+                    self.state["input_fetch_retry_done"] = True
                 if not self.state.get("input_fetch_retry_done"):
                     self.state["input_fetch_retry_done"] = True
                     index = self.tools.load_manifest()
@@ -357,6 +370,8 @@ class RawEngine(Engine):
                     self._save()
                 if not self.state["prepared"]:
                     await self._prepare()
+                    if self.state["status"] == "waiting":
+                        return self.state
                     self.state["prepared"] = True
                     self._save()
                 if not self.state.get("input_extraction_done"):
@@ -473,32 +488,45 @@ class RawEngine(Engine):
         # Every run searches all four purposes, even with a full set of user materials.
         name = self.state["research"]["company"]
         if not self.state["research"]["market"] or not self.state["research"]["security_code"]:
-            receipt = await asyncio.to_thread(self.tools.adapter.search, f"{name} 证券代码 官方 交易所", "identity", 3)
+            receipt = await self._discover(f"{name} 证券代码 官方 交易所", "identity", 3)
             self.state["searches"].append(receipt)
-            self.state["budget"]["tool_calls"] += 1
             self.state["input_snapshot"] = self.tools.snapshot()
             sources = self.tools._read_materials({"company": name}).data["documents"]
             resolution = await self._decision("identity", {"company": name, "sources": sources})
             anchors = self.tools.anchors()
-            candidates = [c for c in resolution["candidates"] if c["source_ref"] in anchors and c["quote"] in anchors[c["source_ref"]][0]["text"] and c["security_code"] in c["quote"]]
+            candidates = [c for c in resolution["candidates"] if c["source_ref"] in anchors and c["quote"] in anchors[c["source_ref"]][0]["text"] and c["security_code"] in c["quote"]
+                          and not any(a.get("evidence_kind") == "discovery" for a in anchors[c["source_ref"]][1].get("acquisitions", []))]
             candidates = list({(c["market"], c["security_code"], c["trading_currency"], c["share_class"]): c for c in candidates}.values())
             self.state["identity_candidates"] = candidates
-            if len(candidates) != 1:
+            if self.state.get("research_flow_version", 0) >= 2:
+                explicit = self.state["research"]
+                candidates = [c for c in candidates if all(not explicit.get(k) or explicit[k] == c[k]
+                    for k in ("market", "security_code", "exchange", "share_class", "trading_currency"))]
+                self.state["identity_candidates"] = [dict(c, candidate_id=f"security-{i}", company=c["legal_name"])
+                                                     for i, c in enumerate(candidates, 1)]
+                if len(candidates) != 1:
+                    self.state.update(status="waiting", pending_user={"kind": "identity",
+                        "question": "请选择具体公司及上市证券；无可核实候选时请补充证券身份或公开来源。",
+                        "candidates": self.state["identity_candidates"], "gaps": resolution.get("gaps", [])})
+                    self._log("identity_choice_required", self.state["pending_user"])
+                    self._save()
+                    return
+            elif len(candidates) != 1:
                 raise StopRun("公司或证券身份有歧义或证据不足：请用 --market 和 --security-code 确认具体证券后启动")
             identity = candidates[0]
             self.state["identity"] = identity
             self.state["research"].update({k: identity[k] for k in ("market", "exchange", "security_code", "trading_currency","share_class")})
             if self.knowledge:
                 self.knowledge.initialize()
+        if self.state.get("research_flow_version", 0) >= 2:
+            await self._information("quote")
+            await self._information("financials")
         queries = [("disclosure", f"{name} 年报 财务报告 官方"), ("counter_evidence", f"{name} 风险 竞争 现金流"),
                    ("changes", f"{name} 公告 最新 经营变化"), ("expectations", f"{name} 市场预期 估值 consensus")]
         for purpose, query in queries:
             self.run_budget.check()
-            self.state["budget"]["tool_calls"] += 1
-            if self.state["budget"]["tool_calls"] > self.state["limits"]["total_tools"]:
-                raise StopRun("全系统工具预算耗尽")
             self._log("independent_search_started", {"query": query, "purpose": purpose})
-            receipt = await asyncio.to_thread(self.tools.adapter.search, query, purpose, 2)
+            receipt = await self._discover(query, purpose, 2)
             self.state["searches"].append(receipt)
             self.state["input_snapshot"] = self.tools.snapshot()
             if self.knowledge:
@@ -537,12 +565,94 @@ class RawEngine(Engine):
             self._record_choice("perspective", self.state["framework"]["version"], self.state.get("framework_selection_reason", "明确的本次或长期偏好"),
                                 "限定研究问题及关注重点", [{"value": "auto", "impact": "依据证据重新选择内置视角"}], user=True)
 
+    async def _information(self, purpose, query=None, max_results=3):
+        """Acquire with frozen finance permissions and the existing tool lifecycle."""
+        if self.state.get("research_flow_version", 0) < 2:
+            return []
+        from .information import query_arguments
+        from .v2_tools import canonical
+        task = self._make_task(MainAction(action="delegate_task", target="finance", purpose="collect",
+                                        question="获取" + purpose + "原始资料"))
+        execution = {"task": task, "local": {"actual_calls": 0, "tool_outputs": []},
+                     "started": time.monotonic(), "failures": {}}
+        results = []
+        def finish_task():
+            if any(t["task_id"] == task.task_id for t in self.state["tasks"]):
+                result = Result(task_id=task.task_id, status="complete" if all(r["ok"] for r in results) else "partial",
+                    data={"information_purpose": purpose, "source_ids": [r["data"]["source_id"] for r in results if r["ok"]]},
+                    evidence_refs=sorted({ref for r in results for ref in r.get("evidence_refs", [])}),
+                    actual_calls=execution["local"]["actual_calls"], assumptions_version=task.assumptions.version).model_dump()
+                self.state["results"].append(result)
+                self._log("information_task_result", result)
+                self._save()
+        for tool, (spec, _) in self.extensions.bindings.items():
+            provider = spec.get("information_provider")
+            arguments = query_arguments(provider, purpose, self.state["research"] | {"query": query or "", "max_results": max_results}) if provider else []
+            if not arguments:
+                continue
+            ready = self.extensions.readiness(tool)
+            if tool not in task.authorized_tools or not ready["ready"]:
+                self.state.setdefault("information_attempts", []).append({"tool": tool, "purpose": purpose,
+                    "status": "unavailable", "reasons": ready["reasons"] or ["role_not_authorized"]})
+                continue
+            for args in arguments:
+                key = canonical([tool, args])
+                if any(a.get("request_key") == key for a in self.state.get("information_attempts", [])):
+                    continue
+                attempt = {"tool": tool, "purpose": purpose, "request_key": key, "status": "started"}
+                if not any(t["task_id"] == task.task_id for t in self.state["tasks"]):
+                    self.state["tasks"].append(task.model_dump())
+                self.state.setdefault("information_attempts", []).append(attempt)
+                self._save()
+                response = await self._execute_worker_tool(execution, tool, args)
+                attempt.update(status="acquired" if response["ok"] else "failed", response=response)
+                results.append(response)
+                if response["ok"]:
+                    data = response["data"]["result"]
+                    if data.get("quote"):
+                        source = next(m for m in self.tools.load_manifest()["materials"] if m["id"] == response["data"]["source_id"])
+                        anchor = next((c for c in source["chunks"] if c.get("location", {}).get("json_pointer") == "/quote"), source["chunks"][0])
+                        quote = data["quote"] | {"source_ref": anchor["ref"], "source_hash": source["source_hash"],
+                                                 "acquired_at": data.get("retrieved_at", source["acquired_at"])}
+                        self.state.setdefault("quote_history", []).append(quote)
+                        identity_matches = all(quote.get(k) == self.state["research"].get(k) and quote.get(k)
+                                               for k in ("security_code", "market", "exchange", "share_class"))
+                        suitable = identity_matches and quote.get("currency") == self.state["research"]["trading_currency"] and quote.get("adjustment") == "unadjusted" and quote.get("price_time") and cutoff_time(quote["price_time"]) <= cutoff_time(self.state["research"]["cutoff"])
+                        if suitable and not self.state.get("quote"):
+                            self.state["quote"] = quote
+                        elif not suitable:
+                            attempt.update(status="inapplicable", reason="quote_identity_currency_adjustment_or_cutoff")
+                    self._save()
+                    if purpose == "quote" and self.state.get("quote"):
+                        finish_task()
+                        return results
+        finish_task()
+        return results
+
+    async def _discover(self, query, purpose, max_results):
+        results = await self._information("identity" if purpose == "identity" else "search", query, max_results)
+        for response in results:
+            if response["ok"]:
+                receipt = await asyncio.to_thread(self.tools.adapter.pipeline().ingest_information,
+                    response["data"]["result"], query, purpose, max_results)
+                if any(r.get("source_id") and r.get("status") in {"fetched", "acquired"} and r.get("parsed", bool(r.get("evidence_refs"))) for r in receipt.get("results", [])):
+                    self.state["input_snapshot"] = self.tools.snapshot()
+                    return receipt
+        self.run_budget.check()
+        if self.state["budget"]["tool_calls"] >= self.state["limits"]["total_tools"]:
+            raise StopRun("全系统工具预算耗尽")
+        self.state["budget"]["tool_calls"] += 1
+        self._save()
+        return await asyncio.to_thread(self.tools.adapter.search, query, purpose, max_results)
+
     def _choice_status(self, kind):
         if not self.state.get("investment_logic_version"):
             return "controller" if self.state["research"]["confirmation_mode"] == "autonomous" else "provisional"
         from .knowledge.preferences import Preferences
         pinned = self.state["authorization_override"] or self.state["preference_snapshot"]["parameters"]["authorization"]
-        live = Preferences(self.knowledge.store).setup_snapshot()
+        live = Preferences(self.knowledge.store).research_snapshot() if self.state.get("research_flow_version", 0) >= 2 else Preferences(self.knowledge.store).setup_snapshot()
+        if self.state.get("research_flow_version", 0) >= 2 and self.state["research"]["confirmation_mode"] == "autonomous" and self.state["authorization_override"] is None and pinned["status"] == "unspecified" and live["version"] == 0:
+            return "default_policy"
         live_authorization = live["parameters"]["authorization"]
         active = self.state["authorization_override"] is not None or (live["version"] == self.state["preference_snapshot"]["version"] and live_authorization["status"] == "granted" and kind in live_authorization["scope"])
         return "controller" if self.state["research"]["confirmation_mode"] == "autonomous" and pinned["status"] == "granted" and kind in pinned["scope"] and active else "provisional"
@@ -569,7 +679,7 @@ class RawEngine(Engine):
         prior = json.loads(json.dumps(self.state["assumptions"]))
         prior_report = json.loads(json.dumps(self.state["report"])) if self.state["report"] else None
         for candidate in [self.state["assumptions"], *self.state["assumptions"].get("auxiliary_models", {}).values()]:
-            if candidate["authorization_source"] == "controller" and any(self._choice_status(k) != "controller" for k in ("models", "assumptions")):
+            if candidate["authorization_source"] in {"controller", "default_policy"} and any(self._choice_status(k) != candidate["authorization_source"] for k in ("models", "assumptions")):
                 candidate.update(confirmed=False, authorization_source="provisional")
                 changed = True
         if changed:
@@ -585,7 +695,7 @@ class RawEngine(Engine):
                 if old:
                     self.state["invalidated"].append(old["task_id"])
             self._log("authorization_revoked", {"retained_preference_version": self.state["preference_snapshot"]["version"]})
-            self.state.setdefault("authorization_observations", []).append(Preferences(self.knowledge.store).setup_snapshot())
+            self.state.setdefault("authorization_observations", []).append(Preferences(self.knowledge.store).research_snapshot())
             for kind in ("models", "assumptions"):
                 self._record_choice(kind, self.state["assumptions"]["model"] if kind == "models" else self.state["assumptions"]["parameters"],
                                     "长期授权已修改或撤销，本次固定版本不能批准新的选择", "后续分析降为暂定情景并重新核验", [{"value": "confirm", "impact": "用户明确确认后形成新版"}])
@@ -693,6 +803,8 @@ class RawEngine(Engine):
                     self.state["assumption_history"].append(json.loads(json.dumps(current)))
                     current["version"] += 1
                 current.update(model=model, parameters=result.data["parameters"], basis=result.data.get("basis", {}), confirmed=False, authorization_source="none")
+                if self.state.get("research_flow_version", 0) >= 2:
+                    current["safety_margin"] = result.data.get("safety_margin")
                 self._check_authorization(current)
                 if self.state.get("investment_logic_version"):
                     from .schemas import ModelAssumptions
@@ -707,6 +819,8 @@ class RawEngine(Engine):
                     self.state["assumptions"] = Assumptions(version=current["version"]+1).model_dump()
         if key == "verification":
             self.state["issues"] = result.data.get("issues", [])
+            if self.state.get("research_flow_version", 0) >= 2 and self.state["artifacts"].get("finance"):
+                self.state["artifacts"]["finance"]["data"]["conflict_assessments"] = result.data.get("conflict_assessments", [])
             if self.state.get("framework_draft") and result.data.get("framework_passed") and result.data.get("passed"):
                 store = FrameworkStore(self.directory.parent / "frameworks")
                 verified = store.verify(self.state["framework_draft"]["version"], {"passed": True, "review_task_id": task.task_id})
@@ -830,7 +944,7 @@ class RawEngine(Engine):
         self.state["preference_signature"] = signature
         if self.state.get("investment_logic_version"):
             self.state["preference_history"].append(self.state["preference_snapshot"])
-            self.state["preference_snapshot"] = Preferences(self.knowledge.store).setup_snapshot()
+            self.state["preference_snapshot"] = Preferences(self.knowledge.store).research_snapshot()
             self.state["fixed_preferences"] = [p for p in Preferences(self.knowledge.store).list() if any(p["id"] == a["id"] for a in applied)]
         request.unlink(missing_ok=True)
 
@@ -880,10 +994,12 @@ class RawEngine(Engine):
         assumptions = self.state["assumptions"]
         self._check_authorization(assumptions)
         if self.state.get("investment_logic_version"):
-            granted = all(self._choice_status(k) == "controller" for k in ("models", "assumptions"))
+            statuses = {self._choice_status(k) for k in ("models", "assumptions")}
+            granted = statuses <= {"controller", "default_policy"}
+            source = "default_policy" if "default_policy" in statuses else "controller"
             for candidate in [assumptions, *assumptions.get("auxiliary_models", {}).values()]:
                 self._check_authorization(candidate)
-                candidate.update(confirmed=granted, authorization_source="controller" if granted else "provisional",
+                candidate.update(confirmed=granted and source != "default_policy", authorization_source=source if granted else "provisional",
                                  authorization_version=self.state["preference_snapshot"]["version"])
             proposal = self.state["artifacts"]["proposal"]["data"]
             self._record_choice("models", [assumptions["model"], *assumptions["auxiliary_models"]], proposal.get("selection_reason") or proposal["scope"],
@@ -893,7 +1009,7 @@ class RawEngine(Engine):
                                 [{"value": "user_parameters", "impact": "提交有效来源和完整参数后重算"}])
         else:
             assumptions.update(confirmed=True, authorization_source="controller")
-        self._log("autonomous_valuation_authorized" if assumptions["confirmed"] else "provisional_valuation_selected",
+        self._log("default_policy_valuation_selected" if assumptions["authorization_source"] == "default_policy" else "autonomous_valuation_authorized" if assumptions["confirmed"] else "provisional_valuation_selected",
                   {"model": assumptions.get("model", "dcf"), "version": assumptions["version"], "basis": assumptions["basis"],
                    "confirmed": assumptions["confirmed"], "authorization_source": assumptions["authorization_source"]})
 
@@ -915,7 +1031,8 @@ class RawEngine(Engine):
         updated = changes["parameters"] if "parameters" in changes else current["parameters"] | changes
         basis = changes.get("basis", current["basis"] | {k: "用户明确修改并确认" for k in changes})
         self._validate_parameters(updated, model)
-        candidate = Assumptions(model=model, version=current["version"]+1, confirmed=True, authorization_source="user", parameters=updated, basis=basis).model_dump()
+        candidate = Assumptions(model=model, version=current["version"]+1, confirmed=True, authorization_source="user", parameters=updated, basis=basis,
+                                safety_margin=changes.get("safety_margin", current.get("safety_margin"))).model_dump()
         from .schemas import ModelAssumptions
         for auxiliary in changes.get("auxiliary_models", []):
             slot = ModelAssumptions(model=auxiliary["model"], version=candidate["version"], confirmed=True, authorization_source="user", parameters=auxiliary["parameters"], basis=auxiliary["basis"]).model_dump()
@@ -1030,9 +1147,19 @@ class RawEngine(Engine):
             self._check_authorization(candidate)
             args["basis"] = candidate["basis"]
         if name == "check_consistency":
+            assessments = args.get("conflict_assessments", []) if task.target == "verification" and self.state.get("research_flow_version", 0) >= 2 else []
             args = {"results": task.inputs, "assumptions": task.assumptions.model_dump(), "research": self.state["research"], "user_overrides": self.state["user_overrides"]}
+            if assessments:
+                args["conflict_assessments"] = assessments
         import hashlib
         fingerprint = hashlib.sha256(json.dumps([name, args], sort_keys=True).encode()).hexdigest()
+        if name in self.extensions.bindings:
+            spec, _ = self.extensions.bindings[name]
+            ready = self.extensions.readiness(name)
+            if not ready["ready"]:
+                raise StopRun("信息工具未就绪：" + ",".join(ready["reasons"]))
+            if self.state.get("research_flow_version", 0) >= 2 and spec["cost_kind"] == "service" and self.state["budget"]["model_cost_cny"] + self.state["budget"]["external_service_cost_cny"] + spec["cost_cny"] >= self.state["limits"]["max_cost_cny"]:
+                raise BudgetExceeded("共享人民币预算不足，无法预留资料服务费用")
         if execution["failures"].get(fingerprint, 0) > self.state["limits"]["retries"]:
             raise StopRun("同一失败操作重试上限")
         return args, fingerprint
@@ -1081,7 +1208,11 @@ class RawEngine(Engine):
                 data=await self.extensions.call(name,args,max(.01,remaining))
                 encoded=json.dumps(data,ensure_ascii=False,allow_nan=False).encode()
                 if len(encoded)>1_000_000:raise ValueError("扩展输出超过 1 MB")
-                source=self.tools.adapter.add(encoded,".json","extension:"+name)
+                source=self.tools.adapter.add(encoded,".json","extension:"+name,
+                    channel={"information_provider": spec.get("information_provider"), "adapter_id": spec.get("information_provider"),
+                             "source_channel_id": "information_api", "tool": name, "status": "fetched",
+                             "evidence_kind": "discovery" if spec.get("information_provider") in {"tavily", "eastmoney"} else "source_api",
+                             "original_disclosure_required": data.get("metadata", {}).get("original_disclosure_required", False)})
                 self.state["input_snapshot"]=self.tools.snapshot()
                 response={"ok":True,"data":{"result":data,"source_id":source["id"],"source_hash":source["source_hash"]},
                           "evidence_refs":[c["ref"] for c in source["chunks"]],"calculation_refs":[]}
@@ -1247,7 +1378,8 @@ class RawEngine(Engine):
                     result.data = {**expected, "metrics": metrics[-1] if metrics else {}}
                 if result.data.get("financials") != expected["financials"]:
                     raise StopRun("财务成果不能改写已校验提取记录")
-                result.data.update(evidence=expected["evidence"], conflicts=expected["conflicts"])
+                result.data.update(evidence=expected["evidence"], conflicts=expected["conflicts"],
+                                   conflict_resolutions=expected.get("conflict_resolutions", []), conflict_refs=expected.get("conflict_refs", []))
                 result.data["gaps"] = list(dict.fromkeys(result.data.get("gaps", []) + expected["gaps"]))
                 if metrics and result.data.get("metrics") != metrics[-1]:
                     raise StopRun("财务指标成果不能改写确定性计算凭证")
@@ -1365,6 +1497,34 @@ class RawEngine(Engine):
             self._save()
         return state
 
+    async def select_identity(self, selector):
+        """Resume a stored securities choice without starting a new budget or run."""
+        with self._lock():
+            pending = self.state.get("pending_user") or {}
+            if self.state["status"] != "waiting" or pending.get("kind") != "identity":
+                raise ValueError("identity selection not found or ambiguous")
+            try:
+                self.run_budget.check()
+            except BudgetExceeded as exc:
+                self._stop(str(exc))
+                self._finish()
+                return self.state
+            candidates = pending.get("candidates", [])
+            matches = [c for i, c in enumerate(candidates, 1)
+                       if str(selector) in {c["candidate_id"], str(i), c["security_code"]}]
+            if len(matches) != 1:
+                raise ValueError("identity selection not found or ambiguous")
+            identity = matches[0]
+            self.state["identity"] = identity
+            self.state["research"].update({k: identity[k] for k in
+                ("market", "exchange", "security_code", "trading_currency", "share_class")})
+            self.state.setdefault("identity_history", []).append({"selected": identity, "source": "user"})
+            self.state.update(status="running", pending_user=None)
+            self.knowledge.initialize()
+            self._log("identity_selected", {"candidate_id": identity["candidate_id"], "security_code": identity["security_code"]})
+            self._save()
+        return await self.advance()
+
     def _report(self):
         report = super()._report()
         thesis = self.state["artifacts"].get("thesis", {}).get("data", {})
@@ -1375,9 +1535,9 @@ class RawEngine(Engine):
             report["投资结论摘要"]["statement"] = thesis["summary"]
         if self.state.get("investment_logic_version"):
             assumptions = self.state["assumptions"]
-            approved = assumptions["confirmed"] and assumptions["authorization_source"] in {"controller", "user"}
+            approved = assumptions["authorization_source"] == "default_policy" or (assumptions["confirmed"] and assumptions["authorization_source"] in {"controller", "user"})
             verified = bool(self.state["artifacts"].get("verification", {}).get("data", {}).get("passed")) and not any(i["severity"] in {"critical", "major"} for i in self.state["issues"])
-            report["投资结论摘要"]["valuation_status"] = "confirmed" if approved and verified else "provisional"
+            report["投资结论摘要"]["valuation_status"] = ("default_policy" if assumptions["authorization_source"] == "default_policy" else "confirmed") if approved and verified else "provisional"
             if not approved or not verified:
                 facts = [c.get("statement", "") for c in thesis.get("claims", []) if c.get("kind", c.get("type")) in {"fact", "management_statement"}]
                 report["投资结论摘要"]["statement"] = "；".join(facts[:2]) + "。结论取决于论点兑现条件、待确认选择和独立核验；具体估值仅作为下文情景分析。"
@@ -1391,6 +1551,9 @@ class RawEngine(Engine):
             report["市场预期差"] = thesis.get("expectations") or {"status": "no_external_baseline", "baseline": None, "own_forecasts": [], "comparisons": [], "statement": "本次未取得可比的外部预测基准"}
         report["事实与数据基础"]["research_evidence"] = self.state["artifacts"].get("finance", {}).get("data", {}).get("evidence", [])
         report["事实与数据基础"].update(framework=self.state["framework"], standard_version=self.state["standard_version"], searches=self.state["searches"])
+        if self.state.get("research_flow_version", 0) >= 2:
+            report["事实与数据基础"].update(research_policy=self.state["research_policy"], public_access=self.state["capabilities"]["public_access"],
+                                         information_attempts=self.state.get("information_attempts", []))
         if self.knowledge:
             report["事实与数据基础"]["knowledge"] = {"fixed_refs":self.knowledge.fixed_refs(),"snapshots":self.state["knowledge"]["snapshots"],"comparisons":self.state["knowledge"]["comparisons"],"notice":self.state["knowledge"].get("startup_notice"),"submission_issues":self.state["knowledge"].get("submission_issues",[])}
         report["事实与数据基础"]["input_version"] = {"manifest_hash": self.state["input_snapshot"]["manifest_hash"],
@@ -1399,11 +1562,14 @@ class RawEngine(Engine):
         if comparison:
             if self.state.get("investment_logic_version"):
                 report["财务分析与估值"]["valuation_price_comparison"] = comparison
-                return report
-            report["市场预期差"].update(comparison=comparison, baseline=comparison["baseline"])
-            if comparison["status"] == "unresolved":
+            else:
+                report["市场预期差"].update(comparison=comparison, baseline=comparison["baseline"])
+            if not self.state.get("investment_logic_version") and comparison["status"] == "unresolved":
                 report["市场预期差"].update(status="unresolved", statement=comparison["statement"])
                 report["投资结论摘要"]["gaps"].append(comparison["statement"])
+        if self.state.get("research_flow_version", 0) >= 2:
+            from .judgment import apply_judgment
+            apply_judgment(self.state, report, self.tools.anchors())
         return report
 
     def _finish(self, cancelled=False):

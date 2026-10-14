@@ -380,6 +380,12 @@ class EmbeddingTests(KnowledgeFixture):
 
 
 class SourceInterfaceTests(unittest.TestCase):
+    def setUp(self):
+        for target in ("socket.create_connection", "socket.socket.connect", "httpx.HTTPTransport.handle_request"):
+            blocker = patch(target, side_effect=AssertionError("unmocked external call forbidden"))
+            blocker.start()
+            self.addCleanup(blocker.stop)
+
     def test_web_and_offline_adapter_share_fetch_archive_and_checkpoint(self):
         class OfflineAdapter:
             id="fictional-offline"
@@ -402,7 +408,7 @@ class SourceInterfaceTests(unittest.TestCase):
             self.assertEqual(web["source_hash"],offline["source_hash"])
             self.assertEqual(len(materials.load_manifest()["materials"]),1)
             self.assertEqual(len(materials.load_manifest()["materials"][0]["acquisitions"]),2)
-            with patch("ddgs.DDGS.text",return_value=[{"href":"https://fixture.invalid/report","title":"fictional disclosure","body":"summary is not evidence"}]),patch.object(materials,"fetch_raw",return_value={"content":b"fictional original 2026-01-01 published profit 10","suffix":".txt","mime":"text/plain","final_url":"https://fixture.invalid/report"}):
+            with patch("yantra.sources.public_search",return_value=[{"href":"https://fixture.invalid/report","title":"fictional disclosure","body":"summary is not evidence"}]),patch.object(materials,"fetch_raw",return_value={"content":b"fictional original 2026-01-01 published profit 10","suffix":".txt","mime":"text/plain","final_url":"https://fixture.invalid/report"}):
                 discovered=materials.search("fictional question","disclosure",1)
             self.assertEqual(discovered["adapter_id"],"web_search")
             self.assertEqual(discovered["results"][0]["source_hash"],offline["source_hash"])

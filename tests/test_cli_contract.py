@@ -22,11 +22,15 @@ class CLIContractTests(unittest.TestCase):
 
     def invoke(self, *arguments, output="json", bootstrap=None, input_text=""):
         argv = ["--config", str(self.config), "--output", output, *map(str, arguments)]
-        command = ([sys.executable, "-c", bootstrap, *argv] if bootstrap else
-                   [sys.executable, "-m", "yantra", *argv])
-        environment = os.environ.copy()
-        environment["PYTHONPATH"] = str(ROOT)
-        environment["YANTRA_CONFIG"] = str(self.config)
+        guard = """from unittest.mock import patch
+def blocked_network(*args, **kwargs):
+    raise AssertionError('unmocked external network in offline CLI fixture')
+with patch('socket.socket.connect', side_effect=blocked_network), patch('socket.create_connection', side_effect=blocked_network):
+"""
+        body = "exec(" + repr(bootstrap) + ")" if bootstrap else "from yantra.cli import main; raise SystemExit(main())"
+        command = [sys.executable, "-c", guard + "    " + body, *argv]
+        environment = {"PATH": os.environ.get("PATH", ""), "PYTHONPATH": str(ROOT),
+                       "YANTRA_CONFIG": str(self.config), "LITELLM_LOCAL_MODEL_COST_MAP": "True", "TERM": "dumb"}
         return subprocess.run(command, cwd=self.root, env=environment, input=input_text, text=True,
                               capture_output=True, timeout=45)
 
@@ -205,15 +209,15 @@ with patch.object(sys.stdin, 'isatty', return_value=True), patch.object(sys.stdo
                 self.assertEqual(error["field"], "--" + flag + "-file")
                 self.response(self.invoke(*arguments, "--" + flag, "{}", "--" + flag + "-file", bad), 2)
 
-    def test_offline_start_resume_compare_replay_and_budget_stop(self):
+    def test_offline_demo_resume_compare_replay_and_budget_stop(self):
         from test_adk_structure import test_materials
         inputs = test_materials(self.root / "inputs")
         limits = self.root / "limits.json"
         limits.write_text('{"total_tools":20}')
-        arguments = ("start", "--company", "DEMO", "--cutoff", "2025-12-31", "--materials-dir", inputs,
+        arguments = ("demo", "--company", "DEMO", "--cutoff", "2025-12-31", "--materials-dir", inputs,
                      "--runs-dir", self.runs, "--limits-file", limits, "--reference-price", "5",
                      "--price-time", "2025-12-31", "--price-source", "synthetic-fixture")
-        started = self.response(self.invoke(*arguments), command="start")["data"]
+        started = self.response(self.invoke(*arguments), command="demo")["data"]
         self.assertEqual(started["status"], "waiting")
         name = started["run_id"]
         self.assertIsNotNone(started["pending_user"])

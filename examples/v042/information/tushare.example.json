@@ -1,0 +1,291 @@
+{
+  "description": "用户自己的 Tushare 直连：A股身份、未复权日线及合并财务三表。权限按具体接口核实；日线交易日期不代表实时行情，财务须定位原始公告。",
+  "command": [
+    ".venv/bin/python",
+    "-m",
+    "yantra.information",
+    "tushare"
+  ],
+  "input_schema": {
+    "type": "object",
+    "oneOf": [
+      {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "const": "stock_basic"
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "ts_code": {
+                "type": "string",
+                "pattern": "^[0-9]{6}\\.(SH|SZ|BJ)$"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              },
+              "exchange": {
+                "enum": [
+                  "SSE",
+                  "SZSE",
+                  "BSE"
+                ]
+              },
+              "list_status": {
+                "const": "L"
+              }
+            },
+            "anyOf": [
+              {
+                "required": [
+                  "ts_code"
+                ]
+              },
+              {
+                "required": [
+                  "name"
+                ]
+              }
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "operation",
+          "parameters"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "const": "daily"
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "ts_code": {
+                "type": "string",
+                "pattern": "^[0-9]{6}\\.(SH|SZ|BJ)$"
+              },
+              "trade_date": {
+                "type": "string",
+                "pattern": "^[0-9]{8}$"
+              },
+              "start_date": {
+                "type": "string",
+                "pattern": "^[0-9]{8}$"
+              },
+              "end_date": {
+                "type": "string",
+                "pattern": "^[0-9]{8}$"
+              }
+            },
+            "required": [
+              "ts_code"
+            ],
+            "additionalProperties": false,
+            "anyOf": [
+              {
+                "required": [
+                  "trade_date"
+                ]
+              },
+              {
+                "required": [
+                  "start_date",
+                  "end_date"
+                ]
+              }
+            ]
+          }
+        },
+        "required": [
+          "operation",
+          "parameters"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "const": "income"
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "ts_code": {
+                "type": "string",
+                "pattern": "^[0-9]{6}\\.(SH|SZ|BJ)$"
+              },
+              "period": {
+                "type": "string",
+                "pattern": "^[0-9]{8}$"
+              },
+              "start_date": {
+                "type": "string",
+                "pattern": "^[0-9]{8}$"
+              },
+              "end_date": {
+                "type": "string",
+                "pattern": "^[0-9]{8}$"
+              },
+              "report_type": {
+                "const": "1"
+              }
+            },
+            "required": [
+              "ts_code"
+            ],
+            "additionalProperties": false,
+            "anyOf": [
+              {
+                "required": [
+                  "period"
+                ]
+              },
+              {
+                "required": [
+                  "start_date",
+                  "end_date"
+                ]
+              }
+            ]
+          }
+        },
+        "required": [
+          "operation",
+          "parameters"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "const": "balancesheet"
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "ts_code": {
+                "type": "string",
+                "pattern": "^[0-9]{6}\\.(SH|SZ|BJ)$"
+              },
+              "period": {
+                "type": "string",
+                "pattern": "^[0-9]{8}$"
+              },
+              "start_date": {
+                "type": "string",
+                "pattern": "^[0-9]{8}$"
+              },
+              "end_date": {
+                "type": "string",
+                "pattern": "^[0-9]{8}$"
+              },
+              "report_type": {
+                "const": "1"
+              }
+            },
+            "required": [
+              "ts_code"
+            ],
+            "additionalProperties": false,
+            "anyOf": [
+              {
+                "required": [
+                  "period"
+                ]
+              },
+              {
+                "required": [
+                  "start_date",
+                  "end_date"
+                ]
+              }
+            ]
+          }
+        },
+        "required": [
+          "operation",
+          "parameters"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "const": "cashflow"
+          },
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "ts_code": {
+                "type": "string",
+                "pattern": "^[0-9]{6}\\.(SH|SZ|BJ)$"
+              },
+              "period": {
+                "type": "string",
+                "pattern": "^[0-9]{8}$"
+              },
+              "start_date": {
+                "type": "string",
+                "pattern": "^[0-9]{8}$"
+              },
+              "end_date": {
+                "type": "string",
+                "pattern": "^[0-9]{8}$"
+              },
+              "report_type": {
+                "const": "1"
+              }
+            },
+            "required": [
+              "ts_code"
+            ],
+            "additionalProperties": false,
+            "anyOf": [
+              {
+                "required": [
+                  "period"
+                ]
+              },
+              {
+                "required": [
+                  "start_date",
+                  "end_date"
+                ]
+              }
+            ]
+          }
+        },
+        "required": [
+          "operation",
+          "parameters"
+        ],
+        "additionalProperties": false
+      }
+    ]
+  },
+  "env_refs": {
+    "TUSHARE_TOKEN": "TUSHARE_TOKEN"
+  },
+  "roles": [
+    "finance",
+    "thesis",
+    "verification"
+  ],
+  "timeout_seconds": 60,
+  "cost_cny": 0,
+  "cost_kind": "service",
+  "enabled": false,
+  "information_provider": "tushare",
+  "cost_status": "unknown"
+}

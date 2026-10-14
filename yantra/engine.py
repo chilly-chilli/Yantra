@@ -595,18 +595,26 @@ def create_adk_engine(company="DEMO", run_id=None):
     storage = Path(os.getenv("YANTRA_RUNS_DIR", "runs"))
     if run_id:
         return Engine.load(storage, run_id)
-    if os.getenv("YANTRA_RAW_MATERIALS"):
-        from .research import RawEngine
-        from .configuration import ConfigStore
-        return RawEngine.create_raw(storage, {"company": company, "horizon": os.getenv("YANTRA_HORIZON", "12个月"),
-            "cutoff": os.getenv("YANTRA_CUTOFF", datetime.now(timezone.utc).isoformat()),
-            "market": os.getenv("YANTRA_MARKET") or None, "security_code": os.getenv("YANTRA_SECURITY_CODE") or None,
-            "exchange": os.getenv("YANTRA_EXCHANGE") or None, "trading_currency": os.getenv("YANTRA_TRADING_CURRENCY") or None,
-            "company_id": os.getenv("YANTRA_COMPANY_ID") or None,"share_class":os.getenv("YANTRA_SHARE_CLASS") or None,
-            **({"confirmation_mode": os.environ["YANTRA_CONFIRMATION_MODE"]} if "YANTRA_CONFIRMATION_MODE" in os.environ else {})},
-            json.loads(os.environ["YANTRA_RAW_MATERIALS"]), framework=os.getenv("YANTRA_FRAMEWORK", "auto"),settings=ConfigStore(),
-            knowledge_dir=os.getenv("YANTRA_KNOWLEDGE_DIR",".yantra/knowledge"),
-            explicit_parameters={k:v for k,v in {"horizon":os.getenv("YANTRA_HORIZON"),"framework":os.getenv("YANTRA_FRAMEWORK")}.items() if v is not None})
-    return Engine.create(storage, {"company": company, "horizon": "12个月", "cutoff": "2025-12-31"},
-                         mode=os.getenv("YANTRA_MODE", "offline-demo"),
-                         materials_dir=os.getenv("YANTRA_MATERIALS_DIR") or None)
+    mode = os.getenv("YANTRA_MODE", "real-model")
+    if mode == "offline-demo":
+        return Engine.create(storage, {"company": company, "horizon": "12个月", "cutoff": "2025-12-31"},
+                             mode="offline-demo", materials_dir=os.getenv("YANTRA_MATERIALS_DIR") or None)
+    if mode != "real-model":
+        raise ValueError("YANTRA_MODE must be real-model or explicit offline-demo")
+    from .research import RawEngine
+    from .configuration import ConfigStore
+    inputs = json.loads(os.getenv("YANTRA_RAW_MATERIALS", "[]"))
+    if not isinstance(inputs, list) or any(not isinstance(item, str) for item in inputs):
+        raise ValueError("YANTRA_RAW_MATERIALS must be a list of input paths or URLs")
+    if not inputs and os.getenv("YANTRA_MATERIALS_DIR"):
+        inputs = [os.environ["YANTRA_MATERIALS_DIR"]]
+    return RawEngine.create_raw(storage, {"company": company, "horizon": os.getenv("YANTRA_HORIZON", "12个月"),
+        "cutoff": os.getenv("YANTRA_CUTOFF", datetime.now(timezone.utc).isoformat()),
+        "market": os.getenv("YANTRA_MARKET") or None, "security_code": os.getenv("YANTRA_SECURITY_CODE") or None,
+        "exchange": os.getenv("YANTRA_EXCHANGE") or None, "trading_currency": os.getenv("YANTRA_TRADING_CURRENCY") or None,
+        "company_id": os.getenv("YANTRA_COMPANY_ID") or None,"share_class":os.getenv("YANTRA_SHARE_CLASS") or None,
+        **({"confirmation_mode": os.environ["YANTRA_CONFIRMATION_MODE"]} if "YANTRA_CONFIRMATION_MODE" in os.environ else {})},
+        inputs, framework=os.getenv("YANTRA_FRAMEWORK", "auto"),settings=ConfigStore(),
+        knowledge_dir=os.getenv("YANTRA_KNOWLEDGE_DIR",".yantra/knowledge"),
+        explicit_parameters={k:v for k,v in {"horizon":os.getenv("YANTRA_HORIZON"),"framework":os.getenv("YANTRA_FRAMEWORK"),
+                                           "confirmation_mode":os.getenv("YANTRA_CONFIRMATION_MODE")}.items() if v is not None})
