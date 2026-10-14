@@ -18,12 +18,26 @@ def show_banner():
     if os.environ.get("TERM") == "dumb":
         print(f"实证研策 · Yantra v{__version__}", file=stream)
         return
-    mark = ["     ╭────╮", "   ╭╯        ╱", "  │           ─",
-            "  │           ●", "  │           ─", "   ╰╮        ╲", "     ╰────╯"]
-    labels = {2: "实证研策", 3: "Yantra", 5: f"v{__version__}"}
+    mark = [
+        "           ▄▄▄▄▄▄▄▄▄",
+        "        ▄██▀▀▀      ▀▀",
+        "      ▄██▀",
+        "    ▄███                 █▀",
+        "    ███                     ▄",
+        "   ███                     ▀▀",
+        "   ███",
+        "   ███                      ●",
+        "   ███                     ▄▄",
+        "    ███                     ▀",
+        "    ▀███                 █▄",
+        "      ▀██▄",
+        "        ▀██▄▄▄      ▄▄",
+        "           ▀▀▀▀▀▀▀▀▀",
+    ]
+    labels = {6: "实证研策", 7: "Yantra", 10: f"v{__version__}"}
     column_width = max(display_width(label) for label in labels.values())
     for index, row in enumerate(mark):
-        padding = " " * (16 - display_width(row))
+        padding = " " * (32 - display_width(row))
         label = labels.get(index, "")
         centered = " " * ((column_width - display_width(label)) // 2) + label
         if "NO_COLOR" not in os.environ:
