@@ -11,6 +11,7 @@
 | [信息来源配置](INFORMATION_SOURCES.md) | 扶摇、东方财富、AKShare、98dou 的注册、凭据及手动准备 |
 | [估值说明](VALUATION.md) | 方法参数、口径、授权、修改与数学复算 |
 | [知识说明](KNOWLEDGE.md) | 正式数据、索引、历史复用、编辑删除、用户要求与信源接口 |
+| [品牌识别](BRAND.md) | 名称、标志资产、色彩与初稿使用边界 |
 | [架构说明](ARCHITECTURE.md) | 模块边界、控制器、权限、预算和数据流 |
 | [变更记录](../CHANGELOG.md) | 各版本变化和发布状态 |
 | [工程规则](../AGENTS.md) | 实施、commit／push、验证和文档维护规范 |
