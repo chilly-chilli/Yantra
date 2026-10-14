@@ -84,11 +84,12 @@ with patch.object(sys.stdin, 'isatty', return_value=True), patch.object(sys.stdo
             result = self.invoke(command, output="text", bootstrap=bootstrap, input_text=answer)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(result.stdout.count("实证研策"), 1)
-            self.assertEqual(result.stdout.count("●"), 1)
+            self.assertEqual(result.stdout.count("⬤"), 1)
             self.assertIn("█", result.stdout)
             self.assertIn("▀", result.stdout)
             self.assertIn("▄", result.stdout)
             self.assertNotIn("╭", result.stdout)
+            self.assertIn("⬤", next(line for line in result.stdout.splitlines() if "实证研策" in line))
             self.assertNotIn("\033", result.stdout)
             chinese = next(line for line in result.stdout.splitlines() if "实证研策" in line)
             english = next(line for line in result.stdout.splitlines() if "Yantra" in line)
@@ -98,11 +99,11 @@ with patch.object(sys.stdin, 'isatty', return_value=True), patch.object(sys.stdo
                                             "{'TERM': 'xterm-256color'}").replace(
                                                 "    raise SystemExit(main())", "    __import__('os').environ.pop('NO_COLOR', None)\n    raise SystemExit(main())")
         colored = self.invoke("configure", output="text", input_text="exit\n", bootstrap=color_bootstrap)
-        self.assertIn("\033[38;2;225;43;34m●\033[0m", colored.stdout)
+        self.assertIn("\033[38;2;225;43;34m⬤\033[0m", colored.stdout)
         plain = self.invoke("configure", output="text", input_text="exit\n",
                             bootstrap=bootstrap.replace("xterm-256color", "dumb"))
         self.assertIn("实证研策 · Yantra v", plain.stdout)
-        self.assertNotIn("●", plain.stdout)
+        self.assertNotIn("⬤", plain.stdout)
         self.response(self.invoke("models", "list", bootstrap=bootstrap))
         redirected = self.invoke("configure", output="text", input_text="exit\n",
                                  bootstrap=bootstrap.replace(

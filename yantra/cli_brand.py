@@ -25,8 +25,8 @@ def show_banner():
         "    ▄███                 █▀",
         "    ███                     ▄",
         "   ███                     ▀▀",
+        "   ███                      ⬤",
         "   ███",
-        "   ███                      ●",
         "   ███                     ▄▄",
         "    ███                     ▀",
         "    ▀███                 █▄",
@@ -41,6 +41,6 @@ def show_banner():
         label = labels.get(index, "")
         centered = " " * ((column_width - display_width(label)) // 2) + label
         if "NO_COLOR" not in os.environ:
-            row = row.replace("●", "\033[38;2;225;43;34m●\033[0m")
+            row = row.replace("⬤", "\033[38;2;225;43;34m⬤\033[0m")
         print(row + padding + "  " + centered, file=stream)
     print(file=stream)
