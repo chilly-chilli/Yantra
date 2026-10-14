@@ -89,7 +89,7 @@ with patch.object(sys.stdin, 'isatty', return_value=True), patch.object(sys.stdo
             self.assertIn("▀", result.stdout)
             self.assertIn("▄", result.stdout)
             self.assertNotIn("╭", result.stdout)
-            self.assertIn("⬤", next(line for line in result.stdout.splitlines() if "实证研策" in line))
+            self.assertIn("⬤", next(line for line in result.stdout.splitlines() if "Yantra" in line))
             self.assertNotIn("\033", result.stdout)
             chinese = next(line for line in result.stdout.splitlines() if "实证研策" in line)
             english = next(line for line in result.stdout.splitlines() if "Yantra" in line)
