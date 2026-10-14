@@ -74,5 +74,13 @@
       "original_log_sha256": "d22cec485629a50a1c5cd9747621e78c40af6629be1dda2817bab84d793c1cc0",
       "archive": "delivery-formal-initial-failure.log.gz"
     }
-  ]
+  ],
+  "implementation_commit": "30281de55383eef18e3a11d7b1711c1472f7895c",
+  "branch": "codex/v0.4.2-formal-research",
+  "documentation_check": {
+    "checked_files": 13,
+    "local_links": 139,
+    "status": "passed",
+    "untracked_host_navigation": "preserved separately, excluded from commits"
+  }
 }

@@ -46,3 +46,5 @@ Tushare直连、Tavily和Yahoo Finance/yfinance使用已有扩展与材料路径
 ## 原生ADK与业务职责
 
 检查了安装的App、Runner接口并复用现有共享App/plugin、专业Worker、Session及事件轨迹；没有升级ADK、替换模型或增加执行／费用账本。新选择、来源尝试、授权版本、安全边际与独立冲突分类由既有RawEngine及RunBudget写入，属于证券与证据业务边界，见[ADR 0002](../../decisions/0002-adk-native-boundaries.md)。源码及当前操作入口见[使用指南](../../USAGE.md)、[信息来源](../../INFORMATION_SOURCES.md)、[估值说明](../../VALUATION.md)。
+
+本地实现提交：`30281de55383eef18e3a11d7b1711c1472f7895c`，分支`codex/v0.4.2-formal-research`。未推送、合并、打tag或发布；仅后续验证记录提交在此实现之上，不重复执行模型或研究。
