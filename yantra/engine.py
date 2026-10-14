@@ -170,7 +170,10 @@ class Engine:
         self.state["in_flight"] = {"kind": "decision", "method": method}
         self._save()
         try:
-            return await asyncio.wait_for(getattr(self.backend, method)(*args), timeout=min(timeout or 30, 30))
+            from .adk_runtime import execution_scope
+            task = args[0] if method == "worker" else None
+            with execution_scope(self, task, "decision"):
+                return await asyncio.wait_for(getattr(self.backend, method)(*args), timeout=min(timeout or 30, 30))
         finally:
             self.state["budget"]["active_seconds"] += time.monotonic() - started
             self.state["in_flight"] = None

@@ -23,6 +23,7 @@ from pydantic import Field
 
 from .schemas import WorkerAction
 from .tools import ToolRegistry
+from .adk_runtime import TraceStore, execution_scope, invocation_scope, native_app
 
 
 ROLES = ("finance", "thesis", "valuation", "verification")
@@ -169,9 +170,21 @@ class WorkerAgent(LlmAgent):
             **kwargs,
         )
 
+    async def _run_async_impl(self, ctx: InvocationContext):
+        with invocation_scope(ctx.invocation_id):
+            async for event in super()._run_async_impl(ctx):
+                yield event
+
 
 def build_workers(engine: Any = None) -> list[WorkerAgent]:
     return [WorkerAgent(role=role, engine=engine) for role in ROLES]
+
+
+def require_session_scope(engine, tool_context):
+    if (engine.directory / "adk-scopes.json").exists() and not TraceStore(engine.directory).permits(
+        tool_context.session.app_name, tool_context.user_id, tool_context.session.id
+    ):
+        raise ValueError("Research belongs to another session.")
 
 
 async def execute_research(tool_context: ToolContext) -> dict[str, Any]:
@@ -197,6 +210,7 @@ async def execute_research(tool_context: ToolContext) -> dict[str, Any]:
             from .knowledge.store import KnowledgeStore, atomic_bytes
             if engine is None and tool_context.state.get("run_id"):
                 engine = Engine.load(Path(os.getenv("YANTRA_RUNS_DIR","runs")),tool_context.state["run_id"])
+                require_session_scope(engine, tool_context)
             metadata = engine.state.get("knowledge",{}) if engine else {}
             store = KnowledgeStore(metadata.get("root") or os.getenv("YANTRA_KNOWLEDGE_DIR",".yantra/knowledge"))
             preferences = Preferences(store)
@@ -218,12 +232,15 @@ async def execute_research(tool_context: ToolContext) -> dict[str, Any]:
             if not engine.state.get("raw_materials"):
                 engine.adk_workers = root.sub_agents
             if run_id:
+                require_session_scope(engine, tool_context)
                 decision = {"确认": "confirm", "拒绝": "reject", "取消": "cancel"}.get(message, message)
                 if decision in {"confirm", "reject", "cancel"}:
                     await engine.respond(decision)
                 elif message.startswith("modify ") or message.startswith("修改 "):
                     await engine.respond("modify", json.loads(message.split(" ", 1)[1]))
-        state = await engine.advance()
+        TraceStore(engine.directory).bind(tool_context.session)
+        with execution_scope(engine, kind="entry"):
+            state = await engine.advance()
     except (FileNotFoundError, ValueError, BackendError) as exc:
         # Do not expose provider messages, credentials or arbitrary file paths.
         return {"status": "error", "error_code": getattr(exc, "code", type(exc).__name__), "message": (
@@ -277,8 +294,9 @@ class YantraAgent(LlmAgent):
     async def _run_async_impl(self, ctx: InvocationContext):
         token = _root_agent.set(self)
         try:
-            async for event in super()._run_async_impl(ctx):
-                yield event
+            with invocation_scope(ctx.invocation_id):
+                async for event in super()._run_async_impl(ctx):
+                    yield event
         finally:
             _root_agent.reset(token)
 
@@ -288,7 +306,7 @@ async def _run_agent(agent: BaseAgent, state: dict[str, Any], output_key: str) -
     session_id = uuid4().hex
     app_name = agent.root_agent.name
     await service.create_session(app_name=app_name, user_id="yantra", session_id=session_id, state=state)
-    runner = Runner(agent=agent, app_name=app_name, session_service=service)
+    runner = Runner(app=native_app(agent, name=app_name), session_service=service)
     try:
         result = None
         async for event in runner.run_async(user_id="yantra", session_id=session_id,
@@ -315,7 +333,8 @@ async def run_worker_loop(execution: dict[str, Any]) -> dict[str, Any]:
     execution["agent_name"] = agent.name
     token = _worker_execution.set(execution)
     try:
-        return await _run_agent(agent, {"task": task.model_dump()}, "result")
+        with execution_scope(engine, task, "worker"):
+            return await _run_agent(agent, {"task": task.model_dump()}, "result")
     finally:
         _worker_execution.reset(token)
 
@@ -331,5 +350,6 @@ async def run_engine(engine: Any) -> dict[str, Any]:
     if root is None:
         root = YantraAgent(engine=engine)
         engine.adk_root_agent = root
-    await _run_agent(root, {}, "research_snapshot")
+    with execution_scope(engine, kind="entry"):
+        await _run_agent(root, {}, "research_snapshot")
     return engine.state

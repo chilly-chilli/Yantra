@@ -23,6 +23,7 @@ from google.genai import types
 from pydantic import BaseModel, ValidationError
 
 from .schemas import MainAction, WorkerAction, Extraction, Framework
+from .adk_runtime import native_app
 
 
 class DecisionBackend(Protocol):
@@ -241,7 +242,7 @@ class RealModelBackend:
                 ),
             ),
         )
-        runner = Runner(agent=agent, app_name=app_name, session_service=service)
+        runner = Runner(app=native_app(agent, name=app_name), session_service=service)
         try:
             async with asyncio.timeout(self.timeout_seconds):
                 await service.create_session(

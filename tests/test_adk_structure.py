@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from google.adk.cli.fast_api import get_fast_api_app
 from google.adk.cli.utils.base_agent_loader import BaseAgentLoader
 from google.adk.agents import LlmAgent
+from google.adk.apps import App
 from google.adk.cli.utils.agent_loader import AgentLoader
 
 from yantra.adk_app import ROLES, YantraAgent, run_engine, run_worker
@@ -109,6 +110,8 @@ class WebStructureTests(unittest.TestCase):
             loader = AgentLoader(str(directory))
             self.assertIn("yantra", loader.list_agents())
             root = loader.load_agent("yantra")
+            self.assertIsInstance(root, App)
+            root = root.root_agent
             self.assertIsInstance(root, LlmAgent)
             self.assertEqual([worker.role for worker in root.sub_agents], list(ROLES))
 

@@ -4,6 +4,8 @@
 
 ## Unreleased — 0.3.3
 
+- ADK 接入第一阶段：所有自建 Runner 显式采用原生 App／生命周期插件；新增所属 Session 的持久脱敏轨迹接口，关联研究、任务、父任务和 invocation，保持隔离与唯一费用账本。阶段证据见[ADK 接入验证](docs/validation/adk-native/README.md)；其他试点仍在实施，不代表完整任务交付。
+
 - 妙想改为金融数据和资讯搜索两个直接 HTTP API 工具，使用 `MX_APIKEY`，停用本机东方财富技能；保留旧资讯凭据引用兼容，并拒绝显式 API 业务错误。
 - 本地凭据统一为根目录 `.env`，保留模板 `.env.example`；合并原模型、资料服务与旧 MCP 变量，移除重复文件，更新 CLI／ADK 配置说明。
 - CLI 支持 OSC 7501 revision 0.4，报告运行、等待输入／确认、完成、错误及取消；状态仅发往 stderr TTY，不改变 JSON 输出和退出码。

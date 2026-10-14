@@ -117,7 +117,15 @@ Define observable success criteria and verify them.
 - Run `git diff --check` and review the change scope. Do not rerun an unrelated full suite for documentation-only work.
 - Report document changes, verification, limitations, and actual commit and push status.
 
-## 5. Git Ignore Policy
+## 5. ADK Native Mechanisms and Business Ownership
+
+1. Check the installed, pinned Google ADK interfaces before adding a custom execution, orchestration, Session, event, tool lifecycle, or artifact mechanism. Latest documentation is supplementary; do not upgrade ADK or change the model to satisfy an integration.
+2. ADK owns general execution interfaces, Session/events, and tool/plugin lifecycle. Yantra owns the research contract, isolation and permissions, evidence revisions, budgets, valuation authorization, deterministic calculation, independent verification, and business recovery.
+3. Each business state has one authoritative writer. Observation plugins must not settle fees, copy tool execution, or maintain a competing business ledger. Every separately constructed Runner must use the shared native App/plugin factory.
+4. A custom exception must state the pinned ADK capability gap, the business necessity, and external behavior checks. Native integration must preserve role/parent isolation, frozen permissions, depth limits, evidence hashes/CAS, deadlines, and truthful partial/failed results.
+5. Runtime commits must explain the reused capability, remaining custom mechanisms, and validation. Test externally observable behavior (including standard API and trace access); importing ADK classes is not architecture acceptance. Follow [ADR 0002](docs/decisions/0002-adk-native-boundaries.md).
+
+## 6. Git Ignore Policy
 
 ### Default Ignore Categories
 

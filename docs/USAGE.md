@@ -187,7 +187,17 @@ export YANTRA_TRADING_CURRENCY=HKD
 .venv/bin/adk web --port 8000
 ```
 
-标准 `yantra/agent.py:root_agent` 入口复用控制器。每个专业及临时任务有独立 ADK Session；动态第三层角色在父授权范围内实际运行，禁止第四层。获准成果可读取、消息可送达；消息不创建任务。跨 Agent 转派需主 Agent 内部批准、验证输入权限和预算后执行。核验 Agent 的否决不能被主 Agent 覆盖。
+标准 `yantra/agent.py:app` 配置原生 App／插件，`root_agent` 保留为兼容导出。每个专业及临时任务有独立 ADK Session；动态第三层角色在父授权范围内实际运行，禁止第四层。获准成果可读取、消息可送达；消息不创建任务。跨 Agent 转派需主 Agent 内部批准、验证输入权限和预算后执行。核验 Agent 的否决不能被主 Agent 覆盖。
+
+Unreleased 的本地 API 入口增加持久 Session 与脱敏研究轨迹：
+
+```sh
+.venv/bin/python -m uvicorn fast_api_app:app --env-file .env --host 127.0.0.1 --port 8000
+```
+
+使用标准 `/apps/yantra/users/USER_ID/sessions` 创建 Session，使用 `/run_sse` 推进。上述 ID 是占位符；所属研究的轨迹接口为 `GET /apps/yantra/users/USER_ID/sessions/SESSION_ID/research/trace`，接受 `after`（序号，默认0）、`limit`（1–500）及 `task_id`。返回研究与任务状态、角色、父任务、ADK Session／invocation、工具调用和结果哈希、错误类别及用量。`cursor` 用于下一页；序号为持久化顺序，因果关系看父 invocation，不能假设外层开始事件先于内部事件写入。
+
+重启仍使用原 `YANTRA_RUNS_DIR`（默认 `runs`）及其 `.adk/sessions.db`，返回当前研究所属 Session。未绑定／不存在的 Session 返回404。API 沿用 ADK 本地 user/session 标识约定，无用户认证，仅按本机可信客户端使用；不提供远程多租户授权。轨迹不返回子任务材料正文或工具参数，不是证据全文接口；账本以运行 `state.json` 为准。普通 `adk web` 不包含此新增路由。验证范围见[接入记录](validation/adk-native/README.md)。
 
 ```sh
 .venv/bin/python -m unittest discover -s tests -v

@@ -247,7 +247,9 @@ class RawEngine(Engine):
         self._save()
         try:
             remaining = min(timeout or 90, 90, self.run_budget.remaining())
-            return await asyncio.wait_for(getattr(self.backend, method)(*args), remaining)
+            from .adk_runtime import execution_scope
+            with execution_scope(self, execution["task"] if execution else None, "decision"):
+                return await asyncio.wait_for(getattr(self.backend, method)(*args), remaining)
         finally:
             self.run_budget.settle(receipt, getattr(self.backend, "last_usage", None))
             receipt["diagnostics"] = getattr(self.backend, "last_diagnostics", {})
