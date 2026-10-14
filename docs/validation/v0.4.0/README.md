@@ -122,6 +122,12 @@ git diff --check
 - 分层CI配置分别报告确定性、离线轨迹和真实模型；真实项明确NOT EXECUTED，不自动读取用户凭据。远端CI尚未执行。本机pip check／compileall／diff check通过。
 - agents-cli的history播种不是实际多轮执行，且转换丢失关联／usage；没有用它证明恢复。先前实际grade（仅纯本地函数）因SDK2.4.0云client初始化要求ADC失败；没有修改凭据、没有分数。此次完成parser及直接函数门槛；真实行为／托管judge预算未批准，均未执行。具体命令及评分要求见[评估说明](../../../tests/eval/README.md)。
 
+## 完整回归的夹具修复
+
+[首次完整检查](full-first-attempt.log)：176项，145.565秒，5个failure／27个error（含subtest）。估值集成16个测试方法共用的旧合成文本写`disclosure`，原解析器仅从`published`／披露定位日期，未知日期材料在UTC进入2026-10-14后按历史截止被正确排除；并非新增上下文投影丢字段。给受控示例添加明确的合成发布日2026-10-12，[16项估值复测](valuation-fixture-fixed.log)全部通过，17.976秒。未扩大解析器推断或截止权限，旧失败日志保留。
+
+原基线两项知识夹具仅固定其自身knowledge记录时间为2026-10-13；研究／费用／墙钟时钟仍真实。[30项知识检查](knowledge-fixture-tests.log)通过，10.989秒。行为材料也改用明确“披露日期”并新增真实解析检查；[6项评估驱动检查](eval-disclosure-fixed.log)通过，2.440秒。
+
 ## 尚待完成
 
 全回归、非ADK准备操作的账本投影复核与最终当前指南。Memory／cache／原生resume仅有接口调查；业务恢复仍保留。

@@ -1,0 +1,33 @@
+test_cli_manifest_and_configs_declare_no_default_model_judge (test_eval_engineering.EvaluationEngineeringTests.test_cli_manifest_and_configs_declare_no_default_model_judge) ... ok
+test_fixed_material_has_explicit_disclosure_before_cutoff (test_eval_engineering.EvaluationEngineeringTests.test_fixed_material_has_explicit_disclosure_before_cutoff) ... ok
+test_generator_budget_and_isolation_with_synthetic_backend_only (test_eval_engineering.EvaluationEngineeringTests.test_generator_budget_and_isolation_with_synthetic_backend_only) ... /Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+/Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/features/_feature_decorator.py:71: UserWarning: [EXPERIMENTAL] feature FeatureName.PLUGGABLE_AUTH is enabled.
+  check_feature_enabled()
+/Users/chillychili/Yantra/yantra/api.py:72: UserWarning: [EXPERIMENTAL] InMemoryCredentialService: This feature is experimental and may change or be removed in future versions without notice. It may introduce breaking changes at any time.
+  credential_service=InMemoryCredentialService(),
+/Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/auth/credential_service/in_memory_credential_service.py:33: UserWarning: [EXPERIMENTAL] BaseCredentialService: This feature is experimental and may change or be removed in future versions without notice. It may introduce breaking changes at any time.
+  super().__init__()
+App "yantra" can transfer between agents but has no context_cache_config. Every transfer swaps the system instruction and the tool set, so the request prefix changes and the whole prompt is re-sent uncached after each transfer. Set context_cache_config on the app to give each agent its own cache.
+/Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/tools/transfer_to_agent_tool.py:106: UserWarning: [EXPERIMENTAL] feature FeatureName.JSON_SCHEMA_FOR_FUNC_DECL is enabled.
+  function_decl = super()._get_declaration()
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_e8bb831c424c and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_e8bb831c424c and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_e7a2e09ff97e and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent yantra and model yantra_research_controller
+Skipping missing token usage metadata for agent yantra and model yantra_research_controller
+Skipping missing token usage metadata for agent yantra and model yantra_research_controller
+Skipping missing token usage metadata for agent yantra and model yantra_research_controller
+ok
+test_live_requires_explicit_finite_total_budgets_and_known_cases (test_eval_engineering.EvaluationEngineeringTests.test_live_requires_explicit_finite_total_budgets_and_known_cases) ... ok
+test_plan_has_five_fictional_cases_and_never_executes (test_eval_engineering.EvaluationEngineeringTests.test_plan_has_five_fictional_cases_and_never_executes) ... ok
+test_transport_gate_rejects_errors_empty_responses_and_unrelated_json (test_eval_engineering.EvaluationEngineeringTests.test_transport_gate_rejects_errors_empty_responses_and_unrelated_json) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 2.440s
+
+OK

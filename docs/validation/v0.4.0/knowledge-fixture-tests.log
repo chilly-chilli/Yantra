@@ -1,0 +1,92 @@
+test_embedding_profile_catalog_persists_and_validates (test_knowledge.EmbeddingTests.test_embedding_profile_catalog_persists_and_validates) ... ok
+test_embedding_unknown_fee_failure_missing_usage_and_request_limit (test_knowledge.EmbeddingTests.test_embedding_unknown_fee_failure_missing_usage_and_request_limit) ... ok
+test_metadata_only_change_reuses_vector_and_insufficient_cost_degrades (test_knowledge.EmbeddingTests.test_metadata_only_change_reuses_vector_and_insufficient_cost_degrades) ... ok
+test_semantic_retrieval_incremental_switch_and_budget (test_knowledge.EmbeddingTests.test_semantic_retrieval_incremental_switch_and_budget) ... ok
+test_archive_pending_and_partial_fact_qualification_are_separate (test_knowledge.KnowledgeTests.test_archive_pending_and_partial_fact_qualification_are_separate) ... ok
+test_business_and_group_metrics_remain_distinct (test_knowledge.KnowledgeTests.test_business_and_group_metrics_remain_distinct) ... ok
+test_business_scope_cannot_directly_confirm_group_thesis (test_knowledge.KnowledgeTests.test_business_scope_cannot_directly_confirm_group_thesis) ... ok
+test_chinese_short_words_return_original_locator_and_hard_filters (test_knowledge.KnowledgeTests.test_chinese_short_words_return_original_locator_and_hard_filters) ... ok
+test_company_security_identity_does_not_merge_names_or_share_classes (test_knowledge.KnowledgeTests.test_company_security_identity_does_not_merge_names_or_share_classes) ... ok
+test_concurrent_company_commit_stale_base_cannot_overwrite (test_knowledge.KnowledgeTests.test_concurrent_company_commit_stale_base_cannot_overwrite) ... ok
+test_correction_relation_and_independent_index_failure (test_knowledge.KnowledgeTests.test_correction_relation_and_independent_index_failure) ... ok
+test_cross_session_conflict_and_distinct_period_scope (test_knowledge.KnowledgeTests.test_cross_session_conflict_and_distinct_period_scope) ... ok
+test_deletion_soft_pin_session_unlink_and_permanent_impact (test_knowledge.KnowledgeTests.test_deletion_soft_pin_session_unlink_and_permanent_impact) ... ok
+test_historical_cutoff_excludes_future_evidence_and_posthoc_thesis (test_knowledge.KnowledgeTests.test_historical_cutoff_excludes_future_evidence_and_posthoc_thesis) ... ok
+test_interrupted_file_commit_recovers_and_indexes_rebuild (test_knowledge.KnowledgeTests.test_interrupted_file_commit_recovers_and_indexes_rebuild) ... ok
+test_lock_wait_consumes_original_deadline (test_knowledge.KnowledgeTests.test_lock_wait_consumes_original_deadline) ... ok
+test_manual_edit_revokes_verification_and_old_pin_survives (test_knowledge.KnowledgeTests.test_manual_edit_revokes_verification_and_old_pin_survives) ... ok
+test_permanent_delete_interruption_recovers_authorized_cleanup (test_knowledge.KnowledgeTests.test_permanent_delete_interruption_recovers_authorized_cleanup) ... ok
+test_permissions_veto_and_content_hash_binding (test_knowledge.KnowledgeTests.test_permissions_veto_and_content_hash_binding) ... ok
+test_requirements_priority_versions_revoke_and_hard_constraints (test_knowledge.KnowledgeTests.test_requirements_priority_versions_revoke_and_hard_constraints) ... ok
+test_snapshot_precedes_comparison_and_revision_preserves_history (test_knowledge.KnowledgeTests.test_snapshot_precedes_comparison_and_revision_preserves_history) ... ok
+test_source_channels_deduplicate_bytes_not_acquisition_history (test_knowledge.KnowledgeTests.test_source_channels_deduplicate_bytes_not_acquisition_history) ... ok
+test_thesis_states_and_rejected_proposal_keep_review_records (test_knowledge.KnowledgeTests.test_thesis_states_and_rejected_proposal_keep_review_records) ... ok
+test_two_sessions_reuse_verified_fact_not_historical_conclusion (test_knowledge.KnowledgeTests.test_two_sessions_reuse_verified_fact_not_historical_conclusion) ... ok
+test_web_and_offline_adapter_share_fetch_archive_and_checkpoint (test_knowledge.SourceInterfaceTests.test_web_and_offline_adapter_share_fetch_archive_and_checkpoint) ... ok
+test_cli_and_adk_explicit_remember_list_forget (test_knowledge_runtime.RuntimeKnowledgeTests.test_cli_and_adk_explicit_remember_list_forget) ... /Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/features/_feature_decorator.py:71: UserWarning: [EXPERIMENTAL] feature FeatureName.PLUGGABLE_AUTH is enabled.
+  check_feature_enabled()
+Executing <Task finished name='Task-2' coro=<RuntimeKnowledgeTests.test_cli_and_adk_explicit_remember_list_forget() done, defined at /Users/chillychili/Yantra/tests/test_knowledge_runtime.py:144> result=None created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/runners.py:100> took 0.309 seconds
+ok
+test_identical_input_reuses_verified_parser_snapshot (test_knowledge_runtime.RuntimeKnowledgeTests.test_identical_input_reuses_verified_parser_snapshot) ... App "yantra" can transfer between agents but has no context_cache_config. Every transfer swaps the system instruction and the tool set, so the request prefix changes and the whole prompt is re-sent uncached after each transfer. Set context_cache_config on the app to give each agent its own cache.
+/Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/tools/transfer_to_agent_tool.py:106: UserWarning: [EXPERIMENTAL] feature FeatureName.JSON_SCHEMA_FOR_FUNC_DECL is enabled.
+  function_decl = super()._get_declaration()
+Executing <Task pending name='Task-11' coro=<Context._run_node_standalone() running at /Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/agents/context.py:886> wait_for=<_GatheringFuture pending cb=[Task.task_wakeup()] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/tasks.py:712> cb=[Task.task_wakeup()] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/tasks.py:420> took 0.325 seconds
+Executing <Task pending name='Task-15' coro=<_execute_single_prepared_call_async() running at /Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/flows/llm_flows/tools/_caller.py:953> wait_for=<Future pending cb=[Task.task_wakeup()] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:449> cb=[gather.<locals>._done_callback() at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/tasks.py:767] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/tasks.py:420> took 0.117 seconds
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_9b35dbc5a276 and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_9b35dbc5a276 and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_e2e526536cfd and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_e2e526536cfd and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent thesis_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent valuation_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent verification_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent verification_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent yantra and model yantra_research_controller
+Skipping missing token usage metadata for agent yantra and model yantra_research_controller
+ok
+test_requirements_boundary_revoke_and_explicit_parameters (test_knowledge_runtime.RuntimeKnowledgeTests.test_requirements_boundary_revoke_and_explicit_parameters) ... ok
+test_two_actual_adk_sessions_reuse_compare_and_replay_fixed_revisions (test_knowledge_runtime.RuntimeKnowledgeTests.test_two_actual_adk_sessions_reuse_compare_and_replay_fixed_revisions) ... Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_7f4d049930cd and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_7f4d049930cd and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_7781a2668e49 and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_7781a2668e49 and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent thesis_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent valuation_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent verification_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent verification_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent yantra and model yantra_research_controller
+Skipping missing token usage metadata for agent yantra and model yantra_research_controller
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_0c5e48fd6b4e and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_0c5e48fd6b4e and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_0a8feb4c57bf and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_0a8feb4c57bf and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent thesis_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent valuation_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent verification_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent verification_worker and model yantra_budgeted_decision_backend
+Executing <Task finished name='Task-365' coro=<_execute_single_prepared_call_async() done, defined at /Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/flows/llm_flows/tools/_caller.py:912> result=Event(model_v...951095.890645) created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/tasks.py:420> took 0.110 seconds
+Skipping missing token usage metadata for agent yantra and model yantra_research_controller
+Skipping missing token usage metadata for agent yantra and model yantra_research_controller
+ok
+test_worker_permissions_proposals_review_and_cancel_archive (test_knowledge_runtime.RuntimeKnowledgeTests.test_worker_permissions_proposals_review_and_cancel_archive) ... ok
+
+----------------------------------------------------------------------
+Ran 30 tests in 10.989s
+
+OK

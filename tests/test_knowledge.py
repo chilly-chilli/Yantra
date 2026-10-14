@@ -31,6 +31,10 @@ PRICE = {"input_per_million":2,"output_per_million":0,"source":"fictional-test-p
 
 class KnowledgeFixture(unittest.TestCase):
     def setUp(self):
+        if self._testMethodName == "test_two_sessions_reuse_verified_fact_not_historical_conclusion":
+            # This historical-cutoff fixture records knowledge before that cutoff.
+            clock = patch("yantra.knowledge.store.now", return_value="2026-10-13T00:00:00+00:00")
+            clock.start(); self.addCleanup(clock.stop)
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name)

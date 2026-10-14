@@ -53,6 +53,11 @@ def offline_search(adapter,query,purpose,max_results):
 
 class RuntimeKnowledgeTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
+        if self._testMethodName == "test_two_actual_adk_sessions_reuse_compare_and_replay_fixed_revisions":
+            # Freeze only synthetic knowledge timestamps, never the run budget clock.
+            for target in ("yantra.knowledge.store.now", "yantra.knowledge.runtime.now"):
+                clock = patch(target, return_value="2026-10-13T00:00:00+00:00")
+                clock.start(); self.addCleanup(clock.stop)
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
         self.root=Path(self.temp.name);self.runs=self.root/"runs"
         self.file=self.root/"fictional-v03.txt";self.file.write_text(FIRST)

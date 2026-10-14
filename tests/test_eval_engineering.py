@@ -18,6 +18,19 @@ from eval_behavior import Approval, approved_cases, generate
 
 
 class EvaluationEngineeringTests(unittest.TestCase):
+    def test_fixed_material_has_explicit_disclosure_before_cutoff(self):
+        from tests_eval_support import material_text
+        from yantra.materials import RawMaterialAdapter
+        from yantra.schemas import ReadArguments
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "synthetic.txt"
+            source.write_text(material_text("financial"))
+            adapter = RawMaterialAdapter.create(root / "materials", "EVAL_SYNTHETIC", [source])
+            documents = adapter.read_materials(ReadArguments(company="EVAL_SYNTHETIC", cutoff="2026-10-13"))["documents"]
+            self.assertEqual(len(documents), 1)
+            self.assertEqual(documents[0]["date"], "2026-10-01")
+
     def test_plan_has_five_fictional_cases_and_never_executes(self):
         result = subprocess.run([sys.executable, str(ROOT / "scripts/eval_behavior.py")], capture_output=True, text=True, check=True)
         plan = json.loads(result.stdout)

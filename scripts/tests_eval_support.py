@@ -14,7 +14,7 @@ class FixedSources:
 
 
 def material_text(variant):
-    header = "公司：EVAL_SYNTHETIC（完全虚构合成评估）\n资料发布日期：2026-10-01\n"
+    header = "公司：EVAL_SYNTHETIC（完全虚构合成评估）\n披露日期：2026-10-01\n"
     if variant == "missing":
         return header + "经营业务：工业制造。本资料没有任何财务金额、证券价格或市场共识。\n"
     text = header + "币种：CNY，金额单位：million，合并口径；期间：FY2025。\n"

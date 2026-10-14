@@ -7,7 +7,7 @@ from yantra.policies import OfflineDemoBackend
 from yantra.research import RawEngine
 
 PRICE = {"input_per_million": 2, "output_per_million": 8, "currency": "CNY", "source": "synthetic-test-only", "as_of": "2026-10-13"}
-TEXT = """SYNTHETIC ONLY 2026-01-01 disclosure FY2025 CNY A total ordinary shares consolidated attributable
+TEXT = """SYNTHETIC ONLY published 2026-10-12; FY2025 financial disclosure dated 2026-01-01 CNY A total ordinary shares consolidated attributable
 600000 eps 2 bvps 8 dividend_per_share 1 ebitda 100 net_debt 20 minority_interest 5 shares 10
 600001 PE 10 PB 1 EV/EBITDA 8
 600002 PE 20 PB 2 EV/EBITDA 12
