@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
 from google.adk.sessions import DatabaseSessionService, InMemorySessionService
@@ -14,7 +14,7 @@ from google.genai import types
 from yantra.api import create_app
 from yantra.backend import RealModelBackend
 from yantra.engine import Engine
-from yantra.adk_runtime import TraceStore
+from yantra.adk_runtime import TraceStore, event_projection
 from test_adk_runtime import ScriptedProvider
 from test_adk_structure import test_materials
 
@@ -38,6 +38,57 @@ def send(client, session_id, text, user="owner"):
 
 
 class NativeTraceTests(unittest.TestCase):
+    def test_tool_error_category_is_allowlisted(self):
+        from google.adk.events import Event
+        for code, expected in (("SKILL_RESOURCE", "SKILL_RESOURCE"), ("PRIVATE_PROVIDER_SECRET", None)):
+            event = Event(author="finance_worker", content=types.Content(role="tool", parts=[
+                types.Part(function_response=types.FunctionResponse(name="load_skill", response={"ok": False,
+                    "error": {"code": code, "message": "PRIVATE_PROVIDER_SECRET"}}))]))
+            projection = event_projection(event)
+            self.assertEqual(projection["tools"][0].get("error_code"), expected)
+            self.assertNotIn("PRIVATE_PROVIDER_SECRET", json.dumps(projection))
+
+    def test_owned_sqlite_service_closed_and_caller_service_retained(self):
+        with tempfile.TemporaryDirectory() as temporary, patch.dict(os.environ, {"YANTRA_RUNS_DIR": temporary}):
+            owned = InMemorySessionService()
+            owned.close = AsyncMock()
+            with patch("yantra.api.DatabaseSessionService", return_value=owned):
+                with TestClient(create_app()) as client:
+                    self.assertEqual(client.get("/list-apps").json(), ["yantra"])
+            owned.close.assert_awaited_once()
+            owned.close.reset_mock()
+            with TestClient(create_app(session_service=owned)) as client:
+                self.assertEqual(client.get("/list-apps").json(), ["yantra"])
+            owned.close.assert_not_awaited()
+
+    def test_authoritative_preparation_receipts_visible_without_private_payload(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            storage = Path(temporary) / "runs"
+            inputs = test_materials(Path(temporary) / "inputs")
+            engine = Engine.create(storage, {"company": "DEMO", "horizon": "12个月", "cutoff": "2025-12-31"}, materials_dir=inputs)
+            engine.state["model_ledger"] = [{"id": "receipt-one", "method": "ocr_paddle_api", "task_id": "main", "status": "usage_missing_reservation_retained",
+                "reserved_cny": .2, "basis": {"source": "PRIVATE_SOURCE"}, "usage": {"input_tokens": 10, "provider_payload": "PRIVATE_SOURCE"}}]
+            engine.state["budget"]["model_cost_cny"] = .2
+            engine.state["searches"] = [{"purpose": "counter_evidence", "query": "PRIVATE_SOURCE", "errors": ["PRIVATE_SOURCE"], "results": []}]
+            engine._save()
+            with patch.dict(os.environ, {"YANTRA_RUNS_DIR": str(storage)}), patch("yantra.engine.create_adk_engine", return_value=engine):
+                with TestClient(create_app()) as client:
+                    session = client.post("/apps/yantra/users/owner/sessions", json={}).json()["id"]
+                    send(client, session, "DEMO")
+                    path = f"/apps/yantra/users/owner/sessions/{session}/research/trace"
+                    trace = client.get(path).json()
+                    authority = trace["controller"]
+                    self.assertEqual(authority["model_receipts"][0]["reserved_cny"], .2)
+                    self.assertEqual(authority["budget"]["model_cost_cny"], .2)
+                    self.assertEqual(authority["preparation_searches"][0]["purpose"], "counter_evidence")
+                    self.assertFalse(authority["actual_bill_available"])
+                    task = trace["tasks"][0]["task_id"]
+                    subset = client.get(path, params={"task_id": task}).json()["controller"]
+                    self.assertEqual(subset["model_receipts"], [])
+                    self.assertEqual(subset["preparation_searches"], [])
+                    self.assertNotIn("PRIVATE_SOURCE", json.dumps(trace))
+            self.assertEqual(json.loads((engine.directory / "state.json").read_text())["model_ledger"], engine.state["model_ledger"])
+
     def test_external_trace_restart_scope_pagination_and_single_accounting(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

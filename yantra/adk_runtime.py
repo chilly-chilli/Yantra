@@ -137,6 +137,10 @@ def event_projection(event):
             result["tools"].append({"kind": "response", "name": response.name, "call_id": response.id,
                                     "ok": value.get("ok") if isinstance(value.get("ok"), bool) else None,
                                     "error": bool(value.get("error")), "result_hash": _digest(value)})
+            error = value.get("error")
+            if isinstance(error, dict) and error.get("code") in {"POLICY_BLOCKED", "INVALID_INPUT", "MATERIAL_IO",
+                    "MISSING_MATERIAL", "UNKNOWN_TOOL", "KNOWLEDGE", "EXTENSION_FAILED", "SKILL_RESOURCE"}:
+                result["tools"][-1]["error_code"] = error["code"]
         if part.text and not part.thought:
             result["text_hash"] = _digest(part.text)
             result["text_bytes"] = len(part.text.encode())

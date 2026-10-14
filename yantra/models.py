@@ -174,6 +174,11 @@ class OCRRecognizer:
         from .backend import RealModelBackend
         from .extensions import run_command
         engine, profile = self.engine, self.profile
+        from .adk_app import _worker_execution
+        execution = _worker_execution.get()
+        task_id = execution["task"].task_id if execution else "main"
+        from .adk_runtime import _invocation
+        owner_invocation_id = _invocation.get()
         if engine.state["budget"]["model_calls"] >= engine.state["limits"]["max_models"]:
             raise ValueError("模型调用预算耗尽")
         if profile["provider"] == "paddleocr-api":
@@ -185,6 +190,7 @@ class OCRRecognizer:
                 raise ValueError(f"请填写环境变量 {profile['api_key_env']} 的真实令牌")
             receipt = engine.run_budget.reserve_fixed(profile["call_cost_cny"], "ocr_paddle_api",
                 {"source": profile["cost_source"], "as_of": profile["cost_as_of"]})
+            receipt.update(task_id=task_id, owner_invocation_id=owner_invocation_id)
             engine.state["budget"]["model_calls"] += 1
             engine._save()
             try:
@@ -197,7 +203,9 @@ class OCRRecognizer:
             import base64
             payload = {"image_base64": base64.b64encode(stream.getvalue()).decode(), "mime_type": "image/png", "width": image.width, "height": image.height, "language": profile["language"]}
             receipt = engine.run_budget.reserve_fixed(profile["call_cost_cny"], "ocr_command", {"source":profile["cost_source"],"as_of":profile["cost_as_of"]})
+            receipt.update(task_id=task_id, owner_invocation_id=owner_invocation_id)
             engine.state["budget"]["model_calls"] += 1
+            engine._save()
             try:
                 return await run_command(profile["command"], payload, timeout, profile["env_refs"])
             finally:
@@ -208,17 +216,13 @@ class OCRRecognizer:
         instruction = "忠实转写图像中的每行文字，返回 words（每项 text、bbox=[左,上,右,下]原图像素坐标）及 warnings。不能推断缺失数字或分析财务。无法识别则留空并说明。"
         receipt = engine.run_budget.reserve(json.dumps(payload), instruction+json.dumps(OCROutput.model_json_schema()), backend.max_output_tokens,
                                            pricing=profile["pricing"], extra_input_tokens=profile["max_image_tokens"])
-        receipt.update(method="ocr_vision", profile=profile["name"])
+        receipt.update(method="ocr_vision", profile=profile["name"], task_id=task_id, owner_invocation_id=owner_invocation_id)
         engine.state["budget"]["model_calls"] += 1
         engine._save()
         try:
             from google.genai import types
-            from .adk_app import _worker_execution
             from .adk_runtime import execution_scope
-            execution = _worker_execution.get()
             task = execution["task"] if execution else None
-            receipt["task_id"] = task.task_id if task else "main"
-            engine._save()
             with execution_scope(engine, task, "ocr", role="finance"):
                 return await asyncio.wait_for(backend._decision("ocr_transcriber", instruction, OCROutput, payload,
                     image_parts=[types.Part.from_bytes(data=stream.getvalue(), mime_type="image/png")]), timeout)

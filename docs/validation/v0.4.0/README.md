@@ -1,6 +1,6 @@
-# v0.4.0 ADK 原生接入验证（进行中）
+# v0.4.0 ADK 原生接入验证
 
-日期：2026-10-14（Asia/Shanghai）。范围：0.3.3 基线上的 Unreleased 接入。固定 `google-adk==2.11.0`、`mcp==1.30.0`，本机 Python 3.12。任务仅授权本地开发和提交；未 push、部署或发布。
+日期：2026-10-14（Asia/Shanghai）。范围：0.3.3基线上的0.4.0（Unreleased）接入。固定 `google-adk==2.11.0`、`mcp==1.30.0`，本机Python3.12。任务仅授权本地开发和提交；未push、部署或发布。以下阶段日志保留当时版本／结果，最终检查另列。
 
 ## 基线与第一阶段
 
@@ -128,8 +128,43 @@ git diff --check
 
 原基线两项知识夹具仅固定其自身knowledge记录时间为2026-10-13；研究／费用／墙钟时钟仍真实。[30项知识检查](knowledge-fixture-tests.log)通过，10.989秒。行为材料也改用明确“披露日期”并新增真实解析检查；[6项评估驱动检查](eval-disclosure-fixed.log)通过，2.440秒。
 
-## 尚待完成
+## 最终检查与交付范围
 
-全回归、非ADK准备操作的账本投影复核与最终当前指南。Memory／cache／原生resume仅有接口调查；业务恢复仍保留。
+- [最终完整回归](full-verified-tests.log)：**178项通过，160.661秒**，运行及pyproject版本0.4.0。涵盖原研究阶段／财务口径／证券／费用预留／总截止／CAS修订／深度／父权限／估值授权／独立否决／partial及离线replay，历史失败没有改写。
+- [34项ADK覆盖复核](adk-scope-final.log)及[18项能力检查](capabilities-scope-final.log)通过。最后增加费用收据owner_invocation_id后，完整回归包含实际ASGI读取的关联断言。公开controller投影只读state.json：数值预算、费用／用量收据及准备检索目的／结果数，不暴露查询、材料、定价来源或提供者详情，不二次结算。没有Runner的程序操作不会伪造ADK事件。
+- 自建DatabaseSessionService通过原生close纳入API生命周期；调用方传入的服务不越权关闭。OCR命令调用前持久化调用计数和收据关联。原生工具错误代码为固定白名单；未知错误仅保留安全类别／哈希。
+- 7项技能路径／权限检查通过，2.885秒（包含于最终完整回归）：保留完整原路径，根文件与references同名文件的实际读取结果／哈希不同，脚本仍只读。首次新增测试误放restored断言导致NameError，已修正测试位置；不是产品授权放宽。
+- [最终外部入口](engineering-delivery-trace.log)及[完整输出](engineering-delivery-trace.json)再次通过实际localhost／SQLite进程重启／agents-cli／Artifact／跨scope检查。CLI转换3事件而公开轨迹22事件，不能用前者冒充全部研究事件。
+- pip check、compileall、CLI版本／parser和本地文档文件／锚点检查通过；未执行远端CI。
 
-真实模型／评估服务尚未执行：本任务没有批准具体新增模型或评估预算。现有凭据与运行默认预算不自动授权评估服务。离线结果不能充当真实行为评估。
+### 七项接入验收
+
+| 项目 | 接入前→后 | 可观察证据／限制 |
+|---|---|---|
+| 完整轨迹／Session | 内部消费→持久脱敏投影＋所属Session接口 | 真实HTTP读取、分页／任务过滤、父关联、重启、404；仍隔离子Session及私有内容 |
+| App／插件 | 分散Runner→统一工厂及覆盖 | entry／worker／decision／vision OCR均关联；MCP完成／取消关闭，SQLite按所有权关闭；账本仍单写 |
+| 嵌套Runner | Worker逐行动Runner→同一Worker单请求及原生工具执行 | invocation26→15，提供者18→18、工具6→6、同一语义哈希；保留结构化业务行动适配及主／提取隔离Runner |
+| 评估／工程 | 无完整识别／行为案例→manifest／package入口／5案例／总预算驱动／分层CI | 实际CLI与parser、审批及生成器合成检查通过；真实模型／judge未执行，grade受ADC限制 |
+| MCP | 每调用重连→原生连接池／冻结工具集 | 两次RPC进程2→1，实际并发／超时／取消／schema改变拒绝／PID退出；分页及ADC等适配增加代码 |
+| Artifact | 仅业务文件→原生只读标准接口 | 版本／业务版本／sha256、原字节一致、重启、scope、缺失及写403；源覆盖可使旧版本不可读，无复制权威 |
+| Skills／上下文 | 全量指令→显式原生只读试点；重复收据→固定引用 | 大目录文本减少，小目录／额外调用退化；默认eager保留。全文仍可读，真实token／费用／行为未知 |
+
+### 最终测量解释
+
+[最终顺序5样本](measure-delivery-sequential.json)再次确认所有语义哈希为`b72cdde2df0f6fc4ff02b9067528827de50db26c3f7ebb6d4b14b770b739f3f1`，提供者／模型18、工具6、invocation15、决策invocation7、轨迹36038字节及请求约677327字节；本机中位0.4480秒。之前阶段中位0.3870秒仍是当时实测；最终与基线0.4640秒的差距很小，样本少、时段不同且没有置信区间，**不认定整体延迟稳定下降**。首次最终采样与CLI并发，未用作延迟结论，改为上述单独顺序复测。
+
+实质改善是外部可查的内部轨迹、Worker少11个生命周期、MCP同任务连接2→1及标准产物读取。其他维度的确定性检查未发现不可接受退化；真实行为、网络延迟、提供者token与费用仍未知，维护适配代码增加，不能证明全面Pareto或研究质量提高。Skills明显退化的配置保持显式试点，不默认推广；不存在“必然降低模型费用”的结论。
+
+### 未执行与保留范围
+
+真实模型／评估服务未执行：[计划输出](live-eval-not-executed.json)明确not_executed。没有批准具体新增模型或judge预算；现有凭据及研究默认预算不自动授权评估。本机MCP／HTTP为实际受控服务；最初合成检查曾误触默认公开搜索并已中止，不算真实外部研究成功。没有启用停用服务，未知公网及服务结果不充当验收。
+
+MemoryService未新增适配：原生通用Session搜索没有截止／证券／固定修订／核验许可，已有read_knowledge提供这些业务能力；没有已测收益，不增加第二套存储或自动长期要求。ContextCacheConfig／Session压缩未启用：LiteLlm有提示接口，但当前Worker单请求没有cache_config，提供者支持／命中／费用／延迟未知；压缩Session也不会缩小显式task＋local，且摘要增加模型费用。保留固定引用和全文读取作为已测方案。
+
+原生resume／工具确认未替代业务恢复：固定版本声明at-least-once、临时状态会丢失，尚无跨费用／知识／外部RPC幂等事务证明。现有显式确认和恢复检查、MCP中断停止保证保留；旧未记录中断不能事后证明幂等性。整体主编排不强制迁移Workflow，OpenAPI／A2A／云部署／后台触发未纳入范围。
+
+### Git与复现
+
+本任务已验证阶段提交：`4f93afe`、`96d7e95`、`ff1fef0`、`28cfcef`、`26396a8`、`9757422`、`cc7c05a`；最终收尾提交的实际hash在交付消息及automation memory中记录。同期品牌／CLI提交属于其他任务并原样保留，未混入本任务提交。用户材料、凭据、my_agent、output、tmp、交付物及公开财报目录未stage。未push、merge、打tag、部署或发布。
+
+当前指南、ADR0002、AGENTS及Unreleased已同步。版本日志与JSON为明确的受控夹具证据；运行／资料文件仍在本机临时或独立目录，不随源码提供。测量脚本可生成新证据，旧checkout须按记录中的真实提交自行导出。完整阶段日志、首次失败及最终通过分别保留。

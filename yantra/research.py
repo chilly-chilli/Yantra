@@ -256,7 +256,9 @@ class RawEngine(Engine):
         instruction = RAW_MAIN if method == "main" else RAW_WORKER if method == "worker" else str(method)
         payload = json.dumps(args, ensure_ascii=False, default=str)
         receipt = self.run_budget.reserve(payload, instruction + json.dumps(self.tools.tool_contracts())+json.dumps(skills,ensure_ascii=False), getattr(self.backend, "max_output_tokens", 4096))
+        from .adk_runtime import _invocation
         receipt.update(method=method, task_id=execution["task"].task_id if execution else "main",
+                       owner_invocation_id=_invocation.get(),
                        framework_version=self.state["framework"]["version"], assumptions_version=self.state["assumptions"]["version"])
         self.state["budget"]["model_calls"] += 1
         self.state["in_flight"] = {"kind": "decision", "method": method, "reservation": receipt["id"]}

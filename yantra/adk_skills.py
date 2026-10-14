@@ -33,9 +33,8 @@ def description(spec):
 
 
 def resource_name(path):
-    if path.startswith(("references/", "assets/")):
-        return path
-    # Scripts are text references, never executable native Script objects.
+    # Preserve the entire original path, avoiding root/reference name collisions.
+    # Scripts and assets are text references, never executable Script objects.
     return "references/" + path
 
 

@@ -1,6 +1,6 @@
 # Yantra
 
-实证研策：Google ADK 驱动的证据核验型买方投研原型。当前工作区版本为 **0.3.3**；发布与变更状态见[更新记录](CHANGELOG.md)。
+实证研策：Google ADK 驱动的证据核验型买方投研原型。当前工作区版本为 **0.4.0（Unreleased）**；发布与变更状态见[更新记录](CHANGELOG.md)。
 
 研究接受公司／证券身份及原始文件、目录或网页链接，沿用 `finance → thesis → valuation → verification → report`，输出备忘录、结构化结果、计算凭证与原始来源快照。支持 DCF、PE、PB、EV/EBITDA、单阶段 DDM，以及跨 session 共享知识与混合检索。
 
@@ -56,3 +56,5 @@ v0.3开发验收记录为 **95项测试通过**，其中65项既有回归、30�
 统一信源管道的 RSS／专用官方披露渠道仍是预留接口，订阅、轮询、自动监控和通用一致预期服务留待后续版本。信息命令扩展可按需查询行情与资料。SOTP、正常化盈利仍是独立原型。旧研究和历史验收保留当时结果；新版不会自动导入 workspace 旧材料。
 
 v0.3.3 新增 OSC 7501 终端状态、四类信息命令扩展及 PaddleOCR 任务 API。版本检查与实际验证边界见[v0.3.3 记录](docs/validation/v0.3.3/README.md)。
+
+v0.4.0 未发布：原生 App／插件、所属 Session 的持久轨迹、Worker 单次请求、MCP 连接复用、只读 Artifact 及可选 SkillToolset 试点；工程入口和行为评估配置已补齐。测量、完整回归和未执行的真实模型／judge范围见[v0.4.0记录](docs/validation/v0.4.0/README.md)。接入和本机收益不等同于研究质量或真实费用提高。

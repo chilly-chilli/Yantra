@@ -124,6 +124,7 @@ Define observable success criteria and verify them.
 3. Each business state has one authoritative writer. Observation plugins must not settle fees, copy tool execution, or maintain a competing business ledger. Every separately constructed Runner must use the shared native App/plugin factory.
 4. A custom exception must state the pinned ADK capability gap, the business necessity, and external behavior checks. Native integration must preserve role/parent isolation, frozen permissions, depth limits, evidence hashes/CAS, deadlines, and truthful partial/failed results.
 5. Runtime commits must explain the reused capability, remaining custom mechanisms, and validation. Test externally observable behavior (including standard API and trace access); importing ADK classes is not architecture acceptance. Follow [ADR 0002](docs/decisions/0002-adk-native-boundaries.md).
+6. Keep deterministic checks, offline API/CLI traces, live model generation and judge evaluation separate. Use [the evaluation entry](tests/eval/README.md); explicit model/service credentials and total budgets are required for live work. Unknown performance, cost or model quality must remain unknown, and a pilot with regressions must not become the default without new evidence.
 
 ## 6. Git Ignore Policy
 

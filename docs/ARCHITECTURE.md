@@ -1,6 +1,6 @@
 # 架构说明
 
-适用版本：0.3.3 与 Unreleased ADK 接入。文档入口见[索引](README.md)。
+适用版本：0.4.0（Unreleased）。文档入口见[索引](README.md)。
 
 `Engine` 保留 v0.1 固定材料执行保障，`RawEngine` 在同一控制器、Pydantic 合约及 ADK 执行路径上增加原始材料研究。`RawBackend` 通过原有 `LiteLlm` 作单次结构化决策；没有共享聊天历史，也没有隐藏工具循环。Unreleased 的 Worker 在自身 ADK 生命周期中调用一次 BaseLlm 请求，不再逐行动创建内部 Runner／Session；主协调、提取和独立审查仍采用隔离决策 Runner。实际安装 ADK 2.11.0 的 `Runner`、`LlmAgent`、Session、`ToolContext`、原生工具事件及回调用于执行。未升级 ADK 或改用另一套 Agent 平台。
 
@@ -70,6 +70,8 @@ flowchart TD
 专业执行通过预算内后端行动映射为 ADK 原生工具事件；工具前回调与控制器再次校验。上下文由 ContextVar 绑定当前任务，动态子任务结束后恢复父绑定。每项运行还使用文件锁，防止不同进程同时修改运行状态。
 
 App 插件覆盖仅限所属 Runner；独立决策与 Worker Runner 显式使用同一工厂。`adk-trace.jsonl` 只保存事件标识、调用名称、内容哈希、状态和原生用量，不保存参数、子任务正文、思维内容或原始错误消息。`adk-scopes.json` 记录控制器实际绑定的外部 Session，轨迹读取及已绑定研究恢复拒绝其他 Session 借用 run ID。内部 Session 继续隔离，投影没有转发为外层 ADK 事件，不重复状态 delta、工具调用或收费。
+
+轨迹接口另读`state.json`给出`controller`投影：原模型／OCR账本收据、owner_invocation_id、总预算和准备检索的目的／结果数。非ADK程序操作不会伪造原生事件；投影与观测不能相加计费。提供者／工具错误只给安全类别，实际账单仍不可得。API生命周期关闭其自建DatabaseSessionService，注入服务的所有权保留给调用方。
 
 当前任务状态及账本仍以 `state.json` 为准；投影是观测数据。绑定文件及投影不能替代证据修订。原生化职责及自定义例外见 [ADR 0002](decisions/0002-adk-native-boundaries.md)。
 

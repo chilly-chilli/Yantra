@@ -1,6 +1,7 @@
 """Local ADK API with a session-scoped research trace endpoint."""
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 import json
 import os
 from pathlib import Path
@@ -20,6 +21,31 @@ from .adk_app import YantraAgent
 from .adk_artifacts import ResearchArtifactService
 from .engine import TERMINAL
 from .adk_runtime import TraceStore, native_app, run_directory
+
+
+def controller_projection(state, task_id=None):
+    """Read authority, never resettle it or expose private query/material content."""
+    numeric = lambda value: isinstance(value, (int, float)) and not isinstance(value, bool)
+    keys = ("tool_calls", "model_calls", "ocr_calls", "main_loops", "repair_rounds", "active_seconds",
+            "cost_reserved_usd", "model_cost_cny", "external_service_cost_cny")
+    receipts = []
+    for receipt in state.get("model_ledger", []):
+        if task_id is not None and receipt.get("task_id", "main") != task_id:
+            continue
+        item = {key: receipt[key] for key in ("id", "method", "task_id", "owner_invocation_id", "status", "framework_version", "assumptions_version") if key in receipt}
+        item.update({key: receipt[key] for key in ("reserved_cny", "cost_cny", "input_token_bound", "output_token_bound")
+                     if numeric(receipt.get(key))})
+        item["usage"] = {key: value for key, value in receipt.get("usage", {}).items()
+                         if key in {"input_tokens", "output_tokens", "total_tokens"} and numeric(value)}
+        receipts.append(item)
+    searches = [{"sequence": index, "purpose": receipt.get("purpose") if receipt.get("purpose") in
+                 {"identity", "disclosure", "counter_evidence", "changes", "expectations"} else "worker",
+                 "result_count": len(receipt.get("results", [])), "has_errors": bool(receipt.get("errors"))}
+                for index, receipt in enumerate(state.get("searches", []), 1)] if task_id in {None, "main"} else []
+    return {"source": "state.json", "accounting": "controller_authoritative_read_only",
+            "actual_bill_available": False, "deadline": state.get("deadline"),
+            "budget": {key: state["budget"][key] for key in keys if numeric(state["budget"].get(key))},
+            "model_receipts": receipts, "preparation_searches": searches}
 
 
 class YantraLoader(BaseAgentLoader):
@@ -47,7 +73,15 @@ def create_app(*, session_service=None, root_agent=None):
         eval_sets_manager=LocalEvalSetsManager(agents_dir=str(local)),
         eval_set_results_manager=LocalEvalSetResultsManager(agents_dir=str(local)),
         agents_dir=str(Path(__file__).resolve().parent.parent))
-    app = server.get_fast_api_app()
+    @asynccontextmanager
+    async def lifecycle(app):
+        try:
+            yield
+        finally:
+            if session_service is None:
+                await service.close()
+
+    app = server.get_fast_api_app(lifespan=lifecycle)
 
     @app.middleware("http")
     async def read_only_artifact(request, call_next):
@@ -74,6 +108,7 @@ def create_app(*, session_service=None, root_agent=None):
                  | {"status": statuses.get(task["task_id"], "interrupted" if state["status"] in TERMINAL else "running")}
                  for task in state["tasks"] if task_id is None or task["task_id"] == task_id]
         return {"run_id": state["run_id"], "status": state["status"], "tasks": tasks,
+                "controller": controller_projection(state, task_id),
                 **store.read(after=after, limit=limit, task_id=task_id)}
 
     return app

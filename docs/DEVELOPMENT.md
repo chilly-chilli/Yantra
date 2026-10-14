@@ -1,6 +1,6 @@
 # 本地开发与评估
 
-适用0.3.3与Unreleased；固定Google ADK2.11.0，工具环境agents-cli1.10.0。安装仍见[使用指南](USAGE.md#安装)，模型和凭据引用见[能力配置](CAPABILITIES.md)。
+适用0.4.0（Unreleased）；固定Google ADK2.11.0，工具环境agents-cli1.10.0。安装仍见[使用指南](USAGE.md#安装)，模型和凭据引用见[能力配置](CAPABILITIES.md)。
 
 `agents-cli-manifest.yaml`让CLI识别现有工程，`yantra.fast_api_app:app`提供其package入口。使用已安装固定.venv启动；不运行完整enhance覆盖工程，不引入云部署、A2A或默认评估模型。架构职责及例外见[ADR0002](decisions/0002-adk-native-boundaries.md)。
 

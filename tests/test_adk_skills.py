@@ -135,6 +135,24 @@ class SkillIntegrationTests(unittest.IsolatedAsyncioTestCase):
             self.assertNotIn("load_skill", restored.permissions["finance"])
             self.assertIn("read_skill_resource", restored.permissions["finance"])
 
+    async def test_native_resource_paths_keep_root_and_reference_files_distinct(self):
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            store, source = setup_skills(root)
+            (source / "references").mkdir()
+            (source / "references/reference.txt").write_text("different original reference")
+            catalog = ExtensionCatalog(store)
+            await catalog.add("skills", "cash_flow", {"path": str(source), "roles": ["finance"], "loading": "native"})
+            native = FrozenSkills(ExtensionRuntime(catalog.snapshot(root / "run")), "finance")
+            context = SimpleNamespace(invocation_id="synthetic-paths", state={}, agent_name="finance_worker")
+            paths = [resource["file_path"] for resource in native.catalogue()[0]["resources"]]
+            self.assertEqual(len(paths), len(set(paths)))
+            one = await native.call("load_skill_resource", {"skill_name": alias("cash_flow"), "file_path": "references/reference.txt"}, context)
+            two = await native.call("load_skill_resource", {"skill_name": alias("cash_flow"), "file_path": "references/references/reference.txt"}, context)
+            self.assertNotEqual(one["source_hash"], two["source_hash"])
+            self.assertIn("different original reference", str(two["result"]))
+
     async def test_child_without_native_grant_receives_no_skill_body_or_catalogue(self):
         class RestrictedProvider(BaseLlm):
             model: str = "synthetic-restricted"

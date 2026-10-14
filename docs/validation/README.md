@@ -4,7 +4,7 @@
 
 | 版本 | 验证记录 | 主要范围 |
 |---|---|---|
-| Unreleased | [ADK 原生接入（进行中）](v0.4.0/README.md) | 基线、外部事件轨迹与插件覆盖；其他接入按阶段补充 |
+| v0.4.0（Unreleased） | [ADK 原生接入](v0.4.0/README.md) | 持久轨迹／插件、Worker、MCP、Artifact、Skills试点、评估工程、全回归及测量限制 |
 | v0.3.3 | [更新与配置检查](v0.3.3/README.md) | OSC 7501 PTY、信息扩展、PaddleOCR API 离线回归及本地配置 |
 | v0.3.1 | [版本与提交检查](v0.3.1/README.md) | CLI契约、版本一致性及推送前检查；完整回归见记录引用 |
 | v0.3 | [开发验收](v0.3/README.md) | 95项测试；真实ADK／SQLite，离线模型和embedding／联网响应 |

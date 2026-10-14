@@ -2,15 +2,16 @@
 
 功能记录与Git发布状态分别说明；本地实现和测试通过不表示已经推送、合并或发布。
 
-## Unreleased — 0.3.3
+## Unreleased — 0.4.0
 
 - CLI 交互配置入口新增实证研策 Unicode 块字符标志，大写 `YANTRA` 多行块字符字标居中与朱砂读数点；支持 `NO_COLOR` 与 `TERM=dumb`，重定向和 JSON 输出不显示标志。
 
-- ADK 接入前两阶段：所有自建 Runner 显式采用原生 App／生命周期插件；新增所属 Session 的持久脱敏轨迹接口；Worker 在自身生命周期完成单次请求及工具执行，减少内部 Runner；只读 ArtifactService 桥接已有报告和计算文件，关联版本／哈希。阶段证据见[ADK 接入验证](docs/validation/v0.4.0/README.md)；其余接入仍在实施，不代表完整任务交付。
+- ADK 接入：所有自建 Runner 显式采用原生 App／生命周期插件；新增所属 Session 的持久脱敏轨迹与权威账本只读投影；Worker 在自身生命周期完成单次请求及工具执行，减少内部 Runner；只读 ArtifactService 桥接已有报告和计算文件，关联版本／哈希。完整回归、收益及未执行范围见[ADK 接入验证](docs/validation/v0.4.0/README.md)。
 - 新增显式 `--loading native` 的只读 SkillToolset 试点与冻结目录／资源加载；默认 eager 保留。新运行用固定引用减少重复收据输入，保留首项全文及权威日志。大目录文本减少，小目录及额外决策有退化，未宣称真实 token／费用改善。
 - 新增agents-cli工程入口、5类虚构行为案例、显式总预算约束的真实生成器及分层CI。实际localhost离线轨迹和CLI生成通过；真实模型／judge及远端CI未执行，安装CLI本地grade的ADC限制明确保留。
 - MCP 接入原生工具集与连接池，同一专业任务复用连接、结束及取消释放；分页保留冻结别名、schema及角色授权，不隐式探测ADC、转发重定向凭据或执行UI动作。外部操作新增持久中断标记，恢复保留原预算／截止并拒绝自动重放；未交付成果任务在轨迹显示 interrupted。
 - 补齐初始Vision OCR独立Runner的运行／任务／父invocation关联，线程传递上下文；原OCR预算与图像隐私边界保持。
+- API关闭自建持久Session服务；技能资源保留完整原路径以区分同名文件。修复受控历史夹具日期，保留原失败证据；运行与pyproject版本统一为0.4.0，仍未发布。
 
 - 妙想改为金融数据和资讯搜索两个直接 HTTP API 工具，使用 `MX_APIKEY`，停用本机东方财富技能；保留旧资讯凭据引用兼容，并拒绝显式 API 业务错误。
 - 本地凭据统一为根目录 `.env`，保留模板 `.env.example`；合并原模型、资料服务与旧 MCP 变量，移除重复文件，更新 CLI／ADK 配置说明。
@@ -19,7 +20,7 @@
 - 新增 PaddleOCR-VL-1.6 jobs API OCR 适配器，有限时轮询、JSONL 下载及原图区域定位；配额、费用上界、缺失版面坐标和本地凭据检查均明确记录。
 - 修正导入停用扩展时 CLI 返回的 enabled 状态，使其与保存配置一致。
 
-本地实现与检查完成日期：2026-10-14；本轮未推送、打 tag、发布 Release 或部署。实际验证范围及未执行的认证／OCR 服务调用见[v0.3.3 记录](docs/validation/v0.3.3/README.md)。
+本地实现与检查完成日期：2026-10-14；本轮未推送、打 tag、发布 Release 或部署。原0.3.3功能的认证／OCR服务边界见[v0.3.3记录](docs/validation/v0.3.3/README.md)，ADK接入及未执行的真实行为评估见[v0.4.0记录](docs/validation/v0.4.0/README.md)。
 
 ## 0.3.1
 

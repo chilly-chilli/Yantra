@@ -109,5 +109,8 @@ class EvaluationEngineeringTests(unittest.TestCase):
             state = json.loads(next((args.output / "runs").glob("run-*/state.json")).read_text())
             self.assertEqual(state["capabilities"]["extensions"]["tools"], {})
             self.assertEqual(state["capabilities"]["models"]["embedding"], None)
+            trace = json.loads((args.output / "traces.json").read_text())["eval_cases"][0]["context"]["research_trace"][-1]
+            observed = {event["invocation_id"] for event in trace["events"]}
+            self.assertTrue(all(receipt["owner_invocation_id"] in observed for receipt in state["model_ledger"]))
             self.assertEqual(settings.path.read_bytes(), original)
             self.assertNotIn("synthetic-secret", (args.output / "traces.json").read_text())

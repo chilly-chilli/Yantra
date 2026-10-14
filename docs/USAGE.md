@@ -1,6 +1,6 @@
 # 使用指南
 
-适用版本：0.3.3。本文维护当前安装、启动、预算、恢复和复测操作。高级配置见[能力配置](CAPABILITIES.md)，估值契约见[估值说明](VALUATION.md)，知识与用户要求见[知识说明](KNOWLEDGE.md)。
+适用版本：0.4.0（Unreleased）。本文维护当前安装、启动、预算、恢复和复测操作。高级配置见[能力配置](CAPABILITIES.md)，估值契约见[估值说明](VALUATION.md)，知识与用户要求见[知识说明](KNOWLEDGE.md)。
 
 ## 安装
 
@@ -199,7 +199,7 @@ Unreleased 的本地 API 入口增加持久 Session 与脱敏研究轨迹：
 
 使用标准 `/apps/yantra/users/USER_ID/sessions` 创建 Session，使用 `/run_sse` 推进。上述 ID 是占位符；所属研究的轨迹接口为 `GET /apps/yantra/users/USER_ID/sessions/SESSION_ID/research/trace`，接受 `after`（序号，默认0）、`limit`（1–500）及 `task_id`。返回研究与任务状态、角色、父任务、ADK Session／invocation、工具调用和结果哈希、错误类别及用量。`cursor` 用于下一页；序号为持久化顺序，因果关系看父 invocation，不能假设外层开始事件先于内部事件写入。
 
-重启仍使用原 `YANTRA_RUNS_DIR`（默认 `runs`）及其 `.adk/sessions.db`，返回当前研究所属 Session。未绑定／不存在的 Session 返回404。API 沿用 ADK 本地 user/session 标识约定，无用户认证，仅按本机可信客户端使用；不提供远程多租户授权。轨迹不返回子任务材料正文或工具参数，不是证据全文接口；账本以运行 `state.json` 为准。普通 `adk web` 不包含此新增路由。验证范围见[接入记录](validation/v0.4.0/README.md)。
+重启仍使用原 `YANTRA_RUNS_DIR`（默认 `runs`）及其 `.adk/sessions.db`，返回当前研究所属 Session。未绑定／不存在的 Session 返回404。API 沿用 ADK 本地 user/session 标识约定，无用户认证，仅按本机可信客户端使用；不提供远程多租户授权。轨迹不返回子任务材料正文或工具参数，不是证据全文接口。`controller`只读投影权威`state.json`预算、费用预留／用量收据、所属invocation及非ADK准备检索的目的／结果数；原生事件仍标明observation_only，不能与投影相加计费。服务没有实际账单，缺用量时保留预留。API关闭其自建SQLite服务，调用方传入的服务由调用方负责。普通 `adk web` 不包含此新增路由。验证范围见[接入记录](validation/v0.4.0/README.md)。
 
 该本地入口还提供标准 ADK Artifact 路由：同一 Session 的 `GET .../artifacts` 列出 `report.json`、`report.md` 和 `calculations.json`；`GET .../artifacts/report.json/versions` 列出 ADK 版本（从0开始），`.../versions/0` 读取固定版本，`.../versions/0/metadata` 返回业务假设版本、run ID、sha256及控制器所有权。路径省略号代表同一 `/apps/yantra/users/USER_ID/sessions/SESSION_ID` 前缀，必须替换为实际标识。
 

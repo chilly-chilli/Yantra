@@ -1,0 +1,1 @@
+{"status": "not_executed", "cases": ["missing_numbers", "role_tool_progress", "authorization_attack", "independent_veto", "wait_confirm_restore"], "reason": "Live generation requires explicit existing model, sourced pricing and total approval budgets; judge needs separate approval."}

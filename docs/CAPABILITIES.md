@@ -1,6 +1,6 @@
 # 模型与扩展配置
 
-适用版本：0.3.3 与 Unreleased ADK 接入。研究启动见[使用指南](USAGE.md)，embedding计费、索引与降级见[知识模块](KNOWLEDGE.md#模型费用和重建)。
+适用版本：0.4.0（Unreleased）。研究启动见[使用指南](USAGE.md)，embedding计费、索引与降级见[知识模块](KNOWLEDGE.md#模型费用和重建)。
 
 这两个模块通过 CLI 与用户交互，并把已选择的能力接入 `RawEngine` 原始材料研究。运行配置位于 `.yantra/config.json`，可用环境变量 `YANTRA_CONFIG` 或命令前的 `--config /绝对路径/config.json` 指定另一个配置文件。
 
@@ -101,6 +101,8 @@ Unreleased 支持显式只读 SkillToolset 试点；默认 `--loading eager` 保
 ```
 
 原生模式仅改变新运行的专业 Worker：初始输入包含获准目录、稳定技能别名和资源哈希，`list_skills`、`load_skill`、`load_skill_resource` 经现有授权和工具预算执行。加载后才加入该任务指令；资源每次核对冻结字节，目录外路径、变更后的文件及未获父权限的工具被拒绝。`scripts/` 映射为只读 `references/scripts/`，没有原生脚本执行器、动态 additional tools 或状态变量插值。主协调／提取／审查仍保持既有完整技能输入；旧运行的快照及权限不变。
+
+原生目录给出实际资源别名：全部原始路径前置`references/`，例如原`references/a.txt`成为`references/references/a.txt`。这样根目录`a.txt`与子目录同名文件保持不同，原始路径和哈希同时保留；以目录返回的file_path读取，勿自行猜测。
 
 新运行的 Worker 输入保留首个完整工具收据，完全相同的后续收据以首项索引／哈希引用；权威工具日志和原文读取保持完整。它不是模型生成摘要或 Session 压缩。小目录的原生加载实测增加输入及调用，使用大目录时也可能多一次决策；因此默认不切换。字节上界、调用数及本机延迟比较见[技能测量](validation/v0.4.0/README.md#第四阶段技能与上下文试点)，真实输入 token、费用和模型行为尚未测量。
 
