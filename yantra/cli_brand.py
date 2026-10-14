@@ -16,7 +16,7 @@ def show_banner():
     if not stream.isatty():
         return
     if os.environ.get("TERM") == "dumb":
-        print(f"实证研策 · Yantra v{__version__}", file=stream)
+        print(f"Yantra v{__version__}", file=stream)
         return
     mark = [
         "           ▄▄▄▄▄▄▄▄▄",
@@ -34,7 +34,7 @@ def show_banner():
         "        ▀██▄▄▄      ▄▄",
         "           ▀▀▀▀▀▀▀▀▀",
     ]
-    labels = {5: "实 证 研 策", 7: "Y a n t r a", 9: f"v{__version__}"}
+    labels = {7: "Y a n t r a", 9: f"v{__version__}"}
     column_width = max(display_width(label) for label in labels.values())
     for index, row in enumerate(mark):
         padding = " " * (30 - display_width(row))

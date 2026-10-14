@@ -83,7 +83,9 @@ with patch.object(sys.stdin, 'isatty', return_value=True), patch.object(sys.stdo
         for command, answer in (("configure", "exit\n"), ("models", "back\n"), ("extensions", "back\n")):
             result = self.invoke(command, output="text", bootstrap=bootstrap, input_text=answer)
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(result.stdout.count("实 证 研 策"), 1)
+            self.assertNotIn("实 证 研 策", result.stdout)
+            self.assertNotIn("实证研策", result.stdout)
+            self.assertEqual(result.stdout.count("Y a n t r a"), 1)
             self.assertEqual(result.stdout.count("⬤"), 1)
             self.assertIn("█", result.stdout)
             self.assertIn("▀", result.stdout)
@@ -91,9 +93,6 @@ with patch.object(sys.stdin, 'isatty', return_value=True), patch.object(sys.stdo
             self.assertNotIn("╭", result.stdout)
             self.assertIn("⬤", next(line for line in result.stdout.splitlines() if "Y a n t r a" in line))
             self.assertNotIn("\033", result.stdout)
-            chinese = next(line for line in result.stdout.splitlines() if "实 证 研 策" in line)
-            english = next(line for line in result.stdout.splitlines() if "Y a n t r a" in line)
-            self.assertEqual(english.index("Y a n t r a"), chinese.index("实 证 研 策"))
         # The parent may set NO_COLOR; clear it explicitly for the color check.
         color_bootstrap = bootstrap.replace("{'TERM': 'xterm-256color', 'NO_COLOR': ''}",
                                             "{'TERM': 'xterm-256color'}").replace(
@@ -102,14 +101,14 @@ with patch.object(sys.stdin, 'isatty', return_value=True), patch.object(sys.stdo
         self.assertIn("\033[38;2;225;43;34m⬤\033[0m", colored.stdout)
         plain = self.invoke("configure", output="text", input_text="exit\n",
                             bootstrap=bootstrap.replace("xterm-256color", "dumb"))
-        self.assertIn("实证研策 · Yantra v", plain.stdout)
+        self.assertIn("Yantra v", plain.stdout)
         self.assertNotIn("⬤", plain.stdout)
         self.response(self.invoke("models", "list", bootstrap=bootstrap))
         redirected = self.invoke("configure", output="text", input_text="exit\n",
                                  bootstrap=bootstrap.replace(
                                      "patch.object(sys.stdout, 'isatty', return_value=True)",
                                      "patch.object(sys.stdout, 'isatty', return_value=False)"))
-        self.assertNotIn("实证研策", redirected.stdout)
+        self.assertNotIn("Y a n t r a", redirected.stdout)
 
     def test_missing_and_invalid_run(self):
         for command in ("status", "resume", "cancel", "replay"):
