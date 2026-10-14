@@ -24,9 +24,9 @@ def _digest(value):
 
 
 @contextmanager
-def execution_scope(engine, task=None, kind="decision"):
+def execution_scope(engine, task=None, kind="decision", role="main"):
     task = task.model_dump() if hasattr(task, "model_dump") else task
-    token = _scope.set({"engine": engine, "task": task, "kind": kind})
+    token = _scope.set({"engine": engine, "task": task, "kind": kind, "role": role})
     try:
         yield
     finally:
@@ -183,7 +183,7 @@ class ResearchLifecyclePlugin(BasePlugin):
         task = (self.scope or {}).get("task") or {}
         record = {"time": datetime.now(timezone.utc).isoformat(), "kind": kind,
                   "task_id": task.get("task_id", "main"), "parent_task_id": task.get("parent_task_id"),
-                  "role": task.get("target", "main"), "depth": task.get("depth", 1),
+                  "role": task.get("target", (self.scope or {}).get("role", "main")), "depth": task.get("depth", 1),
                   "runner_kind": (self.scope or {}).get("kind", "entry"),
                   "app_name": ctx.app_name, "session_id": ctx.session.id,
                   "invocation_id": ctx.invocation_id, "parent_invocation_id": self.parent_invocation_id,

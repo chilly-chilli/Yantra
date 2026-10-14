@@ -158,7 +158,9 @@ class OCRRecognizer:
             result = tesseract_recognize(image, self.profile, timeout)
         else:
             with ThreadPoolExecutor(max_workers=1) as pool:
-                result = pool.submit(lambda: asyncio.run(self._remote(image, timeout))).result()
+                from contextvars import copy_context
+                context = copy_context()
+                result = pool.submit(context.run, lambda: asyncio.run(self._remote(image, timeout))).result()
         output = OCROutput.model_validate(result)
         width, height = image.size
         if any(not (0 <= w.bbox[0] < w.bbox[2] <= width and 0 <= w.bbox[1] < w.bbox[3] <= height) for w in output.words):
@@ -211,8 +213,15 @@ class OCRRecognizer:
         engine._save()
         try:
             from google.genai import types
-            return await asyncio.wait_for(backend._decision("ocr_transcriber", instruction, OCROutput, payload,
-                image_parts=[types.Part.from_bytes(data=stream.getvalue(), mime_type="image/png")]), timeout)
+            from .adk_app import _worker_execution
+            from .adk_runtime import execution_scope
+            execution = _worker_execution.get()
+            task = execution["task"] if execution else None
+            receipt["task_id"] = task.task_id if task else "main"
+            engine._save()
+            with execution_scope(engine, task, "ocr", role="finance"):
+                return await asyncio.wait_for(backend._decision("ocr_transcriber", instruction, OCROutput, payload,
+                    image_parts=[types.Part.from_bytes(data=stream.getvalue(), mime_type="image/png")]), timeout)
         finally:
             engine.run_budget.settle(receipt, backend.last_usage)
 

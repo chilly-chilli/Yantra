@@ -121,6 +121,41 @@ class ModelTests(unittest.IsolatedAsyncioTestCase):
             ModelProfile(kind="ocr",provider="vision",model_id="vision-test",base_url="https://unused.invalid/v1")
         self.assertEqual(ModelProfile(kind="llm",provider="openai-compatible",model_id="local",base_url="http://localhost:1234/v1",pricing=PRICE|{"input_per_million":0,"output_per_million":0}).pricing.input_per_million,0)
 
+    async def test_native_vision_ocr_initial_parse_has_durable_run_scope(self):
+        from PIL import Image
+        from yantra.adk_runtime import invocation_scope
+        class VisionProvider(BaseLlm):
+            model: str = "synthetic-vision"
+            images: int = 0
+            async def generate_content_async(self, llm_request, stream=False):
+                self.images += sum(part.inline_data is not None for content in llm_request.contents for part in content.parts or [])
+                yield LlmResponse(content=types.Content(role="model", parts=[types.Part(text=json.dumps({
+                    "words": [{"text": "经营现金流 1234.50", "bbox": [1, 1, 300, 40]}], "warnings": []}))]),
+                    usage_metadata=types.GenerateContentResponseUsageMetadata(prompt_token_count=1500, candidates_token_count=50, total_token_count=1550))
+        with tempfile.TemporaryDirectory() as temporary, patch.dict(os.environ, {"VISION_KEY": "synthetic-private-vision"}):
+            root = Path(temporary)
+            image = root / "scan.png"
+            Image.new("RGB", (500, 150), "white").save(image)
+            store = ConfigStore(root / "config.json")
+            catalog = ModelCatalog(store)
+            catalog.add("vision", {"kind": "ocr", "provider": "vision", "model_id": "local-vision", "base_url": "https://unused.invalid/v1",
+                "api_key_env": "VISION_KEY", "pricing": PRICE, "max_image_tokens": 2048})
+            catalog.select("ocr", "vision")
+            backend = RealModelBackend("test", "https://unused.invalid/v1", "synthetic-private-vision")
+            provider = VisionProvider()
+            backend._model = provider
+            with patch("yantra.models.create_backend", return_value=backend), invocation_scope("synthetic-parent-invocation"):
+                engine = RawEngine.create_raw(root / "runs", {"company": "测试公司", "horizon": "12个月", "cutoff": "2026-10-13"},
+                    [image], backend=V2TestBackend(), pricing=PRICE, settings=store)
+            self.assertEqual(provider.images, 1)
+            events = [json.loads(line) for line in (engine.directory / "adk-trace.jsonl").read_text().splitlines()]
+            self.assertTrue(all(event["run_id"] == engine.state["run_id"] and event["role"] == "finance" and event["runner_kind"] == "ocr" for event in events))
+            self.assertEqual(len([event for event in events if "usage" in event]), 1)
+            self.assertTrue(all(event["session_id"] and event["invocation_id"] for event in events))
+            self.assertTrue(all(event["parent_invocation_id"] == "synthetic-parent-invocation" for event in events))
+            self.assertEqual(engine.state["model_ledger"][0]["task_id"], "main")
+            self.assertNotIn("synthetic-private-vision", (engine.directory / "adk-trace.jsonl").read_text())
+
     async def test_vision_ocr_image_usage_and_own_price_in_material_pipeline(self):
         from PIL import Image
         captured=[]

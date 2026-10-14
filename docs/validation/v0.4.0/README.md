@@ -70,6 +70,8 @@ git diff --check
 
 ### MCP 测量
 
+第三阶段后续覆盖复核：初始Vision OCR在线程池启动自己的决策Runner，之前丢失ContextVar而无持久关联。增加线程上下文传递及独立OCR scope，并保存OCR收据task_id。[OCR关联及能力复测](ocr-scope-tests.log)：18项通过，8.447秒；新增测试实际原生Runner＋合成图像提供者，验证run／finance／Session／invocation／父invocation、一次用量和凭据不外泄。没有真实模型请求或新增费用账本。
+
 [measure_mcp.py](../../../scripts/measure_mcp.py)对阶段二提交`96d7e95`的导出和本次实现顺序各采样5次，每次用同一冻结定义执行two echo calls。仅测试虚构本地stdio；计时包含调用连接创建／schema核对／退出，不含catalog发现。见[之前](mcp-before.json)与[之后](mcp-after.json)。
 
 | 维度 | 逐调用SDK | 原生工具集 | 证据与限制 |

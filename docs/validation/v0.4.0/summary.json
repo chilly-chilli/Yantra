@@ -30,5 +30,11 @@
     "remote_services_enabled": false,
     "adk_seconds": 10.529,
     "final_mcp_tests": 7
+  },
+  "ocr_scope": {
+    "capability_tests": 18,
+    "seconds": 8.447,
+    "native_synthetic_vision": true,
+    "remote_calls": 0
   }
 }
