@@ -1,0 +1,12 @@
+name: yantra
+acli_version: '1.10.0'
+agent_directory: yantra
+base_template: adk
+language: python
+framework: google-adk
+create_params:
+  root_agent_name: yantra
+  deployment_target: none
+  session_type: none
+  cicd_runner: skip
+  agent_guidance_filename: AGENTS.md

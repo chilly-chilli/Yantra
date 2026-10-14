@@ -1,0 +1,4 @@
+recognized_root /Users/chillychili/Yantra
+framework google-adk agent_directory yantra deployment none
+eval_config.yaml tuple parsed
+behavior_eval_config.yaml tuple parsed

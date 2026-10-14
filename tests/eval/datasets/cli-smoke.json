@@ -1,0 +1,7 @@
+{
+  "eval_cases": [{
+    "eval_case_id": "offline_waiting_transport",
+    "prompt": {"role": "user", "parts": [{"text": "DEMO"}]},
+    "context": {"fictional": true, "scope": "Local transport and scripted trace only; no LLM behavior score."}
+  }]
+}

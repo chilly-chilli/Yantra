@@ -52,6 +52,7 @@ flowchart TD
 - `adk_app.py`：隔离任务的原生工具执行和回调；每个动态角色创建新的 ADK Agent／Session，避免修改共享网页 Agent 的任务上下文或子 Agent 列表。
 - `adk_runtime.py`：固定 ADK 2.11.0 的 App／生命周期插件工厂，覆盖外部入口、Worker 和独立决策 Runner。持久化脱敏事件投影，关联 run／task／parent task／Session／invocation；不修改业务状态或结算费用。
 - `api.py`：原生 ADK ApiServer 和持久 SQLite Session，增加所属 Session 的研究轨迹读取；不是认证或多租户服务器。`fast_api_app.py` 为本地入口。
+- `agents-cli-manifest.yaml`及`yantra/fast_api_app.py`：固定CLI识别与package入口。合成行为案例、真实调用预算门槛及分层CI见[开发指南](DEVELOPMENT.md)；不修改研究模型、升级依赖或引入云设施。
 - `adk_artifacts.py`：只读 BaseArtifactService 桥接控制器已有报告与计算文件，索引 ADK 版本、业务版本及内容哈希；不复制产物、不暴露原始材料、不写证据修订。
 - `adk_skills.py`：显式只读 SkillToolset 试点，按任务冻结目录／角色／父权限发现和加载，重复收据用固定引用投影；权威材料和原日志由既有接口维护。默认完整注入及旧运行行为保留。
 - `replay.py`：固定字节和版本的离线复算及程序复核，不冒充远程模型推理的重放。

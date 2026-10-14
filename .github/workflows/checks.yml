@@ -1,0 +1,42 @@
+name: Research contract checks
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  deterministic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m venv .venv
+      - run: .venv/bin/python -m pip install -r requirements.txt reportlab==4.5.1
+      - run: .venv/bin/python -m pip check
+      - run: .venv/bin/python -m unittest discover -s tests -v
+  offline-trace:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m venv .venv
+      - run: .venv/bin/python -m pip install -r requirements.txt
+      # Separate CLI environment; never changes the pinned ADK runtime.
+      - run: python -m venv /tmp/yantra-cli
+      - run: /tmp/yantra-cli/bin/python -m pip install google-agents-cli==1.10.0
+      - run: .venv/bin/python scripts/check_offline_trace.py --agents-cli /tmp/yantra-cli/bin/agents-cli --output tmp/offline-trace.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: offline-trace
+          path: tmp/offline-trace.json
+  live-behavior:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo '::notice::Live model generation and judge evaluation not executed; no approved CI credentials and budgets configured.'
+          echo 'Live behavior: NOT EXECUTED (requires separate authorization)' >> "$GITHUB_STEP_SUMMARY"

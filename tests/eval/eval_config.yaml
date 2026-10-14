@@ -1,0 +1,6 @@
+# Pure observation, not a model-quality metric. Installed CLI grade still needs ADC.
+metrics_to_run: [transport_contract]
+custom_metrics:
+  - name: transport_contract
+    custom_function_file: transport_metric.py
+    execution: local

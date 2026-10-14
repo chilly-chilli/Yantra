@@ -109,8 +109,21 @@ git diff --check
 
 大型技能目录文本减少约48%至68%，但使用时多一次模型决策，且小目录输入和延迟增加，不能认定整体Pareto改善。因此原生模式保留小范围显式试点，默认不推广；未声称研究质量或模型费用提高。后续真实行为评估应检查模型能否正确加载／引用，不能从固定行动夹具推导此结论。
 
+## 第五阶段：工程与行为评估配置
+
+最小manifest被实际安装agents-cli1.10.0识别为google-adk工程；package FastAPI入口已补齐。[本机配置探测](eval-config-probe.log)确认路径、无部署目标及两份metric配置由CLI实际parser解析。完整enhance dry-run会添加.env／云设施／A2A／默认Gemini judge，未采纳；依赖、模型、凭据未修改。
+
+[固定工具调查](agents-cli-investigation.md)保留当时的安装接口、dry-run差异、grade失败和日期。[工程检查](eval-engineering-tests.log)：5项通过，2.452秒；含审批拒绝、有限总预算、实际ASGI合成生成、原配置不改及无秘密输出。注入固定后端验证的是评估驱动，不是模型行为分数。
+
+- [真实localhost检查](engineering-trace.log)及[完整轨迹](engineering-trace.json)：固定虚构策略和材料，通过socket服务器启动→waiting→继续不计费→进程退出／重启→明确确认→partial；四角色及6项专业工具保持，标准Artifact可读，跨用户scope404。没有远程推理。
+- 同一脚本实际运行`agents-cli eval generate --url ... --concurrency 1`，预期case ID不丢失，响应waiting及直接transport metric满足；CLI转换3事件，公开轨迹22事件，角色finance／thesis／valuation。直接函数只是离线门槛，不当作CLI grade或真实模型分数。
+- 5类[合成行为案例](../../../tests/eval/datasets/behavior.json)与criteria覆盖缺数字、角色和工具／进展、越权与估值授权、独立否决、多轮等待确认恢复；已有确定性测试继续验证程序门槛。真实生成脚本先要求具体已注册模型、价格、案例ID及总模型／费用／时间审批，均分费用和调用上限，共享总截止。固定SourceAdapter保留四类发现记录但拒绝公网资料，不开启用户扩展或知识库。每轮调用实际ASGI入口并另附公开轨迹／原账本，失败run仍保留。
+- 首次合成生成器检查触发默认DDGS发现，44秒后中止；无真实模型／judge调用。改由已有SourceAdapter绑定固定空发现，随后测试通过。另一处夹具误期望空tools为list，按现有dict快照修正。未修改业务检索合约。
+- 分层CI配置分别报告确定性、离线轨迹和真实模型；真实项明确NOT EXECUTED，不自动读取用户凭据。远端CI尚未执行。本机pip check／compileall／diff check通过。
+- agents-cli的history播种不是实际多轮执行，且转换丢失关联／usage；没有用它证明恢复。先前实际grade（仅纯本地函数）因SDK2.4.0云client初始化要求ADC失败；没有修改凭据、没有分数。此次完成parser及直接函数门槛；真实行为／托管judge预算未批准，均未执行。具体命令及评分要求见[评估说明](../../../tests/eval/README.md)。
+
 ## 尚待完成
 
-agents-cli工程和行为评估配置、全回归与最终当前指南。Memory／cache／原生resume仅有接口调查；业务恢复仍保留。
+全回归、非ADK准备操作的账本投影复核与最终当前指南。Memory／cache／原生resume仅有接口调查；业务恢复仍保留。
 
 真实模型／评估服务尚未执行：本任务没有批准具体新增模型或评估预算。现有凭据与运行默认预算不自动授权评估服务。离线结果不能充当真实行为评估。

@@ -38,6 +38,7 @@ test -f .env || cp .env.example .env
 | 估值参数、来源、授权与数学复算 | [估值说明](docs/VALUATION.md) |
 | 共享知识、索引、编辑删除与长期要求 | [知识说明](docs/KNOWLEDGE.md) |
 | 模块职责、权限和数据流 | [架构说明](docs/ARCHITECTURE.md) |
+| agents-cli、本地验证与行为评估 | [开发与评估](docs/DEVELOPMENT.md) |
 | 当前与历史验证、提案及开发提示词 | [文档索引](docs/README.md) |
 | 开发、commit／push与文档维护规则 | [AGENTS.md](AGENTS.md) |
 

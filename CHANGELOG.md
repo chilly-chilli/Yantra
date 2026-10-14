@@ -8,6 +8,7 @@
 
 - ADK 接入前两阶段：所有自建 Runner 显式采用原生 App／生命周期插件；新增所属 Session 的持久脱敏轨迹接口；Worker 在自身生命周期完成单次请求及工具执行，减少内部 Runner；只读 ArtifactService 桥接已有报告和计算文件，关联版本／哈希。阶段证据见[ADK 接入验证](docs/validation/v0.4.0/README.md)；其余接入仍在实施，不代表完整任务交付。
 - 新增显式 `--loading native` 的只读 SkillToolset 试点与冻结目录／资源加载；默认 eager 保留。新运行用固定引用减少重复收据输入，保留首项全文及权威日志。大目录文本减少，小目录及额外决策有退化，未宣称真实 token／费用改善。
+- 新增agents-cli工程入口、5类虚构行为案例、显式总预算约束的真实生成器及分层CI。实际localhost离线轨迹和CLI生成通过；真实模型／judge及远端CI未执行，安装CLI本地grade的ADC限制明确保留。
 - MCP 接入原生工具集与连接池，同一专业任务复用连接、结束及取消释放；分页保留冻结别名、schema及角色授权，不隐式探测ADC、转发重定向凭据或执行UI动作。外部操作新增持久中断标记，恢复保留原预算／截止并拒绝自动重放；未交付成果任务在轨迹显示 interrupted。
 - 补齐初始Vision OCR独立Runner的运行／任务／父invocation关联，线程传递上下文；原OCR预算与图像隐私边界保持。
 
