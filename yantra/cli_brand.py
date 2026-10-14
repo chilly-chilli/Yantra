@@ -16,7 +16,7 @@ def show_banner():
     if not stream.isatty():
         return
     if os.environ.get("TERM") == "dumb":
-        print(f"Yantra v{__version__}", file=stream)
+        print(f"YANTRA v{__version__}", file=stream)
         return
     mark = [
         "           ▄▄▄▄▄▄▄▄▄",
@@ -34,7 +34,14 @@ def show_banner():
         "        ▀██▄▄▄      ▄▄",
         "           ▀▀▀▀▀▀▀▀▀",
     ]
-    labels = {7: "Y a n t r a", 9: f"v{__version__}"}
+    # Four terminal rows form a seven-pixel-high uppercase wordmark.
+    labels = {
+        5: "█   █ ▄▀▀▀▄ █▄  █ ▀▀█▀▀ █▀▀▀▄ ▄▀▀▀▄",
+        6: " ▀▄▀  █▄▄▄█ █▀▄ █   █   █▄▄▄▀ █▄▄▄█",
+        7: "  █   █   █ █  ██   █   █ ▀▄  █   █",
+        8: "  ▀   ▀   ▀ ▀   ▀   ▀   ▀   ▀ ▀   ▀",
+        10: f"v{__version__}",
+    }
     column_width = max(display_width(label) for label in labels.values())
     for index, row in enumerate(mark):
         padding = " " * (30 - display_width(row))
