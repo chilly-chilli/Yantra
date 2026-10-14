@@ -53,6 +53,7 @@ flowchart TD
 - `adk_runtime.py`：固定 ADK 2.11.0 的 App／生命周期插件工厂，覆盖外部入口、Worker 和独立决策 Runner。持久化脱敏事件投影，关联 run／task／parent task／Session／invocation；不修改业务状态或结算费用。
 - `api.py`：原生 ADK ApiServer 和持久 SQLite Session，增加所属 Session 的研究轨迹读取；不是认证或多租户服务器。`fast_api_app.py` 为本地入口。
 - `adk_artifacts.py`：只读 BaseArtifactService 桥接控制器已有报告与计算文件，索引 ADK 版本、业务版本及内容哈希；不复制产物、不暴露原始材料、不写证据修订。
+- `adk_skills.py`：显式只读 SkillToolset 试点，按任务冻结目录／角色／父权限发现和加载，重复收据用固定引用投影；权威材料和原日志由既有接口维护。默认完整注入及旧运行行为保留。
 - `replay.py`：固定字节和版本的离线复算及程序复核，不冒充远程模型推理的重放。
 
 运行、任务、假设、框架与研究标准有独立标识和版本。子任务记录父任务、发起方、执行角色、深度、工具及共享引用、完成条件；费用账本记录任务归属、方法、版本、预留、用量、价格及价格时点。原始资料、提取结果、任务和报告保存在同一运行目录。

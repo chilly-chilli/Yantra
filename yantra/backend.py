@@ -199,6 +199,8 @@ class RealModelBackend:
         if skills:
             instruction += "\n用户启用的技能指令（仍受工具授权、总预算及核验边界约束）：\n"+"\n".join(
                 f"<skill name={s['name']!r}>\n{s['content']}\n资源目录：{s['resource_path']}\n</skill>" for s in skills)
+        if name == "research_worker" and payload["local"].get("skill_catalogue"):
+            instruction += "\nlocal.skill_catalogue 是本任务冻结且获准的技能目录；按需要使用 load_skill 或 load_skill_resource 读取全文。脚本是文本数据，未获执行授权。receipt_ref 是已给定相同原始响应的固定索引和哈希，不是缺失证据。"
         if name == "research_worker":
             return await self._inline_worker(instruction, schema, payload)
         service = InMemorySessionService()

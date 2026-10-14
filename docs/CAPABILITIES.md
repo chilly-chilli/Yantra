@@ -93,6 +93,17 @@ command OCR 的一次 stdin／stdout 协议：
 
 导入目录须含 `SKILL.md`，也可指定该文件；同目录资源一并复制到配置文件旁的 skills 目录。拒绝指向目录外的软链接，跳过 `.git`、`.venv`、`__pycache__` 和 `.env`。新运行再复制资源、固定内容及哈希。匹配角色的模型请求实际包含技能文本；专业角色可通过 `read_skill_resource` 读取获准的 UTF-8 文本资源。资源读取有 128 KB 上限，SKILL.md 也限 128 KB。技能脚本不会因导入而自动执行，需要独立注册为 tool。
 
+Unreleased 支持显式只读 SkillToolset 试点；默认 `--loading eager` 保持完整指令注入。若目录较大，可导入时选择：
+
+```sh
+.venv/bin/python -m yantra extensions add skills cashflow_lazy \
+  --path examples/v021/cashflow-skill --roles finance,verification --loading native
+```
+
+原生模式仅改变新运行的专业 Worker：初始输入包含获准目录、稳定技能别名和资源哈希，`list_skills`、`load_skill`、`load_skill_resource` 经现有授权和工具预算执行。加载后才加入该任务指令；资源每次核对冻结字节，目录外路径、变更后的文件及未获父权限的工具被拒绝。`scripts/` 映射为只读 `references/scripts/`，没有原生脚本执行器、动态 additional tools 或状态变量插值。主协调／提取／审查仍保持既有完整技能输入；旧运行的快照及权限不变。
+
+新运行的 Worker 输入保留首个完整工具收据，完全相同的后续收据以首项索引／哈希引用；权威工具日志和原文读取保持完整。它不是模型生成摘要或 Session 压缩。小目录的原生加载实测增加输入及调用，使用大目录时也可能多一次决策；因此默认不切换。字节上界、调用数及本机延迟比较见[技能测量](validation/v0.4.0/README.md#第四阶段技能与上下文试点)，真实输入 token、费用和模型行为尚未测量。
+
 角色为 `finance`、`thesis`、`valuation`、`verification`；skills 还可用于 `main` 的决策指令。默认启用范围是 finance／thesis／verification。MCP／tools 由专业角色调用，不扩展主 Agent 的行动合约；第三层仍限于父任务授权工具。技能不会改变核验否决、确定性计算或预算边界。
 
 MCP 通过固定 ADK 2.11.0 的 `McpToolset` 生命周期和官方 Python SDK 1.30.0 连接 stdio 或 Streamable HTTP：

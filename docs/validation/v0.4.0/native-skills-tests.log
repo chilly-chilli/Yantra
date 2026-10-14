@@ -1,0 +1,16 @@
+/Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/features/_feature_decorator.py:71: UserWarning: [EXPERIMENTAL] feature FeatureName.PLUGGABLE_AUTH is enabled.
+  check_feature_enabled()
+test_child_without_native_grant_receives_no_skill_body_or_catalogue (test_adk_skills.SkillIntegrationTests.test_child_without_native_grant_receives_no_skill_body_or_catalogue) ... Executing <Task pending name='Task-2' coro=<SkillIntegrationTests.test_child_without_native_grant_receives_no_skill_body_or_catalogue() running at /Users/chillychili/Yantra/tests/test_adk_skills.py:161> wait_for=<Future pending cb=[Task.task_wakeup()] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:449> cb=[_run_until_complete_cb() at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:182] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/runners.py:100> took 0.105 seconds
+Executing <Task pending name='Task-3' coro=<run_node_async.<locals>._run.<locals>._drive_root_node() running at /Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/workflow/_node_runner_utils.py:250> wait_for=<Future pending cb=[Task.task_wakeup()] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:449> created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/tasks.py:420> took 0.392 seconds
+Skipping missing token usage metadata for agent child_task_97f01d843c6a and model yantra_budgeted_decision_backend
+ok
+test_cli_explicit_native_pilot_and_default_eager_are_saved (test_adk_skills.SkillIntegrationTests.test_cli_explicit_native_pilot_and_default_eager_are_saved) ... ok
+test_exact_duplicate_receipts_keep_first_text_and_fixed_reference (test_adk_skills.SkillIntegrationTests.test_exact_duplicate_receipts_keep_first_text_and_fixed_reference) ... ok
+test_legacy_snapshot_does_not_gain_native_permissions (test_adk_skills.SkillIntegrationTests.test_legacy_snapshot_does_not_gain_native_permissions) ... ok
+test_native_worker_lazy_catalogue_loading_hashes_and_single_budget (test_adk_skills.SkillIntegrationTests.test_native_worker_lazy_catalogue_loading_hashes_and_single_budget) ... ok
+test_role_hash_path_and_no_executor_even_after_cache (test_adk_skills.SkillIntegrationTests.test_role_hash_path_and_no_executor_even_after_cache) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 2.696s
+
+OK

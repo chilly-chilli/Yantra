@@ -29,6 +29,7 @@ class ScopedExtension(Contract):
 class SkillSpec(ScopedExtension):
     path: str
     roles: list[ExtensionRole] = Field(default_factory=lambda:["finance","thesis","verification"],min_length=1)
+    loading: Literal["eager","native"] = "eager"
 
 
 class ToolSpec(ScopedExtension):
@@ -163,7 +164,8 @@ class ExtensionCatalog:
             copy_skill(source.parent,destination)
             text=(destination/"SKILL.md").read_text()
             hashes={str(p.relative_to(destination)):hashlib.sha256(p.read_bytes()).hexdigest() for p in destination.rglob("*") if p.is_file()}
-            snapshot["skills"].append({"name":name,"roles":spec["roles"],"content":text,"source_hash":hashes["SKILL.md"],"resource_path":str(destination.resolve()),"resource_hashes":hashes})
+            snapshot["skills"].append({"name":name,"roles":spec["roles"],"loading":spec["loading"],"content":text,"source_hash":hashes["SKILL.md"],"resource_path":str(destination.resolve()),"resource_hashes":hashes})
+        if any(skill["loading"]=="native" for skill in snapshot["skills"]):snapshot["skill_loading"]="native_readonly_v1"
         for kind,schema in (("mcp",MCPSpec),("tools",ToolSpec)):
             snapshot[kind]={name:schema.model_validate(spec).model_dump(mode="json") for name,spec in config[kind].items() if spec["enabled"]}
         return snapshot

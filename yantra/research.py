@@ -115,6 +115,11 @@ class RawEngine(Engine):
                 "arguments_schema":{"type":"object","properties":{"skill":{"type":"string"},"path":{"type":"string"}},"required":["skill","path"],"additionalProperties":False}}
             for role in self.permissions:
                 if any(role in s["roles"] for s in skills):self.permissions[role].append("read_skill_resource")
+            if self.extensions.snapshot.get("skill_loading") == "native_readonly_v1":
+                from .adk_skills import contracts
+                self.tools.extension_contracts.update(contracts())
+                for role in self.permissions:
+                    if any(role in s["roles"] and s.get("loading")=="native" for s in skills):self.permissions[role].extend(contracts())
         profile = state.get("capabilities",{}).get("models",{}).get("ocr")
         if profile:
             from .models import OCRRecognizer
@@ -184,7 +189,7 @@ class RawEngine(Engine):
             "valuation_schema": 2,
             "deadline": end, "limits": config.model_dump(), "pricing": price, "model_ledger": [],
             "program_version": __version__, "config": selected.config_summary() if hasattr(selected, "config_summary") else {"backend": "injected-test"},
-            "capabilities":{"models":{"llm":chosen_llm,"ocr":chosen_ocr,"embedding":chosen_embedding},"extensions":extensions},
+            "capabilities":{"models":{"llm":chosen_llm,"ocr":chosen_ocr,"embedding":chosen_embedding},"extensions":extensions,"worker_context":"exact_receipts_v1"},
             "knowledge":{"root":str(Path(knowledge_dir or Path(storage)/"knowledge").resolve()),"archived":{},"proposals":[],"startup":[],"fixed_refs":[],"snapshots":[],"comparisons":[],"reused":[]},
             "explicit_parameters": explicit_parameters if explicit_parameters is not None else {"horizon":r["horizon"],"framework":framework},
             "input_source_ids": [m["id"] for m in registry.load_manifest()["materials"]],
@@ -225,6 +230,11 @@ class RawEngine(Engine):
             profile=self.state.get("capabilities",{}).get("models",{}).get("llm")
             self.backend = create_backend(profile,RawBackend) if profile else RawBackend.from_env(timeout_seconds=90)
         skills=self.state.get("capabilities",{}).get("extensions",{}).get("skills",[])
+        from .adk_app import _worker_execution
+        execution = _worker_execution.get()
+        native_skills = execution.get("skills") if method == "worker" and execution else None
+        if native_skills is not None:
+            skills = [skill for skill in skills if skill.get("loading")!="native"] + native_skills.instructions()
         self.backend.runtime_skills=skills
         if isinstance(self.backend, RealModelBackend):
             self.backend.max_output_tokens = 8192 if method == "extract" else 4096
@@ -234,12 +244,18 @@ class RawEngine(Engine):
             task, local = args
             local["inbox"] = [m for m in self.state["messages"] if m["target_task_id"] == task["task_id"]]
             local["shared_results"] = [r for r in self.state["results"] if r["task_id"] in task["shared_refs"]]
+            if native_skills is not None or self.state.get("capabilities",{}).get("worker_context") == "exact_receipts_v1":
+                from .adk_skills import compact_receipts
+                compact = compact_receipts(local, loaded_skills=native_skills is not None)
+                if compact["tool_outputs"] != local["tool_outputs"]:
+                    compact["receipt_policy"] = "Exact duplicate receipt_ref points to first receipt; loaded instructions are in system context. Original material text remains readable through read_materials and skill resources."
+                local = compact
+                if native_skills is not None:local["skill_catalogue"] = native_skills.catalogue()
+                args = (task, local)
         args = tuple(decision_context(x) for x in args)
         instruction = RAW_MAIN if method == "main" else RAW_WORKER if method == "worker" else str(method)
         payload = json.dumps(args, ensure_ascii=False, default=str)
         receipt = self.run_budget.reserve(payload, instruction + json.dumps(self.tools.tool_contracts())+json.dumps(skills,ensure_ascii=False), getattr(self.backend, "max_output_tokens", 4096))
-        from .adk_app import _worker_execution
-        execution = _worker_execution.get()
         receipt.update(method=method, task_id=execution["task"].task_id if execution else "main",
                        framework_version=self.state["framework"]["version"], assumptions_version=self.state["assumptions"]["version"])
         self.state["budget"]["model_calls"] += 1
@@ -820,6 +836,12 @@ class RawEngine(Engine):
                 response={"ok":True,"data":data,"evidence_refs":[],"calculation_refs":[]}
             except (ValueError,OSError,UnicodeError) as exc:
                 response={"ok":False,"data":{},"error":{"code":"SKILL_RESOURCE","message":str(exc),"retryable":False},"evidence_refs":[],"calculation_refs":[]}
+        elif name in {"list_skills", "load_skill", "load_skill_resource"}:
+            try:
+                data=await execution["skills"].call(name,args,execution["tool_context"])
+                response={"ok":True,"data":data,"evidence_refs":[],"calculation_refs":[]}
+            except (ValueError,OSError,UnicodeError) as exc:
+                response={"ok":False,"data":{},"error":{"code":"SKILL_RESOURCE","message":"冻结技能读取失败："+type(exc).__name__,"retryable":False},"evidence_refs":[],"calculation_refs":[]}
         elif name in self.extensions.bindings:
             spec,_=self.extensions.bindings[name]
             receipt=None

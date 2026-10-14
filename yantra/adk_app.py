@@ -148,6 +148,7 @@ class ResearchTool(BaseTool):
         execution = _worker_execution.get()
         if execution is None or tool_context.agent_name != execution.get("agent_name", f"{execution['task'].target}_worker"):
             raise ValueError("Tool requires a controller-assigned matching task.")
+        execution["tool_context"] = tool_context
         try:
             result = execution["engine"]._execute_worker_tool(execution, self.name, args)
             import inspect
@@ -335,6 +336,10 @@ async def _run_agent(agent: BaseAgent, state: dict[str, Any], output_key: str) -
 
 async def run_worker_loop(execution: dict[str, Any]) -> dict[str, Any]:
     engine, task = execution["engine"], execution["task"]
+    extensions = getattr(engine, "extensions", None)
+    if extensions is not None and extensions.snapshot.get("skill_loading") == "native_readonly_v1" and any(task.target in spec["roles"] and spec.get("loading")=="native" for spec in extensions.snapshot.get("skills", [])):
+        from .adk_skills import FrozenSkills
+        execution["skills"] = FrozenSkills(extensions, task.target, task.authorized_tools)
     if getattr(engine, "adk_workers", None) is None:
         engine.adk_workers = build_workers()
     if task.depth == 3:

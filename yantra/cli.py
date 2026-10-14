@@ -147,6 +147,7 @@ def parser():
     add.add_argument("--file",type=Path,help="MCP/tool JSON 描述文件")
     add.add_argument("--path",type=Path,help="SKILL.md 或技能目录")
     add.add_argument("--roles",default="finance,thesis,verification")
+    add.add_argument("--loading",choices=("eager","native"),help="仅skills：eager完整注入；native为Worker按需读取试点")
     for action in ("enable","disable","check"):
         command=ext_actions.add_parser(action);command.add_argument("kind",choices=("skills","mcp","tools"));command.add_argument("name")
     from .knowledge.cli import add_commands
@@ -352,8 +353,9 @@ async def capability_command(args,store):
         elif action=="add":
             if args.kind=="skills":
                 if not args.path:raise CLIError("argument_error", "技能导入需要 --path", field="--path")
-                data={"path":str(args.path)}
+                data={"path":str(args.path),"loading":args.loading or "eager"}
             else:
+                if args.loading:raise CLIError("argument_error", "--loading 仅适用于 skills", field="--loading")
                 if not args.file:raise CLIError("argument_error", "MCP/tool导入需要 --file", field="--file")
                 data=load_json_file(args.file, "--file")
             data["roles"]=[r.strip() for r in args.roles.split(",")]
