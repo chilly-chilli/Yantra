@@ -211,7 +211,10 @@ class FormatTests(unittest.TestCase):
             self.assertIn("1,234.50", chunks[0]["text"])
             self.assertEqual(chunks[0]["location"]["page"], 1)
             image = Image.new("RGB", (1600, 350), "white"); draw = ImageDraw.Draw(image)
-            font = ImageFont.truetype("/System/Library/Fonts/STHeiti Medium.ttc", 56)
+            font_path = Path("/System/Library/Fonts/STHeiti Medium.ttc")
+            if not font_path.is_file():
+                font_path = Path("/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc")
+            font = ImageFont.truetype(str(font_path), 56)
             draw.text((30, 30), "营业收入 1234.50 万元", font=font, fill="black")
             draw.text((30, 140), "Revenue 1234.50 CNY", font=font, fill="black")
             image.save(p/"scan.png"); image.save(p/"scan.pdf", "PDF")

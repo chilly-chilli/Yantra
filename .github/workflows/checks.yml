@@ -13,10 +13,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Install OCR test dependencies
+        run: sudo apt-get update && sudo apt-get install -y tesseract-ocr tesseract-ocr-chi-sim fonts-wqy-zenhei
       - run: python -m venv .venv
       - run: .venv/bin/python -m pip install -r requirements.txt reportlab==4.5.1
       - run: .venv/bin/python -m pip check
-      - run: .venv/bin/python -m unittest discover -s tests -v
+      - run: .venv/bin/python scripts/run_offline_tests.py
   offline-trace:
     runs-on: ubuntu-latest
     steps:
