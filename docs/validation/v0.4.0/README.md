@@ -56,8 +56,34 @@ git diff --check
 
 内部轨迹从临时消费变为可持久化并通过所属外部 Session 查询，所有自建 Runner 统一 App／插件，Worker少一层逐行动编排，标准Artifact读取现有产物。新增可追踪性、生命周期减少及产物生态接口；不等同于研究质量或模型费用提高。
 
+## 第三阶段：MCP 生命周期与中断
+
+以固定 ADK 2.11.0 的 McpToolset、McpTool、MCPSessionManager 替换逐调用 SDK 连接栈。同一专业任务内复用连接；每次分页读取工具定义并按冻结名字、描述、schema核对。保留业务别名／角色／父任务预算，响应脱敏后的SDK JSON仍作为来源凭证，不变成估值计算凭证。
+
+固定版本的原生发现只读取一页，并拒绝框架保留名；拥有的适配器补分页并以安全ADK名字发送原RPC名。HTTP默认ADC探测导致首次本地HTTP回归超时；拥有的会话管理器禁止未声明ADC，后续HTTP检查断言未调用google.auth.default。不改环境变量或凭据。UI元数据仅作为数据，禁止事件动作；HTTP沿用原不跟随重定向的凭据边界。
+
+- [第三阶段 ADK 检查](adk-stage3-tests.log)：24项通过。7项新增MCP测试使用实际本地stdio／Streamable HTTP，验证重复／四路并发、超时／取消后可用、schema改变阻止执行、新工具不扩权、分页／同名RPC、1MB限制、错误日志脱敏、无ADC／无重定向凭据、HTTP Session关闭404且服务仍运行、stdio实际PID全部退出。
+- 正常Worker插件after_run关闭连接；取消首次测试留下连接，补Runner.close对应插件close后，实际进程退出验证通过。实际父调用→第三层调用→父再次调用三次RPC使用同一PID，第三层只拥有父给定的一个工具，结束后由父关闭。控制器仍串行，连接层并发检查不支持业务并行状态写入声明。
+- 外部调用前持久`in_flight_tool`，已记录结果后清除。实际取消声明0.2元的合成MCP调用后重新加载：不调用main／worker、不重放RPC、工具／模型次数与费用预留及deadline不变，状态failed／partial。经外部HTTP trace读取任务为interrupted，观测有invocation_interrupted。0.2元是受控夹具预留，不是远端账单。
+- [能力检查](capabilities-stage3-tests.log)：17项通过；[原始研究检查](v2-stage3-tests.log)：19项通过。没有启用或调用停用的真实服务、真实模型或OCR API。
+- 最后把构造器日志也纳入当前MCP脱敏上下文，避免DEBUG级别输出连接参数；[最终7项MCP复测](native-mcp-final-tests.log)通过。compileall、测量脚本help和差异检查通过。
+
+### MCP 测量
+
+[measure_mcp.py](../../../scripts/measure_mcp.py)对阶段二提交`96d7e95`的导出和本次实现顺序各采样5次，每次用同一冻结定义执行two echo calls。仅测试虚构本地stdio；计时包含调用连接创建／schema核对／退出，不含catalog发现。见[之前](mcp-before.json)与[之后](mcp-after.json)。
+
+| 维度 | 逐调用SDK | 原生工具集 | 证据与限制 |
+|---|---:|---:|---|
+| 两次RPC的运行进程／连接数 | 2 | 1 | PID及session一致，实际复用；发现额外进程两边相同 |
+| 工具执行次数 | 2 | 2 | 文本结果均one/two，不增加执行或模型调用 |
+| 中位耗时秒 | 0.6555 | 0.3422 | 本机5样本，无置信区间；真实网络延迟未知 |
+| 退出后的进程 | 全部关闭 | 全部关闭 | OS实际检查，不以close返回成功代替 |
+| 模型调用／付费服务 | 0／0 | 0／0 | 真实费用未知，定义核对metadata请求须纳入声明上界 |
+
+实质改善为连接复用及本机启动开销；正确性／冻结权限／预算／中断／清理未发现不可接受退化。删除约45行自建连接栈，新增约150行固定版本适配与保护，维护代码量增加，不宣称总复杂度下降。需在未来ADK升级时复核受保护接口。旧版本未记录的中断不能事后证明幂等性；没有启用原生resume、常驻后台服务或MCP资源权限。
+
 ## 尚待完成
 
-agents-cli工程和行为评估配置、McpToolset连接复用／并发／清理、SkillToolset冻结目录及上下文测量、全回归与最终当前指南。Memory／cache／原生resume仅有接口调查；业务恢复仍保留。
+agents-cli工程和行为评估配置、SkillToolset冻结目录及上下文测量、全回归与最终当前指南。Memory／cache／原生resume仅有接口调查；业务恢复仍保留。
 
 真实模型／评估服务尚未执行：本任务没有批准具体新增模型或评估预算。现有凭据与运行默认预算不自动授权评估服务。离线结果不能充当真实行为评估。

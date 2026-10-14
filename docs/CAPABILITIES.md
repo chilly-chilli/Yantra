@@ -1,6 +1,6 @@
 # 模型与扩展配置
 
-适用版本：0.3.3。研究启动见[使用指南](USAGE.md)，embedding计费、索引与降级见[知识模块](KNOWLEDGE.md#模型费用和重建)。
+适用版本：0.3.3 与 Unreleased ADK 接入。研究启动见[使用指南](USAGE.md)，embedding计费、索引与降级见[知识模块](KNOWLEDGE.md#模型费用和重建)。
 
 这两个模块通过 CLI 与用户交互，并把已选择的能力接入 `RawEngine` 原始材料研究。运行配置位于 `.yantra/config.json`，可用环境变量 `YANTRA_CONFIG` 或命令前的 `--config /绝对路径/config.json` 指定另一个配置文件。
 
@@ -95,7 +95,7 @@ command OCR 的一次 stdin／stdout 协议：
 
 角色为 `finance`、`thesis`、`valuation`、`verification`；skills 还可用于 `main` 的决策指令。默认启用范围是 finance／thesis／verification。MCP／tools 由专业角色调用，不扩展主 Agent 的行动合约；第三层仍限于父任务授权工具。技能不会改变核验否决、确定性计算或预算边界。
 
-MCP 通过官方 Python SDK 1.30.0 连接 stdio 或 Streamable HTTP：
+MCP 通过固定 ADK 2.11.0 的 `McpToolset` 生命周期和官方 Python SDK 1.30.0 连接 stdio 或 Streamable HTTP：
 
 ```sh
 .venv/bin/python -m yantra extensions add mcp demo \
@@ -109,7 +109,9 @@ MCP 通过官方 Python SDK 1.30.0 连接 stdio 或 Streamable HTTP：
 {"transport":"streamable-http","url":"http://127.0.0.1:8000/mcp","headers_env":{"Authorization":"MCP_AUTHORIZATION"},"roles":["finance"]}
 ```
 
-stdio 的 `command` 是参数数组，`env_refs` 可传入服务要求的变量。当前范围为 MCP tools 的发现与调用；未实现 MCP prompts／resources、OAuth 登录或常驻连接管理。
+stdio 的 `command` 是参数数组，`env_refs` 可传入服务要求的变量。当前范围为 MCP tools 的发现与调用；未实现 MCP prompts／resources、OAuth 登录或后台常驻服务。Unreleased 在同一专业任务内复用原生连接，任务完成／失败或 Runner 关闭时释放；第三层不会关闭父任务的连接。HTTP 仅关闭客户端及 MCP Session，不停止远端服务。直接使用 `ExtensionRuntime` 时应 `async with` 或显式 `await runtime.close()`。
+
+运行仍使用冻结的名字、描述及 input schema；每次调用分页读取定义并比对，新工具被过滤、旧定义改变则拒绝，不更新旧运行权限。工具使用安全别名，不把同名 RPC 当作 ADK Agent 转派。MCP UI 元数据仅作为数据，不能修改 ADK 事件动作；无脚本、资源或 OAuth 权限的隐式扩展。HTTP 不跟随重定向，不自动探测 ADC；凭据只来自 `env_refs`／`headers_env`。原生连接／工具错误日志在此运行上下文中抑制服务详情，响应按已引用凭据脱敏且限制1 MB，业务错误保留安全类别。
 
 命令工具：
 
@@ -122,7 +124,9 @@ tool 描述包括 `description`、`command`、`input_schema`、roles 和可选 e
 
 扩展 timeout 默认 30 秒，至多 120 秒，执行时还受任务及全局剩余时间约束。工具调用计入原有工具限额；`cost_kind=model` 的扩展额外计入模型调用次数及共享人民币费用账本。`cost_cny` 是每次调用声明上界，非零须有 cost_source／cost_as_of。`cost_kind=service` 的声明费用单独统计，不冒充供应商账单。即使调用失败，已预留的费用也保留。
 
-成功的 MCP／tool JSON 响应经所引用凭据脱敏后保存为原始扩展来源，附哈希和引用位置；后续核验可检查返回内容。保存调用凭证不等于第三方数据已被独立证实，也不产生估值计算凭证。接口不覆盖已有财务计算工具，扩展名会加命名空间。
+成功的 MCP／tool JSON 响应经所引用凭据脱敏后保存为原始扩展来源，附哈希和引用位置；后续核验可检查返回内容。这里固定的是SDK响应结构的脱敏JSON字节，不是完整网络帧。保存调用凭证不等于第三方数据已被独立证实，也不产生估值计算凭证。接口不覆盖已有财务计算工具，扩展名会加命名空间。
+
+外部调用开始前持久化 `in_flight_tool`，已记录结果后才清除。若进程中断或调用取消，恢复会保留预留费用、调用次数及原截止并停止，不自动重放结果未知的外部操作；轨迹标为 interrupted。这是现有业务恢复的补强，不启用原生 at-least-once resume。旧版本未记录的中断不能事后证明幂等性。每次实时定义核对增加metadata请求，实际服务若对发现计费，应将其包含在声明费用上界；真实网络费用和延迟尚未测量。验收见[v0.4.0记录](validation/v0.4.0/README.md)。
 
 ## 信息获取扩展
 

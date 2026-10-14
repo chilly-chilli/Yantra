@@ -271,6 +271,8 @@ class RawEngine(Engine):
             with self._lock():
                 self.run_budget.state = self.state
                 self.run_budget.check()
+                if self.state.get("in_flight_tool"):
+                    raise StopRun("上次外部工具操作中断，结果未知；保留费用和工具预算，不自动重放")
                 if self.state.get("normalization_policy") != "raw-unit-v2":
                     aggregate = {"financials": [], "evidence": [], "gaps": []}
                     with (self.directory / "events.jsonl").open() as events:
@@ -832,6 +834,8 @@ class RawEngine(Engine):
                 self._save()
             try:
                 remaining=min(self.run_budget.remaining(),task.time_limit_seconds-(time.monotonic()-execution["started"]))
+                self.state["in_flight_tool"]={"task_id":task.task_id,"name":name,"arguments_hash":fingerprint}
+                self._save()
                 data=await self.extensions.call(name,args,max(.01,remaining))
                 encoded=json.dumps(data,ensure_ascii=False,allow_nan=False).encode()
                 if len(encoded)>1_000_000:raise ValueError("扩展输出超过 1 MB")
@@ -859,6 +863,8 @@ class RawEngine(Engine):
             execution["failures"][fingerprint] = execution["failures"].get(fingerprint, 0) + 1
         self.state["calculations"] = self.tools.calculations
         self._log("tool_result", {"task_id": task.task_id, "name": name, "response": response})
+        if name in self.extensions.bindings:
+            self.state["in_flight_tool"]=None
         self._save()
         return response
 

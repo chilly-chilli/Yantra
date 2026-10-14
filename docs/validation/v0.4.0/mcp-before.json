@@ -1,0 +1,63 @@
+{
+  "scope": "synthetic local stdio, excluding catalog discovery from elapsed time",
+  "samples": [
+    {
+      "elapsed_seconds": 0.6888765000039712,
+      "runtime_processes": 2,
+      "reuse": false,
+      "tool_calls": 2,
+      "values": [
+        "one",
+        "two"
+      ],
+      "all_processes_closed": true
+    },
+    {
+      "elapsed_seconds": 0.7338877080474049,
+      "runtime_processes": 2,
+      "reuse": false,
+      "tool_calls": 2,
+      "values": [
+        "one",
+        "two"
+      ],
+      "all_processes_closed": true
+    },
+    {
+      "elapsed_seconds": 0.6554529159329832,
+      "runtime_processes": 2,
+      "reuse": false,
+      "tool_calls": 2,
+      "values": [
+        "one",
+        "two"
+      ],
+      "all_processes_closed": true
+    },
+    {
+      "elapsed_seconds": 0.5875828340649605,
+      "runtime_processes": 2,
+      "reuse": false,
+      "tool_calls": 2,
+      "values": [
+        "one",
+        "two"
+      ],
+      "all_processes_closed": true
+    },
+    {
+      "elapsed_seconds": 0.5874202499398962,
+      "runtime_processes": 2,
+      "reuse": false,
+      "tool_calls": 2,
+      "values": [
+        "one",
+        "two"
+      ],
+      "all_processes_closed": true
+    }
+  ],
+  "elapsed_median_seconds": 0.6554529159329832,
+  "model_calls": 0,
+  "cost": "no paid service; remote costs and latency unknown"
+}

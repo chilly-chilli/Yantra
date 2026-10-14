@@ -2,8 +2,6 @@
 from __future__ import annotations
 
 import asyncio
-from contextlib import asynccontextmanager
-from datetime import timedelta
 import hashlib
 import json
 import os
@@ -17,6 +15,7 @@ import jsonschema
 from pydantic import Field, model_validator
 
 from .configuration import ask, environment_values, redact
+from .adk_mcp import NativeMCP
 from .schemas import Contract
 
 ExtensionRole = Literal["main","finance","thesis","valuation","verification"]
@@ -76,40 +75,15 @@ class MCPSpec(ScopedExtension):
         return self
 
 
-@asynccontextmanager
-async def mcp_session(spec, timeout=None):
-    import httpx
-    from mcp import ClientSession,StdioServerParameters
-    from mcp.client.stdio import stdio_client
-    from mcp.client.streamable_http import streamable_http_client
-    timeout=min(timeout or spec["timeout_seconds"],spec["timeout_seconds"])
-    async with asyncio.timeout(timeout):
-        if spec["transport"]=="stdio":
-            params=StdioServerParameters(command=spec["command"][0],args=spec["command"][1:],env=environment_values(spec["env_refs"]))
-            with open(os.devnull,"w") as errors:
-                async with stdio_client(params,errlog=errors) as streams:
-                    async with ClientSession(*streams,read_timeout_seconds=timedelta(seconds=timeout)) as session:
-                        await session.initialize();yield session
-        else:
-            async with httpx.AsyncClient(headers=environment_values(spec["headers_env"]),timeout=timeout) as client:
-                async with streamable_http_client(spec["url"],http_client=client) as streams:
-                    async with ClientSession(streams[0],streams[1],read_timeout_seconds=timedelta(seconds=timeout)) as session:
-                        await session.initialize();yield session
-
-
 async def discover_mcp(spec):
-    tools=[]
-    async with mcp_session(spec) as session:
-        cursor=None
-        while True:
-            page=await session.list_tools(cursor=cursor)
-            for tool in page.tools:
-                jsonschema.Draft202012Validator.check_schema(tool.inputSchema)
-                tools.append({"name":tool.name,"description":tool.description or tool.name,"input_schema":tool.inputSchema})
-            cursor=page.nextCursor
-            if not cursor:break
-    secrets=list(environment_values(spec["env_refs"]).values())+list(environment_values(spec["headers_env"]).values())
-    return redact(tools,secrets)
+    native = NativeMCP(spec, frozen=False)
+    try:
+        tools = await native.discover()
+        for tool in tools:
+            jsonschema.Draft202012Validator.check_schema(tool["input_schema"])
+        return tools
+    finally:
+        await native.close()
 
 
 def copy_skill(source,destination):
@@ -197,7 +171,7 @@ class ExtensionCatalog:
 
 class ExtensionRuntime:
     def __init__(self,snapshot):
-        self.snapshot=snapshot;self.bindings={}
+        self.snapshot=snapshot;self.bindings={};self.mcp_servers={};self.native_mcp={}
         for name,spec in snapshot.get("tools",{}).items():
             alias="ext_"+name if len(name)<=60 else "ext_"+name[:40]+"_"+hashlib.sha256(name.encode()).hexdigest()[:8]
             self.bindings[alias]=(spec,None)
@@ -207,6 +181,7 @@ class ExtensionRuntime:
                 digest=hashlib.sha256((server+":"+tool["name"]).encode()).hexdigest()[:8]
                 alias=f"mcp_{server[:20]}_{suffix}_{digest}"
                 self.bindings[alias]=(spec,tool)
+                self.mcp_servers[alias]=server
 
     def contracts(self):
         return {name:{"description":(tool or spec)["description"],"arguments_schema":(tool or spec)["input_schema"]} for name,(spec,tool) in self.bindings.items()}
@@ -220,13 +195,20 @@ class ExtensionRuntime:
         except jsonschema.ValidationError:raise ValueError("扩展工具参数未通过 JSON Schema") from None
         timeout=min(timeout,spec["timeout_seconds"])
         if tool is None:return await run_command(spec["command"],arguments,timeout,spec["env_refs"])
-        async with mcp_session(spec,timeout) as session:
-            result=await session.call_tool(tool["name"],arguments)
-            value=result.model_dump(mode="json",by_alias=True)
-        secrets=list(environment_values(spec["env_refs"]).values())+list(environment_values(spec["headers_env"]).values())
-        value=redact(value,secrets)
-        if result.isError:raise ValueError("MCP 工具返回错误（已脱敏）")
-        return value
+        server=self.mcp_servers[name]
+        if server not in self.native_mcp:self.native_mcp[server]=NativeMCP(spec)
+        return await self.native_mcp[server].call(tool,arguments,timeout)
+
+    async def close(self):
+        for server,connection in list(self.native_mcp.items()):
+            await connection.close()
+            if self.native_mcp.get(server) is connection:self.native_mcp.pop(server)
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self,*args):
+        await self.close()
 
     def read_resource(self,skill,path,role):
         spec=next((s for s in self.snapshot.get("skills",[]) if s["name"]==skill and role in s["roles"]),None)

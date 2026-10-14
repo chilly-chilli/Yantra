@@ -161,6 +161,7 @@ class ExtensionTests(unittest.IsolatedAsyncioTestCase):
             result=await runtime.call(name,{"text":"hello"},10)
             self.assertIn("hello",json.dumps(result));self.assertNotIn("private-server-credential",json.dumps(result))
             with self.assertRaises(ValueError):await runtime.call(name,{"text":3},10)
+            await runtime.close()
 
     async def test_streamable_http_mcp(self):
         with tempfile.TemporaryDirectory() as d:
@@ -177,6 +178,7 @@ class ExtensionTests(unittest.IsolatedAsyncioTestCase):
                 runtime=ExtensionRuntime(catalog.snapshot(root/"run"));name=next(iter(runtime.bindings))
                 result=await runtime.call(name,{"text":"http-works"},10)
                 self.assertIn("http-works",json.dumps(result))
+                await runtime.close()
             finally:
                 process.terminate();await process.wait()
 

@@ -37,7 +37,8 @@ flowchart TD
 
 - `configuration.py`：项目能力配置、原子写入、环境变量引用与扩展响应脱敏。CLI 提供 `configure`、`models`、`extensions` 的交互及脚本入口。
 - `models.py`：LLM／OCR 配置和选择；兼容 API LLM、Tesseract、视觉 OCR、JSON OCR 命令及 `paddle_api.py` 的异步任务适配。OCR 在初始解析与后续获取中沿用所选适配器，模型 OCR 共用费用账本。
-- `extensions.py`：技能及资源复制、MCP SDK 连接与工具发现、命令工具执行、参数 schema、角色授权和运行快照。扩展原响应作为来源凭证保存；不是确定性财务计算凭证。
+- `extensions.py`：技能及资源复制、MCP 原生工具集连接与分页发现、命令工具执行、参数 schema、角色授权和运行快照。扩展原响应作为来源凭证保存；不是确定性财务计算凭证。
+- `adk_mcp.py`：固定 McpToolset／McpTool／MCPSessionManager 生命周期适配，同任务连接复用、冻结定义过滤和核对、退出清理。保留业务别名、禁止隐式ADC和重定向凭据转发，不开放 UI 动作或资源权限。
 - `terminal_status.py`：仅在 CLI stderr 终端上报告 OSC 7501 状态；不改变引擎业务状态、退出码或 JSON 响应。
 - `information.py`：扶摇、东方财富、AKShare 与 98dou 的只读 JSON 命令工具；按既有扩展入口注册，配置见[信息来源](INFORMATION_SOURCES.md)。
 - `knowledge/`：SQLite正式记录、不可变修订、来源字节、可恢复文件提交、核验内容哈希、基准版本CAS、固定引用、FTS5／本地向量及明确要求。`runtime.py`仅由现有控制器管理归档、独立核验和提交。
@@ -69,6 +70,8 @@ flowchart TD
 App 插件覆盖仅限所属 Runner；独立决策与 Worker Runner 显式使用同一工厂。`adk-trace.jsonl` 只保存事件标识、调用名称、内容哈希、状态和原生用量，不保存参数、子任务正文、思维内容或原始错误消息。`adk-scopes.json` 记录控制器实际绑定的外部 Session，轨迹读取及已绑定研究恢复拒绝其他 Session 借用 run ID。内部 Session 继续隔离，投影没有转发为外层 ADK 事件，不重复状态 delta、工具调用或收费。
 
 当前任务状态及账本仍以 `state.json` 为准；投影是观测数据。绑定文件及投影不能替代证据修订。原生化职责及自定义例外见 [ADR 0002](decisions/0002-adk-native-boundaries.md)。
+
+专业任务的插件在 `after_run` 释放扩展连接，取消路径另由 Runner 的插件 `close` 保证释放；第三层不拥有父任务连接的关闭权。外部操作的持久 `in_flight_tool` 由控制器写入／清除，费用由原账本结算。取消或进程中断后，恢复拒绝自动重放结果未知的操作，不重置费用／工具次数或墙钟截止；没有成果包的终止任务在轨迹中为 interrupted。业务控制器仍串行调度；连接层并发通过不代表业务状态支持并行写入。
 
 Worker 的 `WorkerDecisionModel` 仍将经过预算和结构校验的业务行动转换为 ADK 工具调用；自定义理由是保留既有结构化行动与显式程序门槛，不要求模型新增函数调用能力。请求只含当前 task＋local、固定指令及结构，超时和取消关闭提供者生成器；实际用量只转入该 Worker 的一个原生事件，账本只由 `_decision` 结算。主控制器没有整体迁移到 Workflow；阶段和独立否决继续由业务程序保障。
 

@@ -165,6 +165,9 @@ class ResearchLifecyclePlugin(BasePlugin):
         self.scope = scope
         self.parent_invocation_id = parent_invocation_id
         self.pending = {}
+        self.close_context = None
+        self.resources_closed = False
+        self.finished = False
 
     def _directory(self, ctx):
         if self.scope:
@@ -196,12 +199,26 @@ class ResearchLifecyclePlugin(BasePlugin):
         store.append(record | {"run_id": run_id})
 
     async def before_run_callback(self, *, invocation_context):
+        if self.scope and self.scope["kind"] == "worker":
+            self.close_context = invocation_context
         self._record(invocation_context, "invocation_started")
 
     async def on_event_callback(self, *, invocation_context, event):
         self._record(invocation_context, "event", **event_projection(event))
 
+    async def _close_resources(self, invocation_context):
+        task = (self.scope or {}).get("task") or {}
+        if not self.resources_closed and self.scope and self.scope["kind"] == "worker" and (task.get("depth") == 2 or self.parent_invocation_id is None):
+            extensions = getattr(self.scope["engine"], "extensions", None)
+            if extensions is not None:
+                await extensions.close()
+                if invocation_context is not None:
+                    self._record(invocation_context, "resources_closed")
+            self.resources_closed = True
+
     async def after_run_callback(self, *, invocation_context):
+        await self._close_resources(invocation_context)
+        self.finished = True
         self._record(invocation_context, "invocation_finished")
         self.pending.pop(invocation_context.invocation_id, None)
 
@@ -215,7 +232,13 @@ class ResearchLifecyclePlugin(BasePlugin):
         self._record(tool_context._invocation_context, "tool_error", tool=tool.name, error_type=type(error).__name__)
 
     async def close(self):
-        self.pending.clear()
+        try:
+            await self._close_resources(self.close_context)
+            if self.close_context is not None and not self.finished:
+                self._record(self.close_context, "invocation_interrupted")
+        finally:
+            self.close_context = None
+            self.pending.clear()
 
 
 def native_app(agent, *, name=None):

@@ -1,0 +1,42 @@
+/Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+/Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/features/_feature_decorator.py:71: UserWarning: [EXPERIMENTAL] feature FeatureName.PLUGGABLE_AUTH is enabled.
+  check_feature_enabled()
+test_cancelled_external_call_is_not_replayed_or_rebudgeted_on_resume (test_adk_mcp.NativeMCPTests.test_cancelled_external_call_is_not_replayed_or_rebudgeted_on_resume) ... /Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/tools/mcp_tool/mcp_toolset.py:407: UserWarning: [EXPERIMENTAL] feature FeatureName._MCP_GRACEFUL_ERROR_HANDLING is enabled.
+  session = await self._mcp_session_manager.create_session(
+/Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/features/_feature_decorator.py:71: UserWarning: [EXPERIMENTAL] feature FeatureName.BASE_AUTHENTICATED_TOOL is enabled.
+  check_feature_enabled()
+Executing <Task pending name='Task-6' coro=<run_node_async.<locals>._run.<locals>._drive_root_node() running at /Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/workflow/_node_runner_utils.py:250> wait_for=<_GatheringFuture pending cb=[Task.task_wakeup()] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/tasks.py:712> created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/tasks.py:420> took 0.418 seconds
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+/Users/chillychili/Yantra/yantra/api.py:46: UserWarning: [EXPERIMENTAL] InMemoryCredentialService: This feature is experimental and may change or be removed in future versions without notice. It may introduce breaking changes at any time.
+  credential_service=InMemoryCredentialService(),
+/Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/auth/credential_service/in_memory_credential_service.py:33: UserWarning: [EXPERIMENTAL] BaseCredentialService: This feature is experimental and may change or be removed in future versions without notice. It may introduce breaking changes at any time.
+  super().__init__()
+App "yantra" can transfer between agents but has no context_cache_config. Every transfer swaps the system instruction and the tool set, so the request prefix changes and the whole prompt is re-sent uncached after each transfer. Set context_cache_config on the app to give each agent its own cache.
+/Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/tools/transfer_to_agent_tool.py:106: UserWarning: [EXPERIMENTAL] feature FeatureName.JSON_SCHEMA_FOR_FUNC_DECL is enabled.
+  function_decl = super()._get_declaration()
+Skipping missing token usage metadata for agent yantra and model yantra_research_controller
+Skipping missing token usage metadata for agent yantra and model yantra_research_controller
+Executing <Task finished name='Task-2' coro=<NativeMCPTests.test_cancelled_external_call_is_not_replayed_or_rebudgeted_on_resume() done, defined at /Users/chillychili/Yantra/tests/test_adk_mcp.py:304> result=None created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/runners.py:100> took 0.139 seconds
+ok
+test_child_does_not_close_parent_connection_or_expand_tools (test_adk_mcp.NativeMCPTests.test_child_does_not_close_parent_connection_or_expand_tools) ... Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_4720520bfce1 and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_4720520bfce1 and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+ok
+test_http_redirect_cannot_forward_declared_credentials (test_adk_mcp.NativeMCPTests.test_http_redirect_cannot_forward_declared_credentials) ... Error on session runner task: unhandled errors in a TaskGroup (1 sub-exception)
+ok
+test_http_reuses_session_and_closes_client_without_stopping_service (test_adk_mcp.NativeMCPTests.test_http_reuses_session_and_closes_client_without_stopping_service) ... ok
+test_pagination_and_reserved_rpc_names_keep_frozen_aliases (test_adk_mcp.NativeMCPTests.test_pagination_and_reserved_rpc_names_keep_frozen_aliases) ... ok
+test_reuse_concurrent_timeout_cancel_drift_and_exit (test_adk_mcp.NativeMCPTests.test_reuse_concurrent_timeout_cancel_drift_and_exit) ... ok
+test_worker_plugin_cleanup_budget_and_original_response_receipt (test_adk_mcp.NativeMCPTests.test_worker_plugin_cleanup_budget_and_original_response_receipt) ... Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 6.049s
+
+OK

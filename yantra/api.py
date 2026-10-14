@@ -18,6 +18,7 @@ from google.adk.sessions import DatabaseSessionService
 
 from .adk_app import YantraAgent
 from .adk_artifacts import ResearchArtifactService
+from .engine import TERMINAL
 from .adk_runtime import TraceStore, native_app, run_directory
 
 
@@ -70,7 +71,7 @@ def create_app(*, session_service=None, root_agent=None):
         state = json.loads((directory / "state.json").read_text())
         statuses = {result["task_id"]: result["status"] for result in state["results"]}
         tasks = [{key: task.get(key) for key in ("task_id", "parent_task_id", "target", "depth")}
-                 | {"status": statuses.get(task["task_id"], "running")}
+                 | {"status": statuses.get(task["task_id"], "interrupted" if state["status"] in TERMINAL else "running")}
                  for task in state["tasks"] if task_id is None or task["task_id"] == task_id]
         return {"run_id": state["run_id"], "status": state["status"], "tasks": tasks,
                 **store.read(after=after, limit=limit, task_id=task_id)}

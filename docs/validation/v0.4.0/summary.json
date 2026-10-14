@@ -11,5 +11,24 @@
   "live_model_eval": "not_executed_no_new_budget_authorization",
   "goal_status": "active",
   "push": false,
-  "deployment": false
+  "deployment": false,
+  "stage3": {
+    "adk_tests": 24,
+    "mcp_new_tests": 7,
+    "capability_tests": 17,
+    "raw_tests": 19,
+    "stdio_connections_per_two_calls": [
+      2,
+      1
+    ],
+    "stdio_median_seconds": [
+      0.6554529159329832,
+      0.3422047080239281
+    ],
+    "credentials_implicit_adc": false,
+    "real_model_calls": 0,
+    "remote_services_enabled": false,
+    "adk_seconds": 10.529,
+    "final_mcp_tests": 7
+  }
 }
