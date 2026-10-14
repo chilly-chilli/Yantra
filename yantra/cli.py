@@ -311,6 +311,8 @@ async def capability_command(args,store):
             raise CLIError("subcommand_required", "请指定非交互子命令，或使用 interactive 进入菜单", field="subcommand")
         if args.output == "json" or not sys.stdin.isatty():
             raise CLIError("interactive_required", "交互入口需要文本输出和TTY；Agent请使用明确子命令")
+        from .cli_brand import show_banner
+        show_banner()
     if args.command=="configure":
         while True:
             choice=ask("配置中心：models 模型 / extensions 能力扩展 / exit 退出","models")

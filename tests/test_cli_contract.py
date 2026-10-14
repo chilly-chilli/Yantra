@@ -73,6 +73,39 @@ class CLIContractTests(unittest.TestCase):
                 self.assertEqual(self.response(self.invoke(command), 2)["error"]["code"], "subcommand_required")
                 self.assertEqual(self.response(self.invoke(command, "interactive"), 2)["error"]["code"], "interactive_required")
 
+    def test_brand_banner_only_in_interactive_terminal(self):
+        bootstrap = """from unittest.mock import patch
+import sys
+from yantra.cli import main
+with patch.object(sys.stdin, 'isatty', return_value=True), patch.object(sys.stdout, 'isatty', return_value=True), patch.dict('os.environ', {'TERM': 'xterm-256color', 'NO_COLOR': ''}):
+    raise SystemExit(main())
+"""
+        for command, answer in (("configure", "exit\n"), ("models", "back\n"), ("extensions", "back\n")):
+            result = self.invoke(command, output="text", bootstrap=bootstrap, input_text=answer)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.count("实证研策"), 1)
+            self.assertEqual(result.stdout.count("●"), 1)
+            self.assertNotIn("\033", result.stdout)
+            chinese = next(line for line in result.stdout.splitlines() if "实证研策" in line)
+            english = next(line for line in result.stdout.splitlines() if "Yantra" in line)
+            self.assertEqual(english.index("Yantra"), chinese.index("实证研策") + 1)
+        # The parent may set NO_COLOR; clear it explicitly for the color check.
+        color_bootstrap = bootstrap.replace("{'TERM': 'xterm-256color', 'NO_COLOR': ''}",
+                                            "{'TERM': 'xterm-256color'}").replace(
+                                                "    raise SystemExit(main())", "    __import__('os').environ.pop('NO_COLOR', None)\n    raise SystemExit(main())")
+        colored = self.invoke("configure", output="text", input_text="exit\n", bootstrap=color_bootstrap)
+        self.assertIn("\033[38;2;225;43;34m●\033[0m", colored.stdout)
+        plain = self.invoke("configure", output="text", input_text="exit\n",
+                            bootstrap=bootstrap.replace("xterm-256color", "dumb"))
+        self.assertIn("实证研策 · Yantra v", plain.stdout)
+        self.assertNotIn("●", plain.stdout)
+        self.response(self.invoke("models", "list", bootstrap=bootstrap))
+        redirected = self.invoke("configure", output="text", input_text="exit\n",
+                                 bootstrap=bootstrap.replace(
+                                     "patch.object(sys.stdout, 'isatty', return_value=True)",
+                                     "patch.object(sys.stdout, 'isatty', return_value=False)"))
+        self.assertNotIn("实证研策", redirected.stdout)
+
     def test_missing_and_invalid_run(self):
         for command in ("status", "resume", "cancel", "replay"):
             self.assertEqual(self.response(self.invoke(command, "run-missing", "--runs-dir", self.runs), 2)["error"]["code"], "run_not_found")

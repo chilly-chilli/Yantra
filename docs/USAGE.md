@@ -33,6 +33,8 @@ cp /opt/homebrew/share/tessdata/eng.traineddata .venv/share/tessdata/eng.trained
 .venv/bin/python -m yantra extensions --env-file .env interactive
 ```
 
+交互配置入口在 stdout 为 TTY 时显示一次实证研策字符标志和版本号，中英文按显示列宽居中，读数点使用朱砂红。`NO_COLOR` 禁用颜色；`TERM=dumb` 使用纯文字标题。输出重定向、非交互命令及 JSON 模式不显示标志。
+
 配置保存在`.yantra/config.json`；本项目所有本地模型、OCR 和资料服务凭据统一放在仓库根目录 `.env`。`.env.example` 仅为模板，新克隆且尚无 `.env` 时复制后填写，不覆盖已有配置。CLI 通过显式 `--env-file .env` 加载，其他工作目录可传根文件的绝对路径；不自动加载或合并其他文件。ADK 2.11.0 的本地 `run/web` 从 `yantra/` 向父目录查找，可直接加载根 `.env`。模型、OCR、embedding、skills 和 MCP 的完整命令见[能力配置](CAPABILITIES.md)。
 
 ## Agent非交互调用与输出契约
