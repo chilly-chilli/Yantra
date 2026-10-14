@@ -7,4 +7,6 @@
 - [投资研究逻辑整合：首轮开发 Prompt](investment-logic-integration.md)：2026-10-14，产品取舍已确认，实现待执行。
 - [v0.5 更新实施 Prompt Plan](v0.5-implementation-plan.md)：2026-10-14，讨论完成；明确自主公开资料研究、正式／演示入口分离、Tushare／一个搜索服务／Yahoo Finance新增接入、开发顺序及验收要求，代码实施待执行。
 
+- [v0.5 宿主集成与用户交互方案](../prompt/v0.5-host-integration.md)：2026-10-14，CLI＋Skill＋本地 MCP 同版交付，首批 Codex＋OpenCode；先检查执行能力与权限，不含 GUI，实施及验收待执行。
+
 原路径保留兼容入口；执行某个版本任务时应读取该版本完整正文，再结合适用的AGENTS.md及用户本次指令。

@@ -24,6 +24,7 @@
 - [已作出的设计决策](decisions/README.md)：解释当前选择及其原因。
 - [历史提案与审阅](proposals/README.md)：保留建议、未实现项和与最终指令的差异。
 - [开发任务提示词](prompts/README.md)：保存各版本原始范围和验收要求，阅读归档不触发执行。
+- [v0.5 宿主集成与用户交互方案](prompt/v0.5-host-integration.md)：CLI、Skill 与本地 MCP 同版交付的拟议实施方案，首批 Codex＋OpenCode，不含 GUI。
 
 提案和任务提示词属于历史依据，当前行为以源码、当前指南及对应验证记录为准。
 
