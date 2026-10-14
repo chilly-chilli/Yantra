@@ -2,7 +2,7 @@
 
 适用版本：0.3.3 与 Unreleased ADK 接入。文档入口见[索引](README.md)。
 
-`Engine` 保留 v0.1 固定材料执行保障，`RawEngine` 在同一控制器、Pydantic 合约及 ADK 执行路径上增加原始材料研究。`RawBackend` 通过原有 `LiteLlm` 作单次结构化决策；没有共享聊天历史，也没有隐藏工具循环。实际安装 ADK 2.11.0 的 `Runner`、`LlmAgent`、Session、`ToolContext`、原生工具事件及回调用于执行。未升级 ADK 或改用另一套 Agent 平台。
+`Engine` 保留 v0.1 固定材料执行保障，`RawEngine` 在同一控制器、Pydantic 合约及 ADK 执行路径上增加原始材料研究。`RawBackend` 通过原有 `LiteLlm` 作单次结构化决策；没有共享聊天历史，也没有隐藏工具循环。Unreleased 的 Worker 在自身 ADK 生命周期中调用一次 BaseLlm 请求，不再逐行动创建内部 Runner／Session；主协调、提取和独立审查仍采用隔离决策 Runner。实际安装 ADK 2.11.0 的 `Runner`、`LlmAgent`、Session、`ToolContext`、原生工具事件及回调用于执行。未升级 ADK 或改用另一套 Agent 平台。
 
 ```mermaid
 flowchart TD
@@ -51,6 +51,7 @@ flowchart TD
 - `adk_app.py`：隔离任务的原生工具执行和回调；每个动态角色创建新的 ADK Agent／Session，避免修改共享网页 Agent 的任务上下文或子 Agent 列表。
 - `adk_runtime.py`：固定 ADK 2.11.0 的 App／生命周期插件工厂，覆盖外部入口、Worker 和独立决策 Runner。持久化脱敏事件投影，关联 run／task／parent task／Session／invocation；不修改业务状态或结算费用。
 - `api.py`：原生 ADK ApiServer 和持久 SQLite Session，增加所属 Session 的研究轨迹读取；不是认证或多租户服务器。`fast_api_app.py` 为本地入口。
+- `adk_artifacts.py`：只读 BaseArtifactService 桥接控制器已有报告与计算文件，索引 ADK 版本、业务版本及内容哈希；不复制产物、不暴露原始材料、不写证据修订。
 - `replay.py`：固定字节和版本的离线复算及程序复核，不冒充远程模型推理的重放。
 
 运行、任务、假设、框架与研究标准有独立标识和版本。子任务记录父任务、发起方、执行角色、深度、工具及共享引用、完成条件；费用账本记录任务归属、方法、版本、预留、用量、价格及价格时点。原始资料、提取结果、任务和报告保存在同一运行目录。
@@ -68,6 +69,8 @@ flowchart TD
 App 插件覆盖仅限所属 Runner；独立决策与 Worker Runner 显式使用同一工厂。`adk-trace.jsonl` 只保存事件标识、调用名称、内容哈希、状态和原生用量，不保存参数、子任务正文、思维内容或原始错误消息。`adk-scopes.json` 记录控制器实际绑定的外部 Session，轨迹读取及已绑定研究恢复拒绝其他 Session 借用 run ID。内部 Session 继续隔离，投影没有转发为外层 ADK 事件，不重复状态 delta、工具调用或收费。
 
 当前任务状态及账本仍以 `state.json` 为准；投影是观测数据。绑定文件及投影不能替代证据修订。原生化职责及自定义例外见 [ADR 0002](decisions/0002-adk-native-boundaries.md)。
+
+Worker 的 `WorkerDecisionModel` 仍将经过预算和结构校验的业务行动转换为 ADK 工具调用；自定义理由是保留既有结构化行动与显式程序门槛，不要求模型新增函数调用能力。请求只含当前 task＋local、固定指令及结构，超时和取消关闭提供者生成器；实际用量只转入该 Worker 的一个原生事件，账本只由 `_decision` 结算。主控制器没有整体迁移到 Workflow；阶段和独立否决继续由业务程序保障。
 
 ## 估值、核验与失效
 

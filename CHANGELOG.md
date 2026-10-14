@@ -4,7 +4,7 @@
 
 ## Unreleased — 0.3.3
 
-- ADK 接入第一阶段：所有自建 Runner 显式采用原生 App／生命周期插件；新增所属 Session 的持久脱敏轨迹接口，关联研究、任务、父任务和 invocation，保持隔离与唯一费用账本。阶段证据见[ADK 接入验证](docs/validation/adk-native/README.md)；其他试点仍在实施，不代表完整任务交付。
+- ADK 接入前两阶段：所有自建 Runner 显式采用原生 App／生命周期插件；新增所属 Session 的持久脱敏轨迹接口；Worker 在自身生命周期完成单次请求及工具执行，减少内部 Runner；只读 ArtifactService 桥接已有报告和计算文件，关联版本／哈希。阶段证据见[ADK 接入验证](docs/validation/v0.4.0/README.md)；其余接入仍在实施，不代表完整任务交付。
 
 - 妙想改为金融数据和资讯搜索两个直接 HTTP API 工具，使用 `MX_APIKEY`，停用本机东方财富技能；保留旧资讯凭据引用兼容，并拒绝显式 API 业务错误。
 - 本地凭据统一为根目录 `.env`，保留模板 `.env.example`；合并原模型、资料服务与旧 MCP 变量，移除重复文件，更新 CLI／ADK 配置说明。

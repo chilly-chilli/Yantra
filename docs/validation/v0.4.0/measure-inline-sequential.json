@@ -1,0 +1,67 @@
+{
+  "scope": "synthetic ADK/ASGI HTTP, not remote model performance",
+  "samples": [
+    {
+      "elapsed_seconds": 0.8273702919250354,
+      "status": "partial",
+      "semantic_hash": "b72cdde2df0f6fc4ff02b9067528827de50db26c3f7ebb6d4b14b770b739f3f1",
+      "provider_calls": 18,
+      "model_calls": 18,
+      "tool_calls": 6,
+      "input_utf8_bytes": 677326,
+      "invocations": 15,
+      "decision_invocations": 7,
+      "trace_bytes": 36038
+    },
+    {
+      "elapsed_seconds": 0.3933694160077721,
+      "status": "partial",
+      "semantic_hash": "b72cdde2df0f6fc4ff02b9067528827de50db26c3f7ebb6d4b14b770b739f3f1",
+      "provider_calls": 18,
+      "model_calls": 18,
+      "tool_calls": 6,
+      "input_utf8_bytes": 677325,
+      "invocations": 15,
+      "decision_invocations": 7,
+      "trace_bytes": 36038
+    },
+    {
+      "elapsed_seconds": 0.37878845795057714,
+      "status": "partial",
+      "semantic_hash": "b72cdde2df0f6fc4ff02b9067528827de50db26c3f7ebb6d4b14b770b739f3f1",
+      "provider_calls": 18,
+      "model_calls": 18,
+      "tool_calls": 6,
+      "input_utf8_bytes": 677326,
+      "invocations": 15,
+      "decision_invocations": 7,
+      "trace_bytes": 36038
+    },
+    {
+      "elapsed_seconds": 0.3839564579539001,
+      "status": "partial",
+      "semantic_hash": "b72cdde2df0f6fc4ff02b9067528827de50db26c3f7ebb6d4b14b770b739f3f1",
+      "provider_calls": 18,
+      "model_calls": 18,
+      "tool_calls": 6,
+      "input_utf8_bytes": 677327,
+      "invocations": 15,
+      "decision_invocations": 7,
+      "trace_bytes": 36038
+    },
+    {
+      "elapsed_seconds": 0.3869832089403644,
+      "status": "partial",
+      "semantic_hash": "b72cdde2df0f6fc4ff02b9067528827de50db26c3f7ebb6d4b14b770b739f3f1",
+      "provider_calls": 18,
+      "model_calls": 18,
+      "tool_calls": 6,
+      "input_utf8_bytes": 677326,
+      "invocations": 15,
+      "decision_invocations": 7,
+      "trace_bytes": 36038
+    }
+  ],
+  "elapsed_median_seconds": 0.3869832089403644,
+  "usage": "10 input / 5 output synthetic tokens per request; no fees; provider token count unknown"
+}

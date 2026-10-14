@@ -69,20 +69,29 @@ class WorkerDecisionModel(BaseLlm):
         execution = _worker_execution.get()
         engine, task, local = execution["engine"], execution["task"], execution["local"]
         remaining = task.time_limit_seconds - (time.monotonic() - execution["started"])
+        usage = None
         try:
             action = WorkerAction.model_validate(await engine._decision(
                 "worker", task.model_dump(), local, timeout=remaining
             ))
+            if getattr(engine.backend, "inline_worker", False) and engine.backend.last_usage:
+                value = engine.backend.last_usage
+                usage = types.GenerateContentResponseUsageMetadata(prompt_token_count=value["input_tokens"],
+                    candidates_token_count=value["output_tokens"], total_token_count=value["total_tokens"])
             engine._log("worker_action", {"task_id": task.task_id, **action.model_dump()})
             if action.action == "return":
-                yield _text_response(engine._validate_worker_result(task, local, action.result))
+                response = _text_response(engine._validate_worker_result(task, local, action.result))
+                response.usage_metadata = usage
+                yield response
                 return
             # Unknown tools cannot reach ADK's dispatcher or its transfer mechanism.
             engine._prepare_worker_tool(execution, action.tool, action.arguments)
         except StopRun as exc:
-            yield _text_response(engine._partial_worker_result(task, local, str(exc)))
+            response = _text_response(engine._partial_worker_result(task, local, str(exc)))
+            response.usage_metadata = usage
+            yield response
             return
-        yield LlmResponse(content=types.Content(role="model", parts=[
+        yield LlmResponse(usage_metadata=usage, content=types.Content(role="model", parts=[
             types.Part(function_call=types.FunctionCall(name=action.tool, args=action.arguments))
         ]))
 
@@ -241,6 +250,9 @@ async def execute_research(tool_context: ToolContext) -> dict[str, Any]:
         TraceStore(engine.directory).bind(tool_context.session)
         with execution_scope(engine, kind="entry"):
             state = await engine.advance()
+        if state.get("report") and not (engine.directory / "adk-artifacts.json").exists():
+            from .adk_artifacts import publish_outputs
+            publish_outputs(engine)
     except (FileNotFoundError, ValueError, BackendError) as exc:
         # Do not expose provider messages, credentials or arbitrary file paths.
         return {"status": "error", "error_code": getattr(exc, "code", type(exc).__name__), "message": (

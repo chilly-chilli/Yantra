@@ -1,5 +1,6 @@
 """External API regressions use actual ADK; providers and materials are synthetic."""
 import json
+import base64
 import os
 from pathlib import Path
 import tempfile
@@ -7,7 +8,7 @@ import unittest
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
-from google.adk.sessions import DatabaseSessionService
+from google.adk.sessions import DatabaseSessionService, InMemorySessionService
 from google.genai import types
 
 from yantra.api import create_app
@@ -97,6 +98,7 @@ class NativeTraceTests(unittest.TestCase):
                 state = Engine.load(storage, first["run_id"]).state
                 self.assertEqual(state["budget"]["model_calls"], len(provider.payloads))
                 self.assertEqual(len([e for e in trace["events"] if "usage" in e]), len(provider.payloads))
+                self.assertFalse(any(e["runner_kind"] == "decision" and e["task_id"] != "main" for e in trace["events"]))
                 self.assertEqual(state["budget"]["tool_calls"], 6)
                 self.assertTrue(state["artifacts"]["verification"]["data"]["passed"])
                 raw = json.dumps(trace, ensure_ascii=False)
@@ -112,3 +114,47 @@ class NativeTraceTests(unittest.TestCase):
             self.assertEqual(len(store.read()["events"]), 1)
             store.append({"task_id": "task-two", "kind": "event"})
             self.assertEqual(len(store.read()["events"]), 2)
+
+    def test_native_artifacts_versions_scope_missing_files_and_ownership(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            storage = root / "runs"
+            inputs = test_materials(root / "inputs")
+
+            def factory(company="DEMO", run_id=None):
+                return Engine.load(storage, run_id) if run_id else Engine.create(storage,
+                    {"company": company, "horizon": "12个月", "cutoff": "2025-12-31"}, materials_dir=inputs)
+
+            service = InMemorySessionService()
+            with patch.dict(os.environ, {"YANTRA_RUNS_DIR": str(storage)}), patch("yantra.engine.create_adk_engine", side_effect=factory):
+                with TestClient(create_app(session_service=service)) as client:
+                    session_id = client.post("/apps/yantra/users/owner/sessions", json={}).json()["id"]
+                    first = send(client, session_id, "DEMO")
+                    send(client, session_id, "确认")
+                    path = f"/apps/yantra/users/owner/sessions/{session_id}/artifacts"
+                    self.assertEqual(client.get(path).json(), ["calculations.json", "report.json", "report.md"])
+                    old = client.get(path + "/report.json/versions/0").json()
+                    raw = base64.urlsafe_b64decode(old["inlineData"]["data"])
+                    directory = storage / first["run_id"]
+                    self.assertEqual(raw, (directory / "report-v1.json").read_bytes())
+                    metadata = client.get(path + "/report.json/versions/0/metadata").json()
+                    self.assertEqual(metadata["customMetadata"]["business_version"], 1)
+                    self.assertEqual(metadata["customMetadata"]["owner"], "research_controller")
+                    self.assertEqual(client.delete(path + "/report.json").status_code, 403)
+                    self.assertEqual(client.post(path, json={"filename": "report.json", "artifact": {"text": "replace"}}).status_code, 403)
+                    self.assertEqual(client.get(path + "/../state.json").status_code, 404)
+                    stranger = client.post("/apps/yantra/users/stranger/sessions", json={}).json()["id"]
+                    other = f"/apps/yantra/users/stranger/sessions/{stranger}/artifacts"
+                    self.assertEqual(client.get(other).json(), [])
+                    self.assertEqual(client.get(other + "/report.json").status_code, 404)
+                    send(client, session_id, 'modify {"growth_rate":0.03}')
+                    self.assertEqual(client.get(path + "/report.json/versions").json(), [0, 1])
+                    self.assertEqual(client.get(path + "/report.json/versions/0").json(), old)
+                with TestClient(create_app(session_service=service)) as client:
+                    self.assertEqual(client.get(path + "/report.json/versions/0").json(), old)
+                    self.assertEqual(client.get(path + "/report.json/versions/latest/metadata").json()["customMetadata"]["business_version"], 2)
+                    (directory / "report-v1.json").unlink()
+                    self.assertEqual(client.get(path + "/report.json/versions/0").status_code, 404)
+                    self.assertEqual(client.get(path + "/report.json/versions/0/metadata").status_code, 200)
+                    (directory / "report-v2.json").write_text("tampered")
+                    self.assertEqual(client.get(path + "/report.json/versions/1").status_code, 404)

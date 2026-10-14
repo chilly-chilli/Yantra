@@ -587,6 +587,8 @@ class Engine:
         report_path.write_text(memo_markdown(self.state, self.directory))
         self.state["report_path"] = str(report_path)
         self._save()
+        from .adk_artifacts import publish_outputs
+        publish_outputs(self)
 
 
 def create_adk_engine(company="DEMO", run_id=None):

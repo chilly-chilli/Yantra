@@ -1,0 +1,15 @@
+{
+  "stage1_commit": "4f93afe",
+  "stage2": {
+    "adk_tests": 17,
+    "adk_seconds": 4.942,
+    "capability_tests": 17,
+    "capability_seconds": 7.647,
+    "raw_tests": 19,
+    "raw_seconds": 9.681
+  },
+  "live_model_eval": "not_executed_no_new_budget_authorization",
+  "goal_status": "active",
+  "push": false,
+  "deployment": false
+}
