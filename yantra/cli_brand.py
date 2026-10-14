@@ -34,10 +34,10 @@ def show_banner():
         "        ▀██▄▄▄      ▄▄",
         "           ▀▀▀▀▀▀▀▀▀",
     ]
-    labels = {6: "实证研策", 7: "Yantra", 10: f"v{__version__}"}
+    labels = {5: "实 证 研 策", 7: "Y a n t r a", 9: f"v{__version__}"}
     column_width = max(display_width(label) for label in labels.values())
     for index, row in enumerate(mark):
-        padding = " " * (32 - display_width(row))
+        padding = " " * (30 - display_width(row))
         label = labels.get(index, "")
         centered = " " * ((column_width - display_width(label)) // 2) + label
         if "NO_COLOR" not in os.environ:

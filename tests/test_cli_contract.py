@@ -83,17 +83,17 @@ with patch.object(sys.stdin, 'isatty', return_value=True), patch.object(sys.stdo
         for command, answer in (("configure", "exit\n"), ("models", "back\n"), ("extensions", "back\n")):
             result = self.invoke(command, output="text", bootstrap=bootstrap, input_text=answer)
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(result.stdout.count("实证研策"), 1)
+            self.assertEqual(result.stdout.count("实 证 研 策"), 1)
             self.assertEqual(result.stdout.count("⬤"), 1)
             self.assertIn("█", result.stdout)
             self.assertIn("▀", result.stdout)
             self.assertIn("▄", result.stdout)
             self.assertNotIn("╭", result.stdout)
-            self.assertIn("⬤", next(line for line in result.stdout.splitlines() if "Yantra" in line))
+            self.assertIn("⬤", next(line for line in result.stdout.splitlines() if "Y a n t r a" in line))
             self.assertNotIn("\033", result.stdout)
-            chinese = next(line for line in result.stdout.splitlines() if "实证研策" in line)
-            english = next(line for line in result.stdout.splitlines() if "Yantra" in line)
-            self.assertEqual(english.index("Yantra"), chinese.index("实证研策") + 1)
+            chinese = next(line for line in result.stdout.splitlines() if "实 证 研 策" in line)
+            english = next(line for line in result.stdout.splitlines() if "Y a n t r a" in line)
+            self.assertEqual(english.index("Y a n t r a"), chinese.index("实 证 研 策"))
         # The parent may set NO_COLOR; clear it explicitly for the color check.
         color_bootstrap = bootstrap.replace("{'TERM': 'xterm-256color', 'NO_COLOR': ''}",
                                             "{'TERM': 'xterm-256color'}").replace(
