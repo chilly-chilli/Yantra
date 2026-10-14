@@ -217,7 +217,10 @@ class FormatTests(unittest.TestCase):
             font = ImageFont.truetype(str(font_path), 56)
             draw.text((30, 30), "营业收入 1234.50 万元", font=font, fill="black")
             draw.text((30, 140), "Revenue 1234.50 CNY", font=font, fill="black")
-            image.save(p/"scan.png"); image.save(p/"scan.pdf", "PDF")
+            image.save(p/"scan.png")
+            canvas = Canvas(str(p/"scan.pdf"), pagesize=image.size)
+            canvas.drawInlineImage(image, 0, 0)
+            canvas.save()
             for file in (p/"scan.png", p/"scan.pdf"):
                 chunks, gaps = parse_file(file)
                 self.assertTrue(any("1234.50" in x["text"] for x in chunks), chunks)
