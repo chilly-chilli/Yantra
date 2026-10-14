@@ -65,7 +65,7 @@ class SyntheticBackend(OfflineDemoBackend):
             params.update(comparable_rule="同币种、同类股、同FY合成可比；同日倍数中位数", multiples=[{"multiple_type": model, "value": value, "security_code": f"60000{i+1}", "share_class": "A", "currency": "CNY", "period": "FY2025", "earnings_basis": "FY", "accounting_scope": "consolidated" if model == "ev_ebitda" else "attributable", "as_of": "2026-01-01", "source_ref": metric["source_ref"], "source_hash": metric["source_hash"], "quote": f"{label} {value}", "raw_value": str(value)} for i, value in enumerate(values)])
             for m in params["multiples"]:
                 m["per_share_basis"] = metric["share_scope"] if model in {"pe", "pb"} else None
-                m["source_ref"] = next(a["ref"] for a in self.source_anchors if m["security_code"] in a["text"] and m["quote"] in a["text"])
+                m["source_ref"] = next((a["ref"] for a in getattr(self, "source_anchors", []) if m["security_code"] in a["text"] and m["quote"] in a["text"]), metric["source_ref"])
             basis["comparable_rule"] = "合成同业可比选择判断；不是统计置信区间"
         if model == "ev_ebitda":
             params.update({k: rows.get(k) for k in ["net_debt", "minority_interest", "shares"]})
@@ -116,6 +116,13 @@ def create(directory, model="pe", **kwargs):
     material = directory / "synthetic.txt"
     material.write_text(TEXT)
     backend = SyntheticBackend(model, **kwargs)
+    from yantra.knowledge.preferences import Preferences
+    from yantra.knowledge.store import KnowledgeStore
+    from yantra.investment_logic import CHOICE_KINDS
+    preferences = Preferences(KnowledgeStore(directory / "runs" / "knowledge"))
+    if not any(p["id"] == "research-setup" for p in preferences.list(history=True)):
+        preferences.setup({"horizon": "12个月", "framework": "quality", "confirmation_mode": "autonomous",
+                           "authorization": {"status": "granted", "scope": list(CHOICE_KINDS)}})
     return RawEngine.create_raw(directory / "runs", {"company": "合成测试公司", "horizon": "12个月", "cutoff": "2026-10-13", "market": "CN", "security_code": "600000", "trading_currency": "CNY", "confirmation_mode": "autonomous"}, [material], backend=backend, pricing=PRICE, framework="quality")
 
 

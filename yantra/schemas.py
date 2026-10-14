@@ -9,6 +9,7 @@ Role = Literal["finance", "thesis", "valuation", "verification"]
 Purpose = Literal["collect", "supplement", "repair", "analyze", "propose", "calculate", "audit", ""]
 RunStatus = Literal["running", "waiting", "completed", "partial", "failed", "cancelled"]
 ValuationMethod = Literal["dcf", "pe", "pb", "ev_ebitda", "ddm"]
+ChoiceKind = Literal["perspective", "models", "assumptions", "risk", "disconfirmation", "tracking", "expectations"]
 
 
 class Contract(BaseModel):
@@ -49,13 +50,43 @@ class Research(Contract):
     topics: list[str] = Field(default_factory=list)
 
 
-class Assumptions(Contract):
+class ModelAssumptions(Contract):
     model: ValuationMethod = "dcf"  # Missing identity in historical snapshots means legacy DCF.
     version: int = Field(default=1, ge=1)
     confirmed: bool = False
     parameters: dict[str, Any] = Field(default_factory=dict)
     basis: dict[str, Any] = Field(default_factory=dict)
-    authorization_source: Literal["none", "user", "controller"] = "none"
+    authorization_source: Literal["none", "user", "controller", "provisional"] = "none"
+    authorization_version: int | None = None
+
+    @property
+    def calculation_permitted(self):
+        return self.confirmed or self.authorization_source == "provisional"
+
+
+class Assumptions(ModelAssumptions):
+    auxiliary_models: dict[ValuationMethod, ModelAssumptions] = Field(default_factory=dict)
+
+
+class AutonomyAuthorization(Contract):
+    status: Literal["granted", "refused"]
+    scope: list[ChoiceKind]
+
+    @model_validator(mode="after")
+    def explicit_scope(self):
+        if len(set(self.scope)) != len(self.scope) or (self.status == "refused" and self.scope) or (self.status == "granted" and not self.scope):
+            raise ValueError("grant requires an explicit scope; refusal requires an empty scope")
+        return self
+
+
+class ResearchSetup(Contract):
+    horizon: str = Field(min_length=1)
+    framework: Literal["auto", "quality", "value", "change"]
+    confirmation_mode: Literal["autonomous", "manual"]
+    authorization: AutonomyAuthorization
+    questions: list[str] = Field(default_factory=list)
+    topics: list[str] = Field(default_factory=list)
+    notes: str = ""
 
 
 class Task(Contract):
@@ -175,6 +206,9 @@ class FinancialRecord(Contract):
     accounting_scope: Literal["consolidated", "attributable", "parent"] | None = None
     business_scope: str | None = None
     information_kind: Literal["fact", "management_statement", "assumption", "prediction", "judgment"] | None = None
+    period_basis: Literal["FY", "interim", "TTM", "quarter", "point_in_time"] | None = None
+    period_start: str | None = None
+    period_end: str | None = None
 
 
 class EvidenceRecord(Contract):
@@ -275,13 +309,66 @@ class FrameworkChoice(Contract):
     reason: str = Field(min_length=1)
 
 
+class RiskItem(Contract):
+    id: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+    category: str = Field(min_length=1)
+    suggested_level: Literal["high", "medium", "low", "unknown"]
+    evidence_refs: list[str]
+    trigger: str = Field(min_length=1)
+    rationale: str = Field(min_length=1)
+    user_opinion: str | None = None
+    user_level: Literal["high", "medium", "low"] | None = None
+
+
+class DisconfirmationItem(Contract):
+    id: str = Field(min_length=1)
+    thesis: str = Field(min_length=1)
+    condition: str = Field(min_length=1)
+    frequency: str = Field(min_length=1)
+    status: Literal["unknown", "not_triggered", "near", "triggered"] = "unknown"
+    evidence_refs: list[str] = Field(default_factory=list)
+
+
+class TrackingItem(Contract):
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    definition: str = Field(min_length=1)
+    frequency: str = Field(min_length=1)
+    threshold: str | None = None
+    current_value: float | None = None
+    evidence_refs: list[str] = Field(default_factory=list)
+
+
+class BusinessProfile(Contract):
+    name: str = Field(min_length=1)
+    products_services: list[str]
+    revenue_composition: str | None = None
+    customers: str | None = None
+    sales_settlement: str | None = None
+    operating_cycle: str | None = None
+    evidence_refs: list[str]
+    unknowns: list[str] = Field(default_factory=list)
+
+
+class AnomalyExplanation(Contract):
+    signal_id: str
+    business: str | None = None
+    possible_causes: list[str]
+    supporting_refs: list[str]
+    opposing_refs: list[str]
+    follow_up: list[str] = Field(min_length=1)
+
+
 class ThesisData(Contract):
     model_config = ConfigDict(extra="allow", allow_inf_nan=False)
     claims: list[dict[str, Any]] = Field(default_factory=list)
     hypotheses: list[dict[str, Any]] = Field(default_factory=list)
-    risks: list[str] = Field(default_factory=list)
-    disconfirming: list[str] = Field(default_factory=list)
-    tracking: list[str] = Field(default_factory=list)
+    risks: list[RiskItem | str] = Field(default_factory=list)
+    disconfirming: list[DisconfirmationItem | str] = Field(default_factory=list)
+    tracking: list[TrackingItem | str] = Field(default_factory=list)
+    businesses: list[BusinessProfile] = Field(default_factory=list)
+    anomaly_explanations: list[AnomalyExplanation] = Field(default_factory=list)
     expectations: dict[str, Any] = Field(default_factory=dict)
     gaps: list[str] = Field(default_factory=list)
     summary: str | None = None
@@ -295,12 +382,25 @@ class ThesisAction(WorkerAction):
     result: ThesisResult | None = None
 
 
-class ValuationProposal(Contract):
+class ModelProposal(Contract):
     model: Literal["dcf", "pe", "pb", "ev_ebitda", "ddm", "not_applicable"]
     parameters: dict[str, Any] = Field(default_factory=dict)
     basis: dict[str, Any] = Field(default_factory=dict)
     scope: str
     gaps: list[str] = Field(default_factory=list)
+    selection_reason: str = ""
+
+
+class ValuationProposal(ModelProposal):
+    auxiliary_models: list[ModelProposal] = Field(default_factory=list)
+    unused_models: dict[ValuationMethod, str] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def distinct_models(self):
+        models = [self.model] + [p.model for p in self.auxiliary_models]
+        if len(set(models)) != len(models) or ("not_applicable" in models and len(models) > 1):
+            raise ValueError("auxiliary methods must be distinct and applicable")
+        return self
 
 
 class ProposalResult(Result):
@@ -334,6 +434,36 @@ class ConversionArguments(Contract):
 
 class MetricsArguments(Contract):
     records: list[FinancialRecord]
+
+
+class OwnForecast(Contract):
+    field: str
+    value: float = Field(strict=True)
+    period: str
+    earnings_basis: Literal["FY", "TTM", "forward"]
+    currency: str
+    unit: str
+    accounting_scope: Literal["consolidated", "attributable"]
+    security_code: str
+    share_class: str
+    business_scope: str = "group"
+    basis: str = Field(min_length=1)
+    evidence_refs: list[str] = Field(min_length=1)
+    realization_conditions: list[str] = Field(min_length=1)
+
+
+class ExternalForecast(Contract):
+    kind: Literal["consensus", "research_sample"]
+    record: FinancialRecord
+    as_of: str
+    provider: str = Field(min_length=1)
+    sample_size: int = Field(ge=1)
+    sample_scope: str = Field(min_length=1)
+
+
+class ExpectationArguments(Contract):
+    own_forecasts: list[OwnForecast]
+    external_forecasts: list[ExternalForecast] = Field(default_factory=list)
 
 
 class ValuationArguments(Contract):

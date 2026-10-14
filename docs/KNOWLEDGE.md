@@ -109,7 +109,7 @@ view返回修订历史、原始证据及绑定hash的核验记录。编辑创建
 
 只保存显式remember指令，不推断普通任务偏好。保存原话、含义、来源、范围、时间与版本，并回显scope及application。结构化defaults支持horizon、已核验内置framework、questions、topics、notes；其他明确要求可放notes供本次Agent参考，不能覆盖程序硬限制或否决。特定公司使用明确company ID，不能从多个同名公司猜测。
 
-优先级为本次显式参数＞公司要求＞全局默认。新默认在调度边界加载；显式参数保留。`remember/forget --apply-to RUN_ID --modify-this-task`明确允许修改本次对应字段，在边界应用并使相关论点、假设、估值和核验失效。撤销保留历史并重新计算默认值。保存和应用状态分别记录。CLI在remember/forget持久化之前预检目标是否为running/waiting的v0.3运行、知识库路径及公司范围。运行不存在为 `run_not_found`，其他目标约束为 `preference_target_invalid`（退出2），不修改长期要求。保存后再次检查，再写调度请求；成功只表示 `application=pending_at_scheduling_boundary`，不是研究已经应用。
+优先级为本次显式参数＞公司要求＞全局默认。新研究固定启动时的实际偏好及版本，默认修改不静默替换；显式申请应用才在调度边界加载。显式参数保留。`remember/forget --apply-to RUN_ID --modify-this-task`明确允许修改本次对应字段，在边界应用并使相关论点、假设、估值和核验失效。撤销保留历史并重新计算默认值。保存和应用状态分别记录。CLI在remember/forget持久化之前预检目标是否为running/waiting的v0.3运行、知识库路径及公司范围。运行不存在为 `run_not_found`，其他目标约束为 `preference_target_invalid`（退出2），不修改长期要求。保存后再次检查，再写调度请求；成功只表示 `application=pending_at_scheduling_boundary`，不是研究已经应用。
 
 跨SQLite修改与运行请求文件没有联合事务。保存后若运行状态变化或请求写入失败，返回退出1及 `error.code=preference_application_failed`；`error.details.completed`列出已完成的保存／撤销、要求ID及保存版本，`error.details.application`列出失败目标与安全错误。`retryable=false`，不要重新新增；先用preferences list/list --history检查，再使用 `--id` 明确更新已有要求或在有效目标上重试应用。forget的已完成结果含id及revoked，撤销历史仍保留。不存在的要求返回 `preference_not_found`。
 
@@ -130,3 +130,23 @@ ADK入口支持`/memories`、`/forget ID`及：
 此统一信源管道尚未接入 RSS/Atom 订阅、轮询、自动唤醒、专用官方披露或第三方数据服务；通用插件平台未实现。摘要及接口元数据不能取得原文证据资格，多渠道同一 hash 仍是同一份证据。
 
 v0.3.3 的扶摇、东方财富、AKShare 与 98dou 信息工具通过[命令扩展](INFORMATION_SOURCES.md)接入，保存响应凭证；未接入此处预留的订阅／checkpoint 调度，也不因搜索摘要而获得原文证据资格。
+
+## 首次设置与自主选择授权
+
+新建原始材料研究（包括通过 ADK/API 启动）必须先在同一知识库执行 `preferences setup`。固定虚构演示及历史运行保持原契约。设置复用 `preferences` 版本表，不新增用户画像；未选择授权状态时返回 `research_setup_required`，在材料获取或模型调用之前结束。
+
+以下是明确拒绝自主调整、仍默认自主交付的可执行设置例子：
+
+```sh
+.venv/bin/python -m yantra preferences --knowledge-dir .yantra/knowledge setup \
+  --parameters '{"horizon":"12个月","framework":"auto","confirmation_mode":"autonomous","authorization":{"status":"refused","scope":[]},"questions":[],"topics":[],"notes":""}'
+.venv/bin/python -m yantra preferences --knowledge-dir .yantra/knowledge list --history
+```
+
+`authorization.status` 必须为 `granted` 或 `refused`。拒绝的 `scope` 必须为空；授予的范围必须显式列出，可选 `perspective / models / assumptions / risk / disconfirmation / tracking / expectations`。正式自主估值同时需要 `models` 和 `assumptions`，每个模型再通过来源及口径硬门槛。单家公司预测参数不作为永久默认。`confirmation_mode=manual` 表示希望逐节点选择，未回复仍采用暂定情景交付。
+
+再次执行 setup 形成 `research-setup` 新版本；明确拒绝或 `preferences forget research-setup` 撤销长期授权并保留历史。每次运行保存 `preference_snapshot`、实际 `fixed_preferences` 和应用记录。普通偏好修改不会静默改变新运行的固定版本；授权版本已修改或撤销时，旧版本不能继续批准新选择，后续计算降为暂定并失效旧估值、重新核验。历史报告保留当时的授权状态。
+
+`start --authorization '{"status":"refused","scope":[]}'`（或 `--authorization-file`）仅覆盖本次；显式授予也使用相同对象形状，不改长期版本。正常恢复沿用固定版本与原预算。研究视角、模型及假设、风险、反证、跟踪和市场来源的默认建议、备选、理由、影响及 `controller / user / provisional` 状态在报告和 CLI `status` 的 `choices` 中可审阅。
+
+ADK 首次设置使用 `/setup {完整ResearchSetup对象}`，在启动研究前提交；`/memories` 同时列出设置和其他长期要求。API 中的 `/setup` 和普通研究操作共用已有 `execute_research` 原生入口，不引入另一套 Session 或账本。

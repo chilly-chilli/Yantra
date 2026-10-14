@@ -1,0 +1,165 @@
+test_atomic_reservation_and_missing_usage (test_v2.BudgetTests.test_atomic_reservation_and_missing_usage) ... ok
+test_deadline_wait_and_cancel (test_v2.BudgetTests.test_deadline_wait_and_cancel) ... ok
+test_two_hour_deadline_with_closing_reserve (test_v2.BudgetTests.test_two_hour_deadline_with_closing_reserve) ... ok
+test_usage_settlement (test_v2.BudgetTests.test_usage_settlement) ... ok
+test_autonomous_and_manual_authorization_then_modify_recomputes (test_v2.ControllerTests.test_autonomous_and_manual_authorization_then_modify_recomputes) ... /Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/features/_feature_decorator.py:71: UserWarning: [EXPERIMENTAL] feature FeatureName.PLUGGABLE_AUTH is enabled.
+  check_feature_enabled()
+App "yantra" can transfer between agents but has no context_cache_config. Every transfer swaps the system instruction and the tool set, so the request prefix changes and the whole prompt is re-sent uncached after each transfer. Set context_cache_config on the app to give each agent its own cache.
+Executing <Task pending name='Task-2' coro=<ControllerTests.test_autonomous_and_manual_authorization_then_modify_recomputes() running at /Users/chillychili/Yantra/tests/test_v2.py:372> wait_for=<Future pending cb=[Task.task_wakeup()] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:449> cb=[_run_until_complete_cb() at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:182] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/runners.py:100> took 0.433 seconds
+/Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/tools/transfer_to_agent_tool.py:106: UserWarning: [EXPERIMENTAL] feature FeatureName.JSON_SCHEMA_FOR_FUNC_DECL is enabled.
+  function_decl = super()._get_declaration()
+Executing <Task pending name='Task-6' coro=<Context._run_node_standalone() running at /Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/agents/context.py:886> wait_for=<_GatheringFuture pending cb=[Task.task_wakeup()] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/tasks.py:712> cb=[Task.task_wakeup()] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/tasks.py:420> took 0.373 seconds
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_bb71e3d0e11c and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_bb71e3d0e11c and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_1f96f9d5b57b and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_1f96f9d5b57b and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent thesis_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent valuation_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent valuation_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent valuation_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent verification_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent verification_worker and model yantra_budgeted_decision_backend
+Executing <Task finished name='Task-10' coro=<_execute_single_prepared_call_async() done, defined at /Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/flows/llm_flows/tools/_caller.py:912> result=Event(model_v...968714.757938) created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/tasks.py:420> took 0.122 seconds
+Skipping missing token usage metadata for agent yantra and model yantra_research_controller
+Skipping missing token usage metadata for agent yantra and model yantra_research_controller
+Executing <Task pending name='Task-2' coro=<ControllerTests.test_autonomous_and_manual_authorization_then_modify_recomputes() running at /Users/chillychili/Yantra/tests/test_v2.py:382> wait_for=<Future pending cb=[Task.task_wakeup()] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:449> cb=[_run_until_complete_cb() at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:182] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/runners.py:100> took 0.116 seconds
+Skipping missing token usage metadata for agent thesis_worker and model yantra_budgeted_decision_backend
+Executing <Task pending name='Task-2' coro=<ControllerTests.test_autonomous_and_manual_authorization_then_modify_recomputes() running at /Users/chillychili/Yantra/tests/test_v2.py:382> wait_for=<Future pending cb=[Task.task_wakeup()] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:449> cb=[_run_until_complete_cb() at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:182] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/runners.py:100> took 0.148 seconds
+Skipping missing token usage metadata for agent valuation_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent valuation_worker and model yantra_budgeted_decision_backend
+Executing <Task pending name='Task-2' coro=<ControllerTests.test_autonomous_and_manual_authorization_then_modify_recomputes() running at /Users/chillychili/Yantra/tests/test_v2.py:382> wait_for=<Future pending cb=[Task.task_wakeup()] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:449> cb=[_run_until_complete_cb() at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:182] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/runners.py:100> took 0.160 seconds
+Skipping missing token usage metadata for agent verification_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent verification_worker and model yantra_budgeted_decision_backend
+Executing <Task pending name='Task-2' coro=<ControllerTests.test_autonomous_and_manual_authorization_then_modify_recomputes() running at /Users/chillychili/Yantra/tests/test_v2.py:372> wait_for=<Future pending cb=[Task.task_wakeup()] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:449> cb=[_run_until_complete_cb() at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:182] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/runners.py:100> took 0.260 seconds
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_2a444d47c50e and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_2a444d47c50e and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_a59f888b0473 and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_a59f888b0473 and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent thesis_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent valuation_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent valuation_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent valuation_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent verification_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent verification_worker and model yantra_budgeted_decision_backend
+Executing <Task finished name='Task-264' coro=<_execute_single_prepared_call_async() done, defined at /Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/flows/llm_flows/tools/_caller.py:912> result=Event(model_v...68716.9906461) created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/tasks.py:420> took 0.131 seconds
+Skipping missing token usage metadata for agent yantra and model yantra_research_controller
+Skipping missing token usage metadata for agent yantra and model yantra_research_controller
+Executing <Task pending name='Task-2' coro=<ControllerTests.test_autonomous_and_manual_authorization_then_modify_recomputes() running at /Users/chillychili/Yantra/tests/test_v2.py:377> wait_for=<Future pending cb=[Task.task_wakeup()] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:449> cb=[_run_until_complete_cb() at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:182] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/runners.py:100> took 0.123 seconds
+Skipping missing token usage metadata for agent thesis_worker and model yantra_budgeted_decision_backend
+Executing <Task pending name='Task-2' coro=<ControllerTests.test_autonomous_and_manual_authorization_then_modify_recomputes() running at /Users/chillychili/Yantra/tests/test_v2.py:377> wait_for=<Future pending cb=[Task.task_wakeup()] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:449> cb=[_run_until_complete_cb() at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:182] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/runners.py:100> took 0.146 seconds
+Skipping missing token usage metadata for agent valuation_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent valuation_worker and model yantra_budgeted_decision_backend
+Executing <Task pending name='Task-2' coro=<ControllerTests.test_autonomous_and_manual_authorization_then_modify_recomputes() running at /Users/chillychili/Yantra/tests/test_v2.py:377> wait_for=<Future pending cb=[Task.task_wakeup()] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:449> cb=[_run_until_complete_cb() at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:182] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/runners.py:100> took 0.154 seconds
+Skipping missing token usage metadata for agent verification_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent verification_worker and model yantra_budgeted_decision_backend
+Executing <Task pending name='Task-2' coro=<ControllerTests.test_autonomous_and_manual_authorization_then_modify_recomputes() running at /Users/chillychili/Yantra/tests/test_v2.py:382> wait_for=<Future pending cb=[Task.task_wakeup()] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:449> cb=[_run_until_complete_cb() at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:182] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/runners.py:100> took 0.383 seconds
+Skipping missing token usage metadata for agent thesis_worker and model yantra_budgeted_decision_backend
+Executing <Task pending name='Task-2' coro=<ControllerTests.test_autonomous_and_manual_authorization_then_modify_recomputes() running at /Users/chillychili/Yantra/tests/test_v2.py:382> wait_for=<Future pending cb=[Task.task_wakeup()] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:449> cb=[_run_until_complete_cb() at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:182] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/runners.py:100> took 0.205 seconds
+Executing <Task pending name='Task-524' coro=<run_node_async.<locals>._run.<locals>._drive_root_node() running at /Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/workflow/_node_runner_utils.py:250> wait_for=<Future pending cb=[Task.task_wakeup()] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:449> created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/tasks.py:420> took 0.164 seconds
+Skipping missing token usage metadata for agent valuation_worker and model yantra_budgeted_decision_backend
+Executing <Task pending name='Task-524' coro=<run_node_async.<locals>._run.<locals>._drive_root_node() running at /Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/workflow/_node_runner_utils.py:250> wait_for=<Future pending cb=[Task.task_wakeup()] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:449> created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/tasks.py:420> took 0.107 seconds
+Skipping missing token usage metadata for agent valuation_worker and model yantra_budgeted_decision_backend
+Executing <Task pending name='Task-2' coro=<ControllerTests.test_autonomous_and_manual_authorization_then_modify_recomputes() running at /Users/chillychili/Yantra/tests/test_v2.py:382> wait_for=<Future pending cb=[Task.task_wakeup()] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:449> cb=[_run_until_complete_cb() at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:182] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/runners.py:100> took 0.210 seconds
+Executing <Task pending name='Task-546' coro=<run_node_async.<locals>._run.<locals>._drive_root_node() running at /Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/workflow/_node_runner_utils.py:250> wait_for=<Future pending cb=[Task.task_wakeup()] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:449> created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/tasks.py:420> took 0.124 seconds
+Skipping missing token usage metadata for agent verification_worker and model yantra_budgeted_decision_backend
+Executing <Task pending name='Task-546' coro=<run_node_async.<locals>._run.<locals>._drive_root_node() running at /Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/workflow/_node_runner_utils.py:250> wait_for=<Future pending cb=[Task.task_wakeup()] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:449> created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/tasks.py:420> took 0.128 seconds
+Skipping missing token usage metadata for agent verification_worker and model yantra_budgeted_decision_backend
+Executing <Task finished name='Task-2' coro=<ControllerTests.test_autonomous_and_manual_authorization_then_modify_recomputes() done, defined at /Users/chillychili/Yantra/tests/test_v2.py:364> result=None created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/runners.py:100> took 0.290 seconds
+ok
+test_depth_and_tools_cannot_expand (test_v2.ControllerTests.test_depth_and_tools_cannot_expand) ... ok
+test_derived_base_unit_value_is_not_double_scaled (test_v2.ControllerTests.test_derived_base_unit_value_is_not_double_scaled) ... ok
+test_failed_supplement_retains_validated_records (test_v2.ControllerTests.test_failed_supplement_retains_validated_records) ... Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_bd7b727ab1d9 and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_bd7b727ab1d9 and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_99a628ab4a07 and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_99a628ab4a07 and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent thesis_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent valuation_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent verification_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent verification_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent yantra and model yantra_research_controller
+Skipping missing token usage metadata for agent yantra and model yantra_research_controller
+ok
+test_future_or_fabricated_value_rejected (test_v2.ControllerTests.test_future_or_fabricated_value_rejected) ... ok
+test_manual_wait_expires_without_approval_or_budget_reset (test_v2.ControllerTests.test_manual_wait_expires_without_approval_or_budget_reset) ... Executing <Task finished name='Task-767' coro=<ControllerTests.test_manual_wait_expires_without_approval_or_budget_reset() done, defined at /Users/chillychili/Yantra/tests/test_v2.py:318> result=None created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/runners.py:100> took 0.109 seconds
+ok
+test_raw_flow_dynamic_roles_and_no_forced_valuation (test_v2.ControllerTests.test_raw_flow_dynamic_roles_and_no_forced_valuation) ... Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_bdb01440f5f3 and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_bdb01440f5f3 and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_2d27ed69465f and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_2d27ed69465f and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent thesis_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent valuation_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent verification_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent verification_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent yantra and model yantra_research_controller
+Skipping missing token usage metadata for agent yantra and model yantra_research_controller
+ok
+test_raw_replay_recomputes_without_remote_calls (test_v2.ControllerTests.test_raw_replay_recomputes_without_remote_calls) ... Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_ef7732a98029 and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_ef7732a98029 and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_0a1abefb5a46 and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_0a1abefb5a46 and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent thesis_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent valuation_worker and model yantra_budgeted_decision_backend
+Executing <Task pending name='Task-1091' coro=<run_node_async.<locals>._run.<locals>._drive_root_node() running at /Users/chillychili/Yantra/.venv/lib/python3.12/site-packages/google/adk/workflow/_node_runner_utils.py:250> wait_for=<Future pending cb=[Task.task_wakeup()] created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/base_events.py:449> created at /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/asyncio/tasks.py:420> took 0.114 seconds
+Skipping missing token usage metadata for agent verification_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent verification_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent yantra and model yantra_research_controller
+Skipping missing token usage metadata for agent yantra and model yantra_research_controller
+ok
+test_shared_read_message_and_approved_transfer (test_v2.ControllerTests.test_shared_read_message_and_approved_transfer) ... ok
+test_user_framework_is_verified_and_used_in_current_run (test_v2.ControllerTests.test_user_framework_is_verified_and_used_in_current_run) ... Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_203b2ba44fd6 and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_203b2ba44fd6 and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_c24735490410 and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent child_task_c24735490410 and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent finance_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent thesis_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent valuation_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent verification_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent verification_worker and model yantra_budgeted_decision_backend
+Skipping missing token usage metadata for agent yantra and model yantra_research_controller
+Skipping missing token usage metadata for agent yantra and model yantra_research_controller
+ok
+test_verifier_veto_cannot_be_overridden (test_v2.ControllerTests.test_verifier_veto_cannot_be_overridden) ... ok
+test_financial_heading_selection_and_foreign_language_query (test_v2.FormatTests.test_financial_heading_selection_and_foreign_language_query) ... ok
+test_office_web_and_structured_anchors (test_v2.FormatTests.test_office_web_and_structured_anchors) ... ok
+test_text_pdf_and_actual_english_chinese_ocr (test_v2.FormatTests.test_text_pdf_and_actual_english_chinese_ocr) ... ok
+test_draft_and_pinned_baseline (test_v2.FrameworkTests.test_draft_and_pinned_baseline) ... ok
+
+----------------------------------------------------------------------
+Ran 19 tests in 11.918s
+
+OK

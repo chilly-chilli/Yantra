@@ -36,7 +36,7 @@ class IntegratedValuationTests(unittest.IsolatedAsyncioTestCase):
                 self.assertAlmostEqual(v["per_share_value"], price)
                 self.assertEqual(v["calculation"]["kind"], "valuation_method")
                 self.assertTrue(s["artifacts"]["verification"]["data"]["passed"], s["issues"])
-                self.assertEqual(v["market_comparison"]["baseline"], s["report"]["市场预期差"]["baseline"])
+                self.assertEqual(v["market_comparison"]["baseline"], s["report"]["财务分析与估值"]["valuation_price_comparison"]["baseline"])
                 self.assertAlmostEqual(v["market_comparison"]["difference"], price / 15 - 1, places=5)
                 self.assertIn("管理层陈述", Path(s["report_path"]).read_text())
                 self.assertIn("EV/EBITDA" if method == "ev_ebitda" else method.upper(), Path(s["report_path"]).read_text())
@@ -150,7 +150,7 @@ class IntegratedValuationTests(unittest.IsolatedAsyncioTestCase):
     async def test_missing_market_baseline_is_unresolved_not_zero(self):
         with tempfile.TemporaryDirectory() as d:
             engine = await self.run_method(d)
-            c = engine.state["report"]["市场预期差"]["comparison"]
+            c = engine.state["report"]["财务分析与估值"]["valuation_price_comparison"]
             self.assertEqual(c["status"], "unresolved")
             self.assertIsNone(c["difference"])
             self.assertIsNone(c["baseline"])
@@ -189,8 +189,9 @@ class IntegratedValuationTests(unittest.IsolatedAsyncioTestCase):
             engine._save()
             with patch("yantra.materials.RawMaterialAdapter.search", no_search):
                 await run_engine(engine)
-                self.assertEqual(engine.state["status"], "waiting")
-                self.assertNotIn("valuation", engine.state["artifacts"])
+                self.assertEqual(engine.state["status"], "partial")
+                self.assertEqual(engine.state["assumptions"]["authorization_source"], "provisional")
+                self.assertIn("valuation", engine.state["artifacts"])
                 await engine.respond("confirm")
             self.assertEqual(engine.state["artifacts"]["valuation"]["data"]["per_share_value"], 12)
             engine.state["artifacts"]["verification"]["data"]["passed"] = False

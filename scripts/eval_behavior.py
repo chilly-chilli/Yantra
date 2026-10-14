@@ -84,6 +84,12 @@ def generate(args, approval, cases):
     config["selected"]["llm"] = approval.model_profile
     settings.update(lambda saved: saved.update(config))
     storage = args.output / "runs"
+    # The isolated fictional evaluator explicitly refuses autonomous selection;
+    # it never copies or changes the operator's persistent preferences.
+    from yantra.knowledge.preferences import Preferences
+    from yantra.knowledge.store import KnowledgeStore
+    Preferences(KnowledgeStore(storage / "knowledge")).setup({"horizon": "12个月", "framework": "auto", "confirmation_mode": "manual",
+        "authorization": {"status": "refused", "scope": []}})
     os.environ["YANTRA_RUNS_DIR"] = str(storage.resolve())
     total_deadline = time.time() + approval.run_seconds
     traces, spent_calls, spent_cost = [], 0, 0.0

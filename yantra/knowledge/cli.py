@@ -59,6 +59,8 @@ def add_commands(commands):
     actions = prefs.add_subparsers(dest="preference_action", required=True)
     listing = actions.add_parser("list")
     listing.add_argument("--history", action="store_true")
+    setup = actions.add_parser("setup", help="首次使用必需：明确偏好、授权或拒绝授权；再次设置形成新版本")
+    add_json_input(setup, "parameters", required=True, help="ResearchSetup对象，必须明确authorization.status/scope")
     remember = actions.add_parser("remember")
     remember.add_argument("original")
     remember.add_argument("--meaning", required=True)
@@ -96,6 +98,8 @@ def execute(args, settings):
         preferences = Preferences(store)
         if args.preference_action == "list":
             result = {"requirements": preferences.list(args.history)}
+        elif args.preference_action == "setup":
+            result = preferences.setup(args.parameters)
         else:
             prior = next((p for p in preferences.list(history=True) if p["id"] == args.id), None) if args.preference_action == "forget" else None
             if args.preference_action == "forget" and prior is None:

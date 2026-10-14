@@ -1,4 +1,5 @@
 """Controlled offline jobs responses; these tests never contact PaddleOCR."""
+from research_fixtures import create_test_raw
 import asyncio
 import json
 import os
@@ -14,7 +15,6 @@ from pydantic import ValidationError
 from yantra.configuration import ConfigStore
 from yantra.models import ModelCatalog, ModelProfile, check_model
 from yantra.paddle_api import OPTIONS, normalize_jsonl, recognize
-from yantra.research import RawEngine
 from test_v2 import V2TestBackend
 
 PROFILE = {"kind": "ocr", "provider": "paddleocr-api", "model_id": "PaddleOCR-VL-1.6",
@@ -189,7 +189,7 @@ class PaddleAPITests(unittest.IsolatedAsyncioTestCase):
             catalog.add("paddle", PROFILE)
             catalog.select("ocr", "paddle")
             with patch("yantra.paddle_api.recognize", mock_recognize):
-                engine = RawEngine.create_raw(root / "runs", {"company": "测试公司", "horizon": "12个月", "cutoff": "2026-10-13"},
+                engine = create_test_raw(root / "runs", {"company": "测试公司", "horizon": "12个月", "cutoff": "2026-10-13"},
                     [image], backend=V2TestBackend(), pricing=PRICE, settings=store)
             self.assertEqual(engine.state["budget"]["ocr_calls"], 1)
             self.assertEqual(engine.state["budget"]["model_calls"], 1)
@@ -210,7 +210,7 @@ class PaddleAPITests(unittest.IsolatedAsyncioTestCase):
             catalog.add("paddle", PROFILE)
             catalog.select("ocr", "paddle")
             with patch("yantra.paddle_api.recognize", side_effect=TimeoutError("controlled timeout")):
-                engine = RawEngine.create_raw(root / "runs", {"company": "测试公司", "horizon": "12个月", "cutoff": "2026-10-13"},
+                engine = create_test_raw(root / "runs", {"company": "测试公司", "horizon": "12个月", "cutoff": "2026-10-13"},
                     [image], backend=V2TestBackend(), pricing=PRICE, settings=store)
             self.assertEqual(engine.state["budget"].get("ocr_calls", 0), 0)
             self.assertEqual(engine.state["budget"]["model_calls"], 1)
@@ -227,7 +227,7 @@ class PaddleAPITests(unittest.IsolatedAsyncioTestCase):
             catalog.add("paddle", PROFILE)
             catalog.select("ocr", "paddle")
             with patch("yantra.paddle_api.recognize") as request:
-                engine = RawEngine.create_raw(root / "runs", {"company": "测试公司", "horizon": "12个月", "cutoff": "2026-10-13"},
+                engine = create_test_raw(root / "runs", {"company": "测试公司", "horizon": "12个月", "cutoff": "2026-10-13"},
                     [image], backend=V2TestBackend(), pricing=PRICE, settings=store)
                 request.assert_not_called()
             self.assertEqual(engine.state["budget"]["model_calls"], 0)

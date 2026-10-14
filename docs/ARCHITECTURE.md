@@ -44,6 +44,8 @@ flowchart TD
 - `knowledge/`：SQLite正式记录、不可变修订、来源字节、可恢复文件提交、核验内容哈希、基准版本CAS、固定引用、FTS5／本地向量及明确要求。`runtime.py`仅由现有控制器管理归档、独立核验和提交。
 - `sources.py`：发现与获取分离的统一合约；现有web_search使用同一入口，支持不透明cursor／checkpoint存储，无新信源服务或订阅调度。
 - `materials.py`：原始字节、格式解析、来源日期依据、原文 anchors、公开发现与获取；目录自动建立内部 index，不要求用户准备 manifest。
+- `financial_analysis.py`：固定科目、指标、可比期间、平均余额、数据质量与统一异常调查信号；不推算分部或定义行业阈值。
+- `investment_logic.py`：结构化清单兼容、纯数学经营预期比较及各模型差异；不写业务状态。
 - `v2_tools.py`：原文数值校验、提取登记、冲突保留、EBIT桥接、单一valuation入口按方法分派、统一凭证及独立程序复核。
 - `valuation/`：PE/PB/EV-EBITDA/单阶段DDM的纯数学、方法输入门槛与结构化基准比较；不批准参数、不改变运行状态、不发布报告。Pydantic契约统一在`schemas.py`。
 - `budget.py`：一个完整研究任务的原子费用预留、用量核算及总墙钟截止；新建任务默认上限 2 小时，其中预留 30 秒收尾。等待、重试、第三层及恢复不另起预算。
@@ -81,7 +83,7 @@ Worker 的 `WorkerDecisionModel` 仍将经过预算和结构校验的业务行�
 
 ## 估值、核验与失效
 
-自主授权独立记录为 `controller`，人工确认为 `user`。授权及工具请求核对方法＋参数＋版本和当前任务快照，按方法核验来源、日期、币种、证券类别、期间及财务口径。整体权益换算每股需要匹配总股数；EPS×PE/BVPS×PB核验每股指标。新原始材料DCF要求EBIT桥接及明确少数股东权益；OCF倒推尚未开放给新研究，旧快照与固定演示保留旧算法。不具备有效方法时保留not_applicable和研究partial。三个研究框架与估值方法分别选择，保持finance→thesis→valuation→verification→report。
+新研究首次设置和实际偏好版本复用知识偏好存储；长期授权、单次覆盖与交付方式分别记录。显式范围内自主选择为 `controller`，人工确认为 `user`，未确认但可计算的条件情景为 `provisional`（confirmed=false）。主／辅助模型各自有完整参数、依据、授权状态和凭证，独立核验；首页通过授权及核验后才显示正式每股结论。授权及工具请求核对方法＋参数＋版本和当前任务快照，按方法核验来源、日期、币种、证券类别、期间及财务口径。整体权益换算每股需要匹配总股数；EPS×PE/BVPS×PB核验每股指标。新原始材料DCF要求EBIT桥接及明确少数股东权益；OCF倒推尚未开放给新研究，旧快照与固定演示保留旧算法。不具备有效方法时保留not_applicable和研究partial。三个研究框架与估值方法分别选择，保持finance→thesis→valuation→verification→report。
 
 新增方法复用calc:<hash>凭证。重放重建输入并数学计算，不读取outputs充当复算，未知类型和数值篡改明确失败。缺市场基准保留unresolved；thesis保留解释，工具与报告使用同一结构化基准。细节与历史映射见[估值运行说明](USAGE.md)。
 
@@ -106,3 +108,5 @@ Vision OCR 的独立决策 Runner 也通过统一 App／插件。初始解析和
 研究保存采用过的知识修订与证据hash/locator。resume冻结模型配置、预算和截止；replay只读原固定版本，复算原估值和程序核验，不重做远程历史比较。永久删除标记受影响session来源缺失，replay明确拒绝。
 
 正式数据、派生索引、编辑删除与要求优先级详见[知识契约及命令](KNOWLEDGE.md)。
+
+首次设置、暂定选择与后续编辑继续由 RawEngine 写入 state.json。已核对 ADK 2.11.0 的 ToolContext.request_confirmation：原生确认服务于暂停／响应流程，不提供投资授权版本、撤销、暂定情景发布和证据依赖失效。沿用既有业务控制器补充这些业务契约；执行、Session、工具／插件生命周期和只读 Artifact 仍由现有原生工厂提供。API 轨迹只读显示偏好版本和选择状态，不复制选择正文到脱敏轨迹。

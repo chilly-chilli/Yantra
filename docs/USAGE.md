@@ -82,7 +82,7 @@ CLI 按 [OSC 7501 规范 revision 0.4](https://www.superlogical.com/rex/docs/bui
 | 1 | 本地I/O、意外执行失败、EOF中止或要求保存后应用失败；可能已有持久化副作用 |
 | 130 | 用户中断；检查已保存运行，不自动重放未完成请求 |
 
-常见code：`argument_error`、`invalid_json`、`input_file_error`、`validation_error`、`invalid_run_id`、`run_not_found`、`invalid_run_state`、`missing_parameters`、`subcommand_required`、`interactive_required`、`input_aborted`、`io_error`、`execution_error`、`interrupted`。模型／扩展未注册为 `model_not_found/extension_not_found`；知识、来源、要求缺失为 `knowledge_not_found/source_not_found/preference_not_found`；缺失或哈希不匹配的来源为 `source_unavailable`；运行锁冲突为 `run_busy`（退出1、可重试）。偏好应用错误见[知识说明](KNOWLEDGE.md#明确长期要求)。通用执行错误故意不转发服务正文。
+常见code：`research_setup_required`、`argument_error`、`invalid_json`、`input_file_error`、`validation_error`、`invalid_run_id`、`run_not_found`、`invalid_run_state`、`missing_parameters`、`subcommand_required`、`interactive_required`、`input_aborted`、`io_error`、`execution_error`、`interrupted`。模型／扩展未注册为 `model_not_found/extension_not_found`；知识、来源、要求缺失为 `knowledge_not_found/source_not_found/preference_not_found`；缺失或哈希不匹配的来源为 `source_unavailable`；运行锁冲突为 `run_busy`（退出1、可重试）。偏好应用错误见[知识说明](KNOWLEDGE.md#明确长期要求)。通用执行错误故意不转发服务正文。
 
 `start/resume/status/replay/cancel`的data包含 `run_id`、既有业务 `status`、`mode`、预算／限制、`stop_reasons`、`pending_user`、`hard_checks`、`issues`、报告路径及复现信息；未产生的字段为null。`status`查询到failed仍退出0，启动或恢复得到waiting/partial/failed/cancelled也不等于CLI失败。状态集合保持 `running/waiting/completed/partial/failed/cancelled`。`compare`返回比较结果，`replay`同时返回新运行与comparison。
 
@@ -98,7 +98,8 @@ CLI 按 [OSC 7501 规范 revision 0.4](https://www.superlogical.com/rex/docs/bui
 |---|---|---|
 | `--limits` | `--limits-file` | start |
 | `--pricing` | `--pricing-file` | start |
-| `--parameters` | `--parameters-file` | resume、preferences remember |
+| `--parameters` | `--parameters-file` | resume、preferences remember/setup |
+| `--authorization` | `--authorization-file` | start（仅本次覆盖） |
 | `--changes` | `--changes-file` | knowledge edit-fact |
 | `--budget` | `--budget-file` | knowledge query/rebuild |
 
@@ -130,7 +131,7 @@ CLI 按 [OSC 7501 规范 revision 0.4](https://www.superlogical.com/rex/docs/bui
 
 `--framework auto` 为默认，由预算内模型从价值与安全边际（`value`）、经营质量与现金流（`quality`）、经营改善与预期差（`change`）选择一个主框架并记录理由。可显式选择；其他用于辅助反证。`--framework-file '/路径/自定义框架.md'` 接受自然语言／Markdown，保存原文与草稿。用户框架先经过独立核验，再固定用于当前研究并保存为以后可选择的版本。主 Agent 在运行中调整的草稿经核验后供以后选择；不会静默改动正在使用的框架。
 
-默认 `--confirmation-mode autonomous`。控制器按所选方法检查参数、原始来源、币种、证券类别、期间及口径，记录 `authorization_source=controller`，再运行确定性计算；不会伪装为人工确认。整体权益换算每股还需要匹配股数，EPS×PE/BVPS×PB 校验每股指标口径。`--confirmation-mode manual` 需用户明确确认当前方法和版本，不能绕过硬条件。等待也消耗本次总墙钟时间，超时不会自动批准。
+新原始研究先完成[首次偏好及明确授权设置](KNOWLEDGE.md#首次设置与自主选择授权)，`--confirmation-mode` 继承已记录偏好，可单次覆盖。`autonomous` 只表示自主交付，不能推断授权。在显式授予范围内系统选择为 `controller`；用户明确输入为 `user`；拒绝授权或 `manual` 未回复时为 `provisional`、`confirmed=false`。暂定情景仍通过来源、口径、数学和独立核验，继续交付有实质内容的报告；首页不展示正式目标价或方向性倾向，具体值只放财务估值模块。固定演示与旧运行仍保留原等待语义。
 
 单次完整研究任务默认墙钟上限为 2 小时（7200 秒），其中预留 30 秒收尾；配置不得超过 7200 秒。新建研究使用此默认值，已保存运行沿用原截止时点。默认人民币模型费上限 49 元，必须低于 50 元。全部主 Agent、专业任务、临时角色、解析模型、框架操作、重试与修复共享持久化截止时点和费用账本。先按输入 UTF-8 字节的保守 token 上界及输出上限原子预留，再按返回用量和配置单价核算；没有用量时保留预留，不记零。账单不可得时明确标注，搜索／数据服务费单独统计。工具、模型、任务时间、失败重试及主循环另有限额。
 
@@ -149,7 +150,7 @@ DCF、PE、PB、EV/EBITDA和DDM的公式、参数、单位与硬条件集中在[
 .venv/bin/python -m yantra resume RUN_ID --runs-dir runs --env-file .env
 ```
 
-活动原始研究的参数修改以请求文件提交，在调度边界应用新版本，失效受影响成果，再重算与核验。取消可由另一终端提交，随后在预算边界收束；正在进行的 HTTP 请求最多等待其局部超时。正常恢复沿用原预算及截止；`resume --continue-research` 可明确继续 partial/failed，仍不重置预算及截止；已中断操作保留预留，未完成请求不会自动重放。修改不重置预算；已取消研究不能恢复。拒绝估值仅用于人工等待时。
+活动原始研究的参数修改以请求文件提交，在调度边界应用新版本，失效受影响成果，再重算与核验。取消可由另一终端提交，随后在预算边界收束；正在进行的 HTTP 请求最多等待其局部超时。正常恢复沿用原预算及截止；`resume --continue-research` 可明确继续 partial/failed，仍不重置预算及截止；已中断操作保留预留，未完成请求不会自动重放。修改不重置预算；已取消研究不能恢复。新研究可在暂定报告后明确拒绝估值，保留其他研究分析；旧运行仍沿用原人工等待契约。
 
 上面的 `growth_rate` 是DCF增量改参示例。切换方法时，`--parameters` 传入包含 `model`、完整 `parameters` 和 `basis` 的JSON对象；按新方法重新校验来源及硬条件、增加版本并使旧估值和核验失效。不能用旧参数授权另一种方法。完整请求形状见[手动修改说明](VALUATION.md#手动修改或切换方法)。
 

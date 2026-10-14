@@ -1,0 +1,94 @@
+{
+  "date": "2026-10-14",
+  "timezone": "Asia/Shanghai",
+  "version": "0.4.0 Unreleased",
+  "full_regression": {
+    "status": "passed",
+    "tests": 201,
+    "seconds": 241.954,
+    "log": "tests.log"
+  },
+  "investment_regression": {
+    "status": "passed",
+    "tests": 23,
+    "seconds": 21.393,
+    "log": "investment-tests.log"
+  },
+  "cli_contract": {
+    "status": "passed",
+    "scope": "actual CLI subprocesses, temporary synthetic paths, no services or models",
+    "checks": [
+      {
+        "command": "start --material SYNTHETIC --mode real-model with no setup",
+        "exit_code": 2,
+        "error_code": "research_setup_required",
+        "run_created": false
+      },
+      {
+        "command": "preferences setup explicit refusal",
+        "exit_code": 0,
+        "version": 1,
+        "authorization": {
+          "status": "refused",
+          "scope": []
+        }
+      },
+      {
+        "command": "start --help",
+        "exit_code": 0
+      },
+      {
+        "command": "preferences setup --help",
+        "exit_code": 0
+      },
+      {
+        "command": "resume --help",
+        "exit_code": 0
+      }
+    ]
+  },
+  "documentation": {
+    "status": "passed",
+    "files": 13,
+    "local_links_checked": 158,
+    "errors": []
+  },
+  "checks": {
+    "compileall": "passed",
+    "pip_check": "passed",
+    "diff_check": "passed"
+  },
+  "offline_adk_agents_cli": {
+    "status": "passed",
+    "evidence": "offline-cli-trace.json",
+    "scope": "fixed fictional demonstration on actual loopback socket and SQLite, installed agents-cli 1.10.0"
+  },
+  "new_api_scope": "actual local ASGI /setup and /run_sse, SQLite restart, source-scoped trace; fixed injected decisions",
+  "live_model_generation": "not_executed",
+  "judge": "not_executed",
+  "live_data_or_ocr": "not_executed",
+  "paid_model_calls": 0,
+  "quality_performance_and_real_cost": "unknown",
+  "push_merge_deploy_release": "not_performed",
+  "final_targeted": [
+    {
+      "status": "passed",
+      "tests": 23,
+      "seconds": 21.393,
+      "log": "investment-tests.log"
+    },
+    {
+      "status": "passed",
+      "tests": 19,
+      "seconds": 11.918,
+      "log": "v2-final-tests.log"
+    },
+    {
+      "status": "passed",
+      "tests": 16,
+      "seconds": 24.413,
+      "log": "valuation-final-tests.log"
+    }
+  ],
+  "final_targeted_scope": "After final in-memory report-history copy fix: 58 tests covering new contracts, raw controller, existing valuations and replay. Full suite was run before that final history-copy fix."
+}

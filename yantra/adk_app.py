@@ -214,7 +214,7 @@ async def execute_research(tool_context: ToolContext) -> dict[str, Any]:
         tool_context.user_content.parts if tool_context.user_content else []
     ) if not part.thought).strip()
     try:
-        if message == "/memories" or message.startswith(("/remember ","/forget ")):
+        if message == "/memories" or message.startswith(("/remember ","/forget ","/setup ")):
             from .engine import Engine
             from .knowledge.preferences import Preferences
             from .knowledge.store import KnowledgeStore, atomic_bytes
@@ -226,6 +226,8 @@ async def execute_research(tool_context: ToolContext) -> dict[str, Any]:
             preferences = Preferences(store)
             if message == "/memories":
                 return {"requirements":preferences.list()}
+            if message.startswith("/setup "):
+                return preferences.setup(json.loads(message.split(" ", 1)[1]), source="adk:/setup")
             if message.startswith("/forget "):
                 return preferences.revoke(message.split(" ",1)[1].strip())
             data = json.loads(message.split(" ",1)[1])
@@ -260,7 +262,8 @@ async def execute_research(tool_context: ToolContext) -> dict[str, Any]:
             "缺少本地研究材料，请设置 YANTRA_MATERIALS_DIR（含 manifest.json）。"
             if isinstance(exc, FileNotFoundError) else
             "真实模型模式需配置 MODEL_ID、MODEL_BASE_URL、MODEL_API_KEY。"
-            if isinstance(exc, BackendError) else "研究配置或用户操作无效，请检查当前状态与参数。"
+            if isinstance(exc, BackendError) else "首次研究前请用 /setup JSON记录偏好，明确选择授权或拒绝授权。"
+            if getattr(exc, "code", None) == "research_setup_required" else "研究配置或用户操作无效，请检查当前状态与参数。"
         )}
     snapshot = {key: state.get(key) for key in ("run_id", "status", "stage", "pending_user", "report")}
     if snapshot["status"] == "waiting":

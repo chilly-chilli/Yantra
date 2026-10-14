@@ -54,7 +54,9 @@ async def replay_raw(storage, original):
                 recomputed = engine.tools._valuation({"parameters": receipt["inputs"], "basis": receipt.get("basis", {}), "assumptions_version": receipt["assumptions_version"]}).data["calculation"]
             elif receipt["kind"] == "raw_financial_metrics":
                 rows = [{k: v for k, v in row.items() if k not in {"normalized_value", "normalized_unit"}} for row in receipt["inputs"]]
-                recomputed = engine.tools._calculate_metrics({"records": rows}, verify_sources=False).data["calculation"]
+                recomputed = engine.tools._calculate_metrics({"records": rows}, verify_sources=False, screening_version=1 if "financial_screening" in receipt["results"] else 0).data["calculation"]
+            elif receipt["kind"] == "expectation_comparison":
+                recomputed = engine.tools._compare_expectations(receipt["inputs"]).data["calculation"]
             else:
                 raise ValueError("unsupported calculation kind")
         except (ValueError, KeyError, TypeError, InvalidOperation) as exc:

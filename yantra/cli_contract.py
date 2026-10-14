@@ -122,6 +122,8 @@ def output_mode(argv):
 
 
 def exception_error(exc):
+    if getattr(exc, "code", None) == "research_setup_required":
+        return CLIError("research_setup_required", "首次研究前请完成 preferences setup，明确偏好并选择授权或拒绝授权", field="preferences")
     from pydantic import ValidationError
     if isinstance(exc, CLIError):
         return exc

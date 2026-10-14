@@ -21,7 +21,7 @@ def canonical(value):
 
 
 class RawToolRegistry(ToolRegistry):
-    names = ToolRegistry.names | {"search_public", "fetch_source"}
+    names = ToolRegistry.names | {"search_public", "fetch_source", "compare_expectations"}
 
     def __init__(self, directory):
         super().__init__(directory, RawMaterialAdapter(directory))
@@ -38,7 +38,46 @@ class RawToolRegistry(ToolRegistry):
         from .schemas import MethodInputs
         contracts["valuation"]["description"] = "Execute authorized model DCF/PE/PB/EV-EBITDA/single-stage DDM. Historical DCF parameters are unchanged. New raw DCF also requires minority_interest (million), reviewed EBIT FCFF bridge and structured source_refs in basis for base_fcf/net_debt/shares/minority_interest. All bridge records must carry security_code, share_class and accounting_scope. New non-DCF parameters schema: " + json.dumps(MethodInputs.model_json_schema(), ensure_ascii=False)
         contracts.update(self.extension_contracts)
+        from .schemas import ExpectationArguments
+        contracts["compare_expectations"] = {"description": "Compare sourced operating forecasts with dated consensus, a limited research sample, or no external baseline. No price-implied assumptions or pricing claims.", "arguments_schema": ExpectationArguments.model_json_schema()}
         return contracts
+
+    def _compare_expectations(self, args):
+        from .schemas import ExpectationArguments
+        from .investment_logic import compare_expectations
+        value = ExpectationArguments.model_validate(args)
+        anchors = self.anchors()
+        original = json.loads(self.extraction_path.read_text()) if self.extraction_path.exists() else {"financials": []}
+        context = getattr(self, "research_context", {})
+        for forecast in value.own_forecasts:
+            from .valuation import PER_SHARE_UNITS, per_share_unit_matches
+            if forecast.unit in PER_SHARE_UNITS and not per_share_unit_matches(forecast.unit, forecast.currency):
+                raise ValueError("own forecast per-share unit/currency mismatch")
+            if (forecast.security_code, forecast.share_class, forecast.currency) != (context.get("security_code"), context.get("share_class"), context.get("trading_currency")):
+                raise ValueError("own forecast identity does not match research")
+            if any(ref not in anchors for ref in forecast.evidence_refs):
+                raise ValueError("own forecast basis requires original anchors")
+        for forecast in value.external_forecasts:
+            row = forecast.record
+            if row.unit in PER_SHARE_UNITS and not per_share_unit_matches(row.unit, row.currency):
+                raise ValueError("external forecast per-share unit/currency mismatch")
+            if canonical(row.model_dump()) not in [canonical(r) for r in original["financials"]]:
+                raise ValueError("external forecast is not an accepted original extraction")
+            if row.information_kind != "prediction" or row.source_ref not in anchors or anchors[row.source_ref][1]["source_hash"] != row.source_hash:
+                raise ValueError("external forecast must be a sourced prediction")
+            text = anchors[row.source_ref][0]["text"]
+            if not source_number_present(row.raw_value, text) or numeric(row.raw_value) != row.value or forecast.provider not in text or forecast.as_of not in text:
+                raise ValueError("external forecast number/provider/date does not resolve")
+            if not row.disclosure_date or cutoff_time(forecast.as_of) > cutoff_time(context["cutoff"]) or row.disclosure_date != forecast.as_of:
+                raise ValueError("external forecast date mismatch or after cutoff")
+            if forecast.kind == "consensus" and (not re.search(r"一致|consensus", text, re.I) or not source_number_present(str(forecast.sample_size), text)):
+                raise ValueError("consensus requires original provider/sample evidence")
+        results = compare_expectations(value.model_dump())
+        payload = {"kind": "expectation_comparison", "schema_version": 1, "inputs": value.model_dump(),
+                   "formula": {"absolute_difference": "own-external", "relative_difference": "own/external-1; positive denominator required"}, "results": results}
+        ref = self._record_calculation(payload)
+        return ToolResponse(ok=True, data={**results, "calculation": payload, "calculation_ref": ref}, calculation_refs=[ref],
+                            evidence_refs=sorted({r for f in value.own_forecasts for r in f.evidence_refs} | {f.record.source_ref for f in value.external_forecasts}))
 
     def snapshot(self):
         index = self.load_manifest()
@@ -282,7 +321,7 @@ class RawToolRegistry(ToolRegistry):
         refs = sorted({x["source_ref"] for x in data["financials"] + data["evidence"]})
         return ToolResponse(ok=True, data=data, evidence_refs=refs)
 
-    def _calculate_metrics(self, args, *, verify_sources=True):
+    def _calculate_metrics(self, args, *, verify_sources=True, screening_version=None):
         records = MetricsArguments.model_validate(args).records
         if verify_sources and not self.extraction_path.exists():
             raise ValueError("metrics require an original extraction receipt")
@@ -314,7 +353,7 @@ class RawToolRegistry(ToolRegistry):
             if len(group)>5:
                 metrics["business_scope"]=group[5]
             for name, numerator in (("operating_margin", "operating_profit"), ("net_margin", "net_profit")):
-                if "revenue" in unique and unique["revenue"][0] != 0 and numerator in unique:
+                if "revenue" in unique and unique["revenue"][0] != 0 and (not getattr(self, "screening_version", 0) or unique["revenue"][0] > 0) and numerator in unique:
                     metrics[name] = _out(unique[numerator][0] / unique["revenue"][0])
             if {"debt", "cash"} <= unique.keys():
                 metrics["net_debt"] = _out(unique["debt"][0] - unique["cash"][0])
@@ -355,6 +394,10 @@ class RawToolRegistry(ToolRegistry):
             ordered = [k for k in ordered if len(k.split("/")) == 5 and k.split("/")[3] == context["security_code"] and k.split("/")[4] == "consolidated"]
         if ordered:
             results.update(latest_period=ordered[-1].split("/")[0], **results["periods"][ordered[-1]])
+        screening_version = screening_version if screening_version is not None else getattr(self, "screening_version", 0)
+        if screening_version:
+            from .financial_analysis import screening
+            results["financial_screening"] = screening(normalized)
         payload = {"kind": "raw_financial_metrics", "inputs": normalized,
                    "formula": {"net_debt": "debt - cash", "margin": "profit / revenue", "ocf_minus_capex": "OCF - abs(capex cash outflow); not FCFF without reconciliation", "units": "value * original unit factor / million"}, "results": results}
         ref = self._record_calculation(payload)
@@ -363,7 +406,11 @@ class RawToolRegistry(ToolRegistry):
 
     def _check_consistency(self, args):
         value = CheckArguments.model_validate(args)
-        entries = [{**v, "target": k} for k, v in value.results.items()] if isinstance(value.results, dict) else value.results
+        entries = [{**v, "target": k} for k, v in value.results.items()] if isinstance(value.results, dict) else list(value.results)
+        for entry in list(entries):
+            auxiliary_models = entry.get("data", {}).get("auxiliary_models", {})
+            for model, data in (auxiliary_models.items() if isinstance(auxiliary_models, dict) else []):
+                entries.append({"target": "valuation", "data": data, "calculation_refs": [data["calculation_ref"]], "evidence_refs": []})
         anchors = self.anchors()
         issues, refs, calcs = [], set(), set()
         original = json.loads(self.extraction_path.read_text()) if self.extraction_path.exists() else {"financials": [], "evidence": []}
@@ -373,6 +420,19 @@ class RawToolRegistry(ToolRegistry):
 
         for entry in entries:
             data = entry.get("data", entry)
+            if getattr(self, "screening_version", 0) and entry.get("target") == "finance" and data.get("metrics"):
+                metrics = data["metrics"]
+                metric_receipt = self.calculations.get(metrics.get("calculation_ref"))
+                if not metric_receipt or canonical(metrics.get("calculation")) != canonical(metric_receipt) or any(canonical(metrics.get(k)) != canonical(v) for k, v in metric_receipt.get("results", {}).items()):
+                    issue("finance", "财务指标或异常信号与凭证不符", "critical")
+            for key in ("businesses", "risks", "disconfirming", "tracking"):
+                for row in data.get(key, []):
+                    if not isinstance(row, dict):
+                        continue  # Historical textual lists retain their original contract.
+                    citations = row.get("evidence_refs", [])
+                    requires_source = key == "businesses" or row.get("suggested_level", "unknown") != "unknown" or row.get("status", "unknown") != "unknown" or row.get("current_value") is not None
+                    if any(r not in anchors for r in citations) or (requires_source and not citations):
+                        issue("thesis", "业务、风险或跟踪当前状态缺少原始来源", "critical")
             for ref in entry.get("evidence_refs", []):
                 if ref not in anchors:
                     issue("finance", f"引用不能解析：{ref}", "critical")
@@ -403,26 +463,32 @@ class RawToolRegistry(ToolRegistry):
                     rows = [{k: v for k, v in r.items() if k not in {"normalized_value", "normalized_unit"}} for r in receipt["inputs"]]
                     if any(canonical(r) not in [canonical(x) for x in original["financials"]] for r in rows):
                         issue("finance", "计算输入与原始记录不符", "critical")
-                    expected = self._calculate_metrics({"records": rows}, verify_sources=False).data["calculation"]
+                    expected = self._calculate_metrics({"records": rows}, verify_sources=False, screening_version=1 if "financial_screening" in receipt["results"] else 0).data["calculation"]
+                elif receipt["kind"] == "expectation_comparison":
+                    expected = self._compare_expectations(receipt["inputs"]).data["calculation"]
+                    if data.get("expectations", {}).get("calculation") and data["expectations"] != self._compare_expectations(receipt["inputs"]).data:
+                        issue("thesis", "经营预期比较与凭证不符", "critical")
                 elif receipt["kind"] in {"dcf", "dcf_bridge", "valuation_method"}:
                     model = receipt.get("model") if receipt["kind"] == "valuation_method" else "dcf"
-                    if not value.assumptions.confirmed or receipt["assumptions_version"] != value.assumptions.version or receipt["inputs"] != value.assumptions.parameters:
+                    published = data.get("auxiliary_models", {}).get(model, data) if data.get("model") != model else data
+                    authorized = value.assumptions if model == value.assumptions.model else value.assumptions.auxiliary_models.get(model)
+                    if not authorized or not authorized.calculation_permitted or receipt["assumptions_version"] != authorized.version or receipt["inputs"] != authorized.parameters:
                         issue("valuation", "估值授权或版本失效", "critical")
-                    if model != value.assumptions.model or (receipt["kind"] in {"valuation_method", "dcf_bridge"} and receipt["basis"] != value.assumptions.basis):
+                    if not authorized or (receipt["kind"] in {"valuation_method", "dcf_bridge"} and receipt["basis"] != authorized.basis):
                         issue("valuation", "方法身份或参数依据与授权不符", "critical")
                     try:
                         if receipt["kind"] == "dcf_bridge":
-                            self.validate_dcf_sources(value.assumptions.model_dump(), value.research.model_dump())
+                            self.validate_dcf_sources(authorized.model_dump(), value.research.model_dump())
                         expected = self._valuation({"model": model, "parameters": receipt["inputs"], "assumptions_version": receipt["assumptions_version"], "basis": receipt.get("basis", {})}).data["calculation"]
                     except (ValueError, KeyError, FileNotFoundError) as exc:
                         issue("valuation", f"估值来源或复算拒绝：{exc}", "critical")
                         continue
-                    if (entry.get("target") == "valuation" or data.get("calculation")) and (data.get("calculation") != receipt or any(data.get(k) != v for k, v in receipt["results"].items())):
+                    if (entry.get("target") == "valuation" or published.get("calculation")) and (published.get("calculation") != receipt or any(published.get(k) != v for k, v in receipt["results"].items())):
                         issue("valuation", "发布结果与凭证不符", "critical")
-                    if entry.get("target") == "valuation" or data.get("calculation"):
+                    if entry.get("target") == "valuation" or published.get("calculation"):
                         metadata = ["inputs", "formula", "assumptions_version"] + (["basis", "model"] if receipt["kind"] != "dcf" else [])
                         metadata += [k for k in ["scenarios", "sensitivity"] if k in receipt]
-                        if any(data.get(k) != receipt.get(k) for k in metadata):
+                        if any(published.get(k) != receipt.get(k) for k in metadata):
                             issue("valuation", "发布参数、方法、公式或情景与凭证不符", "critical")
                 else:
                     issue("valuation", "未知凭证类型，不支持复算", "critical")

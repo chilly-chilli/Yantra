@@ -30,6 +30,7 @@
 ## 验证与历史资料
 
 - [验证索引](validation/README.md)：各版本的命令、结果、证据和未验证范围。
+- [首轮投资逻辑整合检查](validation/v0.4.0/investment-logic-2026-10-14/README.md)：首次设置、暂定交付、财务异常、多模型及报告结构的确定性和离线验证。
 - [历史使用与实施文稿](archive/README.md)：查看当时的操作、选型和交付状态。
 - [估值示例](../examples/v022/README.md)：合成示例及依赖用户文件的可选验证。
 

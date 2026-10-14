@@ -88,6 +88,12 @@ def prepare_reviewed_extractions(engine, backend):
 
 
 async def validate(storage=ROOT / "examples/v022/output/local"):
+    from yantra.knowledge.preferences import Preferences
+    from yantra.knowledge.store import KnowledgeStore
+    preferences = Preferences(KnowledgeStore(Path(storage) / "knowledge"))
+    if not any(p["id"] == "research-setup" for p in preferences.list(history=True)):
+        preferences.setup({"horizon": "12个月", "framework": "quality", "confirmation_mode": "autonomous",
+                           "authorization": {"status": "refused", "scope": []}})
     summaries = []
     for reject in [False, True]:
         backend = LocalBackend(reject)

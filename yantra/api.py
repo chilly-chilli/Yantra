@@ -45,7 +45,10 @@ def controller_projection(state, task_id=None):
     return {"source": "state.json", "accounting": "controller_authoritative_read_only",
             "actual_bill_available": False, "deadline": state.get("deadline"),
             "budget": {key: state["budget"][key] for key in keys if numeric(state["budget"].get(key))},
-            "model_receipts": receipts, "preparation_searches": searches}
+            "model_receipts": receipts, "preparation_searches": searches,
+            "preference_version": state.get("preference_snapshot", {}).get("version"),
+            "choices": [{k: choice.get(k) for k in ("id", "kind", "status", "preference_version", "assumptions_version")}
+                        for choice in state.get("choices", [])] if task_id in {None, "main"} else []}
 
 
 class YantraLoader(BaseAgentLoader):

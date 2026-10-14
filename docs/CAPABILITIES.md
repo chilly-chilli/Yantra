@@ -162,3 +162,5 @@ v0.3.3 提供扶摇 REST、东方财富妙想金融数据／资讯搜索直接 A
 实现协议依据：[MCP 传输规范](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports)、[官方 Python SDK](https://github.com/modelcontextprotocol/python-sdk/tree/v1.x)。历史接入验证见 [v0.2.1 记录](validation/v0.2.1/README.md)。
 
 当前版本的验证范围见[v0.3验收](validation/v0.3/README.md)；模型列表探测和离线响应不等于真实推理验收。
+
+首轮投资逻辑整合在thesis角色增加只读确定性 `compare_expectations`，与已有valuation价格基准分开；输入、来源和预测差异保存计算凭证。没有新增收费服务、模型、PS、订阅或自动监控。权限、公式及报告契约见[估值说明](VALUATION.md#经营预测比较与清单)。

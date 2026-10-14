@@ -20,6 +20,7 @@ from yantra.policies import OfflineDemoBackend
 from yantra.research import RawBackend, RawEngine
 from yantra.schemas import MainAction
 from test_v2 import PRICE, TEXT
+from research_fixtures import create_test_raw
 
 
 class Provider(BaseLlm):
@@ -65,7 +66,7 @@ async def measure(output, samples):
                         backend = RawBackend("test", "https://unused.invalid/v1", "synthetic-only")
                         provider = Provider(native=native, use_skill=use_skill)
                         backend._model = provider
-                        engine = RawEngine.create_raw(root / "runs", {"company": "测试公司", "horizon": "12个月", "cutoff": "2026-10-13", "market": "CN", "security_code": "600000"},
+                        engine = create_test_raw(root / "runs", {"company": "测试公司", "horizon": "12个月", "cutoff": "2026-10-13", "market": "CN", "security_code": "600000"},
                             [material], backend=backend, pricing=PRICE, settings=store)
                         if not compact:
                             engine.state["capabilities"].pop("worker_context")

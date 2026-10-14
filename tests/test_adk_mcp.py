@@ -1,4 +1,5 @@
 """Actual local MCP transports, frozen contracts and externally observed cleanup."""
+from research_fixtures import create_test_raw
 import asyncio
 import json
 import logging
@@ -20,7 +21,6 @@ from yantra.adk_mcp import NativeMCP
 from yantra.adk_app import run_worker
 from yantra.adk_app import YantraAgent
 from yantra.api import create_app
-from yantra.research import RawEngine
 from yantra.engine import Engine
 from yantra.schemas import MainAction
 from test_v2 import PRICE, TEXT, V2TestBackend
@@ -241,7 +241,7 @@ class NativeMCPTests(unittest.IsolatedAsyncioTestCase):
             source = root / "input.txt"
             source.write_text(TEXT)
             backend = Backend()
-            engine = RawEngine.create_raw(root / "runs", {"company": "测试公司", "horizon": "12个月", "cutoff": "2026-10-13", "market": "CN", "security_code": "600000"},
+            engine = create_test_raw(root / "runs", {"company": "测试公司", "horizon": "12个月", "cutoff": "2026-10-13", "market": "CN", "security_code": "600000"},
                 [source], backend=backend, pricing=PRICE, settings=store)
             backend.alias = next(iter(engine.extensions.bindings))
             task = engine._make_task(MainAction(action="delegate_task", target="finance", purpose="collect"))
@@ -285,7 +285,7 @@ class NativeMCPTests(unittest.IsolatedAsyncioTestCase):
             source = root / "input.txt"
             source.write_text(TEXT)
             backend = Backend()
-            engine = RawEngine.create_raw(root / "runs", {"company": "测试公司", "horizon": "12个月", "cutoff": "2026-10-13", "market": "CN", "security_code": "600000"},
+            engine = create_test_raw(root / "runs", {"company": "测试公司", "horizon": "12个月", "cutoff": "2026-10-13", "market": "CN", "security_code": "600000"},
                 [source], backend=backend, pricing=PRICE, settings=store)
             backend.alias = next(iter(engine.extensions.bindings))
             task = engine._make_task(MainAction(action="delegate_task", target="finance", purpose="collect"))
@@ -314,7 +314,7 @@ class NativeMCPTests(unittest.IsolatedAsyncioTestCase):
             source = root / "input.txt"
             source.write_text(TEXT)
             backend = Backend()
-            engine = RawEngine.create_raw(root / "runs", {"company": "测试公司", "horizon": "12个月", "cutoff": "2026-10-13", "market": "CN", "security_code": "600000"},
+            engine = create_test_raw(root / "runs", {"company": "测试公司", "horizon": "12个月", "cutoff": "2026-10-13", "market": "CN", "security_code": "600000"},
                 [source], backend=backend, pricing=PRICE, settings=store)
             backend.alias = next(iter(engine.extensions.bindings))
             task = engine._make_task(MainAction(action="delegate_task", target="finance", purpose="collect"))

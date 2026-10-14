@@ -1,4 +1,5 @@
 """Actual SkillToolset/Worker path with controlled synthetic provider decisions."""
+from research_fixtures import create_test_raw
 import json
 from pathlib import Path
 import tempfile
@@ -17,7 +18,7 @@ from yantra.configuration import ConfigStore
 from yantra.engine import Engine
 from yantra.extensions import ExtensionCatalog, ExtensionRuntime
 from yantra.policies import OfflineDemoBackend
-from yantra.research import RawBackend, RawEngine
+from yantra.research import RawBackend
 from yantra.schemas import MainAction
 from test_v2 import PRICE, TEXT, V2TestBackend
 
@@ -66,7 +67,7 @@ class SkillIntegrationTests(unittest.IsolatedAsyncioTestCase):
             backend = RawBackend("test", "https://unused.invalid/v1", "synthetic-only")
             provider = SkillProvider()
             backend._model = provider
-            engine = RawEngine.create_raw(root / "runs", {"company": "测试公司", "horizon": "12个月", "cutoff": "2026-10-13", "market": "CN", "security_code": "600000"},
+            engine = create_test_raw(root / "runs", {"company": "测试公司", "horizon": "12个月", "cutoff": "2026-10-13", "market": "CN", "security_code": "600000"},
                 [material], backend=backend, pricing=PRICE, settings=store)
             task = engine._make_task(MainAction(action="delegate_task", target="finance", purpose="collect"))
             result = await run_worker(engine, task.model_dump())
@@ -127,7 +128,7 @@ class SkillIntegrationTests(unittest.IsolatedAsyncioTestCase):
             await ExtensionCatalog(store).add("skills", "cash_flow", {"path": str(source), "roles": ["finance"], "loading": "native"})
             material = root / "input.txt"
             material.write_text(TEXT)
-            engine = RawEngine.create_raw(root / "runs", {"company": "测试公司", "horizon": "12个月", "cutoff": "2026-10-13", "market": "CN", "security_code": "600000"},
+            engine = create_test_raw(root / "runs", {"company": "测试公司", "horizon": "12个月", "cutoff": "2026-10-13", "market": "CN", "security_code": "600000"},
                 [material], backend=V2TestBackend(), pricing=PRICE, settings=store)
             engine.state["capabilities"]["extensions"].pop("skill_loading")
             engine._save()
@@ -171,7 +172,7 @@ class SkillIntegrationTests(unittest.IsolatedAsyncioTestCase):
             backend = RawBackend("test", "https://unused.invalid/v1", "synthetic-only")
             provider = RestrictedProvider()
             backend._model = provider
-            engine = RawEngine.create_raw(root / "runs", {"company": "测试公司", "horizon": "12个月", "cutoff": "2026-10-13", "market": "CN", "security_code": "600000"},
+            engine = create_test_raw(root / "runs", {"company": "测试公司", "horizon": "12个月", "cutoff": "2026-10-13", "market": "CN", "security_code": "600000"},
                 [material], backend=backend, pricing=PRICE, settings=store)
             task = engine._make_task(MainAction(action="delegate_task", target="finance", purpose="collect"))
             task.depth = 3

@@ -35,7 +35,15 @@ def memo_markdown(state, directory):
         return f"[{ref}]({path}:{line})"
 
     def bullets(values):
-        return ["- " + str(v) for v in values] or ["- 证据不足，待补查。"]
+        items = []
+        for value in values:
+            if isinstance(value, dict):
+                title = value.get("description", value.get("condition", value.get("name", "")))
+                detail = {k: v for k, v in value.items() if k not in {"description", "condition", "name", "evidence_refs"} and v is not None}
+                items.append("- " + title + " · " + json.dumps(detail, ensure_ascii=False) + " · " + "、".join(source(r) for r in value.get("evidence_refs", [])))
+            else:
+                items.append("- " + str(value))
+        return items or ["- 证据不足，待补查。"]
 
     lines = ["# Yantra 投资备忘录", f"运行：{state['run_id']} · 模式：{state['mode']} · 状态：**{state['status']}**",
              f"对象：{research['company']} · 研究期限：{research['horizon']} · 资料截止：{research['cutoff']}"]
@@ -44,7 +52,7 @@ def memo_markdown(state, directory):
     if state["mode"] == "offline-demo":
         lines += ["行动由脚本化演示策略选择，用于验证执行闭环；不代表真实模型推理。"]
     lines += ["## 1. 投资结论摘要", "[判断] " + report["投资结论摘要"]["statement"]]
-    if valuation.get("per_share_value") is not None:
+    if valuation.get("per_share_value") is not None and report["投资结论摘要"].get("valuation_status", "confirmed") == "confirmed":
         lines += [f"[预测] 当前授权参数下，{method_label} 每股价值为 **{valuation['per_share_value']:.6f} {valuation.get('currency', 'CNY')}**。该结果是条件性模型输出。"]
     if research["reference_price"] is None:
         lines += ["用户参考价格及价格时点缺失；相对现价差异须使用下方已核对的计算基准。"]
@@ -67,6 +75,13 @@ def memo_markdown(state, directory):
         lines += [f"| {labels.get(row.get('information_kind') or 'fact')} | {row['period']} | {FIELDS.get(row['field'], row['field'])} | {row['value']:g} | {row['currency']} {row['unit']} | {source(row['source_ref'])} |"]
     for item in finance.get("evidence", []):
         lines += [f"[{labels.get(item['kind'], '未分类')}] {item['statement']} · {item.get('speaker') or ''} · {source(item['source_ref'])}"]
+    for business in report["事实与数据基础"].get("businesses", []):
+        lines += ["实际业务：" + business["name"], json.dumps({k: v for k, v in business.items() if k != "evidence_refs"}, ensure_ascii=False),
+                  "业务依据：" + "、".join(source(r) for r in business["evidence_refs"])]
+    if state.get("investment_logic_version"):
+        setup = state["preference_snapshot"]
+        lines += [f"使用偏好：{setup['id']} v{setup['version']} · 长期授权：{setup['parameters']['authorization']['status']} · 本次覆盖：{state.get('authorization_override')}",
+                  "关键节点选择：" + json.dumps(state.get("choices", []), ensure_ascii=False)]
     if not finance.get("financials"):
         lines += ["未取得可用财务底表，不补造数字。"]
     lines += ["## 4. 财务分析与估值"]
@@ -77,9 +92,21 @@ def memo_markdown(state, directory):
                   f"最新期间净债务（{metrics.get('currency', '未确认')} 百万元）：{metrics.get('net_debt', '缺失')}。"]
         if "revenue_growth" in metrics:
             lines += [f"收入增长率：{metrics['revenue_growth']:.2%}；营业利润率：" + json.dumps(metrics.get("operating_margin", {}), ensure_ascii=False)]
+        screen = metrics.get("financial_screening", {})
+        if screen:
+            lines += ["[计算] 四类指标矩阵（比例为ratio，金额为百万元；期间及平均余额口径保存在凭证）：",
+                      "| 期间 | 业务范围 | 指标 | 数值 | 原始位置 |", "|---|---|---|---:|---|"]
+            for entry in screen["matrix"]:
+                for name, value in entry["metrics"].items():
+                    lines += [f"| {entry['period']} | {entry['business_scope']} | {name} | {value:.6f} | {'、'.join(source(r) for r in entry['source_refs'][name])} |"]
+                if entry["data_quality"]:
+                    lines += ["数据待核：" + "；".join(entry["data_quality"])]
+                lines += ["未计算的指标及原因：" + json.dumps(entry["unavailable"], ensure_ascii=False)]
+            lines += ["异常调查信号（业务解释保留信号，触发不等同于质量差）：", *bullets(screen["signals"]),
+                      "可能原因及待核查：" + json.dumps(thesis.get("anomaly_explanations", []), ensure_ascii=False)]
     proposal = a.get("proposal", {}).get("data", {})
     lines += ["模型：" + str(proposal.get("model", "尚未提出")), "适用范围：" + str(proposal.get("scope", "证据不足")),
-              f"[假设] 版本 v{version}，确认状态：{'已明确确认' if assumptions['confirmed'] else '未确认，禁止正式估值'}。",
+              f"[假设] 版本 v{version}，确认状态：{assumptions.get('authorization_source', 'none')}；{'已确认' if assumptions['confirmed'] else '未确认，仅为暂定情景'}。",
               "| 参数 | 当前值 | 依据 |", "|---|---|---|"]
     for key, value in assumptions["parameters"].items():
         basis = assumptions["basis"].get(key, "口径标签")
@@ -88,6 +115,14 @@ def memo_markdown(state, directory):
         elif isinstance(basis, str) and ":L" in basis:
             basis = source(basis)
         lines += [f"| {key} | {value} | {basis} |"]
+    if valuation.get("per_share_value") is not None:
+        lines += [f"[情景计算] {method_label} 每股价值：{valuation['per_share_value']:.6f} {valuation.get('currency', 'CNY')}；状态：{assumptions.get('authorization_source', 'none')}。"]
+    if valuation.get("auxiliary_models"):
+        for method, output in valuation["auxiliary_models"].items():
+            lines += ["辅助模型："+method+" · "+json.dumps({k: output.get(k) for k in ("per_share_value", "value_range", "currency", "basis", "calculation_ref")}, ensure_ascii=False)]
+        lines += ["模型差异："+json.dumps(valuation["model_differences"], ensure_ascii=False)]
+    if report["财务分析与估值"].get("valuation_price_comparison"):
+        lines += ["估值相对价格差异（与经营预测差异分开）："+json.dumps(report["财务分析与估值"]["valuation_price_comparison"], ensure_ascii=False)]
     if valuation and model != "dcf":
         lines += ["[预测] 公式：" + str(valuation.get("formula", "")),
                   "方法状态：" + str(valuation.get("method_status")),
@@ -115,6 +150,9 @@ def memo_markdown(state, directory):
         lines += ["比较基准：" + json.dumps(report["市场预期差"]["baseline"], ensure_ascii=False)]
     if report["市场预期差"].get("comparison"):
         lines += ["[计算] " + json.dumps(report["市场预期差"]["comparison"], ensure_ascii=False)]
+    if report["市场预期差"].get("own_forecasts"):
+        lines += ["本方预测及兑现条件："+json.dumps(report["市场预期差"]["own_forecasts"], ensure_ascii=False),
+                  "已取得预测比较："+json.dumps(report["市场预期差"].get("comparisons", []), ensure_ascii=False)]
     lines += ["## 证据缺口与核验", *bullets(report["投资结论摘要"]["gaps"])]
     if state.get("raw_materials"):
         lines += [f"主框架：{state['framework']['version']} · 研究标准：v{state['standard_version']} · 估值授权：{assumptions.get('authorization_source', 'none')}",

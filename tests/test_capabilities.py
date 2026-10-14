@@ -1,4 +1,5 @@
 """v0.2.1 profiles and extension integration, using local services only."""
+from research_fixtures import create_test_raw
 import asyncio
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 import json
@@ -23,7 +24,6 @@ from yantra.configuration import ConfigStore
 from yantra.engine import Engine,StopRun
 from yantra.extensions import ExtensionCatalog,ExtensionRuntime,run_command
 from yantra.models import ModelCatalog,ModelProfile,OCROutput,check_model
-from yantra.research import RawEngine
 from yantra.schemas import FrameworkChoice,MainAction
 from test_v2 import PRICE,TEXT,V2TestBackend
 
@@ -85,7 +85,7 @@ class ModelTests(unittest.IsolatedAsyncioTestCase):
             profile={"kind":"llm","provider":"openai-compatible","model_id":"first","base_url":"http://localhost:1234/v1","api_key_env":"KEY_ONE","pricing":PRICE}
             catalog.add("one",profile);catalog.add("two",profile|{"model_id":"second","api_key_env":"KEY_TWO"});catalog.select("llm","one")
             with patch("yantra.models.create_backend",return_value=V2TestBackend()) as factory:
-                engine=RawEngine.create_raw(root/"runs",{"company":"测试公司","horizon":"12个月","cutoff":"2026-10-13","market":"CN","security_code":"600000"},[source],settings=store)
+                engine=create_test_raw(root/"runs",{"company":"测试公司","horizon":"12个月","cutoff":"2026-10-13","market":"CN","security_code":"600000"},[source],settings=store)
                 self.assertEqual(factory.call_args.args[0]["name"],"one")
             catalog.select("llm","two")
             loaded=Engine.load(root/"runs",engine.state["run_id"])
@@ -110,7 +110,7 @@ class ModelTests(unittest.IsolatedAsyncioTestCase):
             store=ConfigStore(root/"config.json");catalog=ModelCatalog(store)
             catalog.add("local-ocr",{"kind":"ocr","provider":"command","command":[sys.executable,str(script)],"call_cost_cny":.1,"cost_source":"test fixture fee bound","cost_as_of":"2026-10-13"})
             catalog.select("ocr","local-ocr")
-            engine=RawEngine.create_raw(root/"runs",{"company":"测试公司","horizon":"12个月","cutoff":"2026-10-13"},[image],backend=V2TestBackend(),pricing=PRICE,settings=store)
+            engine=create_test_raw(root/"runs",{"company":"测试公司","horizon":"12个月","cutoff":"2026-10-13"},[image],backend=V2TestBackend(),pricing=PRICE,settings=store)
             document=next(iter(engine.state["input_snapshot"]["materials"].values()))
             self.assertIn("1,234.50",document["text"])
             self.assertEqual(engine.state["budget"]["ocr_calls"],1)
@@ -145,7 +145,7 @@ class ModelTests(unittest.IsolatedAsyncioTestCase):
             provider = VisionProvider()
             backend._model = provider
             with patch("yantra.models.create_backend", return_value=backend), invocation_scope("synthetic-parent-invocation"):
-                engine = RawEngine.create_raw(root / "runs", {"company": "测试公司", "horizon": "12个月", "cutoff": "2026-10-13"},
+                engine = create_test_raw(root / "runs", {"company": "测试公司", "horizon": "12个月", "cutoff": "2026-10-13"},
                     [image], backend=V2TestBackend(), pricing=PRICE, settings=store)
             self.assertEqual(provider.images, 1)
             events = [json.loads(line) for line in (engine.directory / "adk-trace.jsonl").read_text().splitlines()]
@@ -171,7 +171,7 @@ class ModelTests(unittest.IsolatedAsyncioTestCase):
                                   "api_key_env":"VISION_KEY","pricing":price,"max_image_tokens":2048})
             catalog.select("ocr","vision")
             with patch.object(RealModelBackend,"_decision",transcribe):
-                engine=RawEngine.create_raw(root/"runs",{"company":"测试公司","horizon":"12个月","cutoff":"2026-10-13"},[image],backend=V2TestBackend(),pricing=PRICE,settings=store)
+                engine=create_test_raw(root/"runs",{"company":"测试公司","horizon":"12个月","cutoff":"2026-10-13"},[image],backend=V2TestBackend(),pricing=PRICE,settings=store)
             receipt=engine.state["model_ledger"][0]
             self.assertEqual(captured[0][:2],("ocr_transcriber",OCROutput))
             self.assertEqual(captured[0][3][0].inline_data.mime_type,"image/png")
@@ -271,7 +271,7 @@ class ExtensionTests(unittest.IsolatedAsyncioTestCase):
             store=ConfigStore(root/"config.json");catalog=ExtensionCatalog(store)
             await catalog.add("tools","echo",{"description":"Echo a value","command":[sys.executable,str(tool)],"input_schema":{"type":"object","properties":{"value":{"type":"integer"}},"required":["value"]},"roles":["finance"],"cost_cny":.2,"cost_kind":"model","cost_source":"fixture","cost_as_of":"2026-10-13"})
             source=root/"source.txt";source.write_text(TEXT)
-            engine=RawEngine.create_raw(root/"runs",{"company":"测试公司","horizon":"12个月","cutoff":"2026-10-13","market":"CN","security_code":"600000"},[source],backend=ToolBackend(),pricing=PRICE,settings=store)
+            engine=create_test_raw(root/"runs",{"company":"测试公司","horizon":"12个月","cutoff":"2026-10-13","market":"CN","security_code":"600000"},[source],backend=ToolBackend(),pricing=PRICE,settings=store)
             task=engine._make_task(MainAction(action="delegate_task",target="finance",purpose="collect"))
             result=await run_worker(engine,task.model_dump())
             self.assertTrue(result["data"]["extension_checked"])
@@ -297,7 +297,7 @@ class ExtensionTests(unittest.IsolatedAsyncioTestCase):
             store=ConfigStore(root/"config.json");catalog=ExtensionCatalog(store)
             await catalog.add("mcp","local",{"transport":"stdio","command":[sys.executable,str(server)],"roles":["finance"]})
             source=root/"source.txt";source.write_text(TEXT);backend=MCPBackend()
-            engine=RawEngine.create_raw(root/"runs",{"company":"测试公司","horizon":"12个月","cutoff":"2026-10-13","market":"CN","security_code":"600000"},[source],backend=backend,pricing=PRICE,settings=store)
+            engine=create_test_raw(root/"runs",{"company":"测试公司","horizon":"12个月","cutoff":"2026-10-13","market":"CN","security_code":"600000"},[source],backend=backend,pricing=PRICE,settings=store)
             backend.alias=next(iter(engine.extensions.bindings))
             task=engine._make_task(MainAction(action="delegate_task",target="finance",purpose="collect"))
             result=await run_worker(engine,task.model_dump())

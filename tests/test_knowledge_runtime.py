@@ -1,4 +1,5 @@
 """Fictional two-session ADK/controller integration; no remote models/services."""
+from research_fixtures import create_test_raw
 import asyncio
 import copy
 import json
@@ -14,7 +15,6 @@ from yantra.cli import parser, execute, read_state
 from yantra.engine import Engine, StopRun
 from yantra.knowledge.preferences import Preferences
 from yantra.replay import replay_raw
-from yantra.research import RawEngine
 from yantra.schemas import MainAction
 from test_v2 import V2TestBackend
 
@@ -63,7 +63,7 @@ class RuntimeKnowledgeTests(unittest.IsolatedAsyncioTestCase):
         self.file=self.root/"fictional-v03.txt";self.file.write_text(FIRST)
 
     def create(self,**options):
-        return RawEngine.create_raw(self.runs,{"company":"虚构v03汽车集团","market":"CN","exchange":"SSE","security_code":"600001","share_class":"A","trading_currency":"CNY","horizon":"12个月","cutoff":"2026-10-13","confirmation_mode":"autonomous","questions":["汽车与集团利润率是否一致"]},[self.file],backend=KnowledgeBackend(),pricing=PRICE,**options)
+        return create_test_raw(self.runs,{"company":"虚构v03汽车集团","market":"CN","exchange":"SSE","security_code":"600001","share_class":"A","trading_currency":"CNY","horizon":"12个月","cutoff":"2026-10-13","confirmation_mode":"autonomous","questions":["汽车与集团利润率是否一致"]},[self.file],backend=KnowledgeBackend(),pricing=PRICE,**options)
 
     async def run_fixture(self,engine):
         with patch("yantra.materials.RawMaterialAdapter.search",offline_search):
@@ -154,7 +154,7 @@ class RuntimeKnowledgeTests(unittest.IsolatedAsyncioTestCase):
             result=await execute_research(Context())
             self.assertEqual(result["scope"],engine.state["knowledge"]["company_id"])
             Context.user_content=types.Content(role="user",parts=[types.Part(text="/memories")])
-            self.assertEqual(len((await execute_research(Context()))["requirements"]),1)
+            self.assertEqual(len((await execute_research(Context()))["requirements"]),2)
             Context.user_content=types.Content(role="user",parts=[types.Part(text="/forget "+result["id"])])
             self.assertTrue((await execute_research(Context()))["history_retained"])
         finally:_root_agent.reset(token)

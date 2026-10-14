@@ -1,0 +1,33 @@
+{
+  "status": "passed",
+  "scope": "actual CLI subprocesses, temporary synthetic paths, no services or models",
+  "checks": [
+    {
+      "command": "start --material SYNTHETIC --mode real-model with no setup",
+      "exit_code": 2,
+      "error_code": "research_setup_required",
+      "run_created": false
+    },
+    {
+      "command": "preferences setup explicit refusal",
+      "exit_code": 0,
+      "version": 1,
+      "authorization": {
+        "status": "refused",
+        "scope": []
+      }
+    },
+    {
+      "command": "start --help",
+      "exit_code": 0
+    },
+    {
+      "command": "preferences setup --help",
+      "exit_code": 0
+    },
+    {
+      "command": "resume --help",
+      "exit_code": 0
+    }
+  ]
+}

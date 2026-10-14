@@ -104,7 +104,8 @@ def parser():
             sub.add_argument("--security-code")
             sub.add_argument("--exchange")
             sub.add_argument("--trading-currency")
-            sub.add_argument("--confirmation-mode", choices=("autonomous", "manual"), default="autonomous", help="默认 autonomous；manual 需要明确参数确认，等待仍消耗墙钟预算")
+            sub.add_argument("--confirmation-mode", choices=("autonomous", "manual"), default=None, help="继承长期偏好；未回复的节点使用暂定情景继续交付")
+            add_json_input(sub, "authorization", help="仅本次覆盖自主选择授权，明确status/scope；不修改长期偏好")
             sub.add_argument("--framework", default=None, help="auto/value/quality/change 或经独立核验的框架版本")
             sub.add_argument("--knowledge-dir", type=Path, default=Path(".yantra/knowledge"))
             sub.add_argument("--company-id", help="明确同一公司跨证券类别的身份")
@@ -166,7 +167,7 @@ def parser():
 
 def run_result(state, args, settings):
     keys = ("run_id", "mode", "status", "budget", "limits", "deadline", "pending_user",
-            "stop_reasons", "hard_checks", "issues", "report_path", "reproducibility")
+            "stop_reasons", "hard_checks", "issues", "report_path", "reproducibility", "preference_snapshot", "choices")
     result = {key: state.get(key) for key in keys}
     prefix = [sys.executable, "-m", "yantra", "--output", "json", "--config", str(settings.path)]
     context = ["--runs-dir", str(args.runs_dir.resolve())]
@@ -178,6 +179,9 @@ def run_result(state, args, settings):
     elif state.get("raw_materials") and state["status"] in {"partial", "failed"}:
         actions.append({"action": "continue_research", "argv": prefix + ["resume", state["run_id"], *context, "--continue-research"],
                         "notice": "仅在原预算及截止仍允许时可继续，不重置预算"})
+        if state.get("investment_logic_version") and state.get("assumptions", {}).get("parameters") and not state["assumptions"]["confirmed"]:
+            actions.append({"action": "confirm", "argv": prefix + ["resume", state["run_id"], *context, "--decision", "confirm"],
+                            "notice": "明确确认当前主模型形成新版本、重算及核验；辅助模型须分别提交确认"})
     result["next_actions"] = actions
     return result
 
@@ -236,15 +240,18 @@ async def execute(args):
                 raise CLIError("validation_error", "原始材料研究须用 --mode real-model", field="--mode")
             from .research import RawEngine
             research.update(market=args.market, security_code=args.security_code, exchange=args.exchange,
-                            trading_currency=args.trading_currency, confirmation_mode=args.confirmation_mode,
+                            trading_currency=args.trading_currency,
                             company_id=args.company_id,share_class=args.share_class,questions=args.question,topics=args.topic)
             explicit = {k:v for k,v in {"horizon":args.horizon,"framework":args.framework,"questions":args.question or None,"topics":args.topic or None}.items() if v is not None}
             if args.framework_file:
                 explicit["framework"] = args.framework or "auto"
+            if args.confirmation_mode is not None:
+                research["confirmation_mode"] = args.confirmation_mode
+                explicit["confirmation_mode"] = args.confirmation_mode
             engine = RawEngine.create_raw(args.runs_dir, research, args.material, limits=args.limits, pricing=args.pricing,
                                           framework=args.framework or "auto", framework_file=args.framework_file,settings=settings,
                                           llm_profile=args.llm,ocr_profile=args.ocr,embedding_profile=args.embedding,
-                                          knowledge_dir=args.knowledge_dir,explicit_parameters=explicit)
+                                          knowledge_dir=args.knowledge_dir,explicit_parameters=explicit, authorization_override=args.authorization)
         else:
             # Preserve explicit v0.1 demonstration behavior, including manual confirmation.
             research["cutoff"] = research["cutoff"][:10]

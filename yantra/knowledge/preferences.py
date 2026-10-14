@@ -7,7 +7,12 @@ from uuid import uuid4
 from ..materials import now
 
 
-ALLOWED_DEFAULTS = {"horizon", "framework", "questions", "topics", "notes"}
+ALLOWED_DEFAULTS = {"horizon", "framework", "questions", "topics", "notes", "authorization", "confirmation_mode"}
+SETUP_ID = "research-setup"
+
+
+class SetupRequired(ValueError):
+    code = "research_setup_required"
 
 
 class Preferences:
@@ -25,6 +30,11 @@ class Preferences:
             raise ValueError("questions/topics must be text arrays")
         if "notes" in parameters and not isinstance(parameters["notes"], str):
             raise ValueError("requirement notes must be text")
+        if "authorization" in parameters or "confirmation_mode" in parameters or identifier == SETUP_ID:
+            from ..schemas import ResearchSetup
+            if identifier != SETUP_ID or scope != "global":
+                raise ValueError("authorization is recorded only by preferences setup")
+            parameters = ResearchSetup.model_validate(parameters).model_dump()
         identifier = identifier or "preference-" + uuid4().hex
         with self.store.transaction() as db:
             if scope != "global" and not db.execute("SELECT 1 FROM companies WHERE id=?", (scope,)).fetchone():
@@ -36,6 +46,21 @@ class Preferences:
             db.execute("INSERT INTO preferences VALUES(?,?,?,?,?,?,?,?,?)", (identifier, version, scope, original, meaning, json.dumps(parameters, ensure_ascii=False), source, 1, now()))
             self.store.log("remember", "user", {"id": identifier, "version": version, "scope": scope, "meaning": meaning}, db)
         return {"id": identifier, "version": version, "scope": scope, "meaning": meaning, "parameters": parameters, "saved": True, "application": "pending"}
+
+    def setup(self, parameters, source="cli:preferences setup"):
+        from ..schemas import ResearchSetup
+        values = ResearchSetup.model_validate(parameters).model_dump()
+        return self.save(json.dumps(values, ensure_ascii=False), "明确研究偏好及自主选择授权", values,
+                         source=source, identifier=SETUP_ID)
+
+    def setup_snapshot(self):
+        row = next((p for p in self.list(history=True) if p["id"] == SETUP_ID), None)
+        if row is None:
+            raise SetupRequired("首次研究前必须完成 preferences setup，并明确选择授权或拒绝授权")
+        result = {k: row[k] for k in ("id", "version", "parameters", "active", "recorded_at", "source")}
+        if not row["active"]:
+            result["parameters"] = result["parameters"] | {"authorization": {"status": "refused", "scope": []}}
+        return result
 
     def list(self, history=False):
         with self.store.connect() as db:

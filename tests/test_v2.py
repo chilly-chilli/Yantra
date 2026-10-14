@@ -1,4 +1,5 @@
 """Real format parsing and adversarial v0.2 controller behavior; no remote inference."""
+from research_fixtures import create_test_raw
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -14,7 +15,6 @@ from yantra.engine import Engine, StopRun
 from yantra.frameworks import FrameworkStore
 from yantra.materials import numeric, parse_file, research_chunks
 from yantra.policies import OfflineDemoBackend
-from yantra.research import RawEngine
 from yantra.schemas import ChildArguments, MainAction, Result
 
 PRICE = {"input_per_million": 2, "output_per_million": 8, "currency": "CNY", "source": "test-price", "as_of": "2026-10-13"}
@@ -225,7 +225,7 @@ class FormatTests(unittest.TestCase):
 class ControllerTests(unittest.IsolatedAsyncioTestCase):
     def create(self, d, **kwargs):
         source = Path(d)/"original.txt"; source.write_text(TEXT)
-        return RawEngine.create_raw(Path(d)/"runs", {"company": "测试公司", "horizon": "12个月", "cutoff": "2026-10-13T04:30:00+08:00", "market": "CN", "security_code": "600000", "trading_currency": "CNY", "confirmation_mode": "autonomous"},
+        return create_test_raw(Path(d)/"runs", {"company": "测试公司", "horizon": "12个月", "cutoff": "2026-10-13T04:30:00+08:00", "market": "CN", "security_code": "600000", "trading_currency": "CNY", "confirmation_mode": "autonomous"},
             [source], backend=V2TestBackend(), pricing=PRICE, **kwargs)
 
     async def test_raw_flow_dynamic_roles_and_no_forced_valuation(self):
@@ -368,19 +368,19 @@ class ControllerTests(unittest.IsolatedAsyncioTestCase):
                 source=Path(d)/"original.txt"
                 source.write_text(TEXT.splitlines()[0]+" unlevered operating_cash_flow 192 capex 72 debt 150 cash 50 total ordinary shares 100 minority_interest 0 ebit 160 tax_rate 0.25 depreciation 72 delta_nwc 0\n")
                 research={"company":"测试公司","horizon":"12个月","cutoff":"2026-10-13","market":"CN","security_code":"600000","trading_currency":"CNY","confirmation_mode":mode}
-                engine=RawEngine.create_raw(Path(d)/"runs",research,[source],backend=PositiveCashFlowBackend(),pricing=PRICE,framework="quality")
+                engine=create_test_raw(Path(d)/"runs",research,[source],backend=PositiveCashFlowBackend(),pricing=PRICE,framework="quality")
                 state=await run_engine(engine)
                 if mode=="manual":
-                    self.assertEqual(state["status"],"waiting",state["stop_reasons"])
-                    self.assertNotIn("valuation",state["artifacts"])
-                    self.assertEqual((await engine.advance())["status"],"waiting")
+                    self.assertEqual(state["status"],"partial",state["stop_reasons"])
+                    self.assertFalse(state["assumptions"]["confirmed"])
+                    self.assertEqual(state["assumptions"]["authorization_source"], "provisional")
                     state=await engine.respond("confirm")
                 self.assertIn("valuation",state["artifacts"],state["stop_reasons"])
                 self.assertTrue(state["artifacts"]["verification"]["data"]["passed"],state["issues"])
                 self.assertEqual(state["assumptions"]["authorization_source"], "controller" if mode=="autonomous" else "user")
                 old=state["artifacts"]["valuation"]["data"]["per_share_value"]
                 changed=await engine.respond("modify",{"growth_rate":.03})
-                self.assertEqual(changed["assumptions"]["version"],2)
+                self.assertEqual(changed["assumptions"]["version"],2 if mode=="autonomous" else 3)
                 self.assertNotEqual(old,changed["artifacts"]["valuation"]["data"]["per_share_value"])
                 self.assertTrue(changed["invalidated"])
 

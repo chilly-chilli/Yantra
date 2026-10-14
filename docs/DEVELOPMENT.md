@@ -9,3 +9,5 @@
 [CI配置](../.github/workflows/checks.yml)分别报告确定性、离线轨迹及真实行为；真实行为目前明确未执行。CI配置存在不代表远端CI已成功运行。可重复本机测量脚本位于`scripts/measure_adk.py`、`scripts/measure_mcp.py`和`scripts/measure_skills.py`，方法和结果集中在[v0.4.0验证](validation/v0.4.0/README.md)。
 
 提交前只stage当前任务，检查`git diff --cached`和`git diff --check`，完成与改动相关的验证。运行机制提交说明应包含复用的ADK能力、自定义缺口和证据。local commit不等于push、合并或部署；完整规则见[AGENTS.md](../AGENTS.md)。
+
+首轮投资逻辑整合的确定性检查包括 `tests/test_investment_logic.py`：明确setup、拒绝及撤销、暂定报告、主／辅助模型、固定财务信号、结构化风险意见和经营预测；真实本机ASGI请求验证 `/setup`、首次启动拒绝、暂定交付、SQLite Session重启确认及所属Session轨迹。合成行为案例的逐节点要求已调整为“未回复仍交付，确认后新版”，真实生成和judge仍需原显式审批。新状态的来源／数学／恢复测试不能证明LLM业务识别、异常归因或研究质量提高。验证见[本轮记录](validation/v0.4.0/investment-logic-2026-10-14/README.md)。
