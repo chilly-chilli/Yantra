@@ -1,0 +1,24 @@
+{
+  "host_version": "1.18.33",
+  "scope": "native debug/run alternate entry probes; no complete acceptance claim",
+  "mcp_debug": {
+    "exit_code": 1,
+    "result": "Tool yantra_yantra_schema not found for agent build",
+    "note": "native debug tool entry supports the Skill but did not expose this MCP tool"
+  },
+  "run_explicit_directory": {
+    "timeout_seconds": 10,
+    "result": "native run reached the configured localhost-only fixture provider; no TCP server needed, fixture endpoint unavailable"
+  },
+  "in_process_fixture_plugin": {
+    "timeout_seconds": 20,
+    "result": "plugin initialization did not complete; no fixture fetch callback was observed"
+  },
+  "live_models": "not_called",
+  "configuration_scope": "temporary test directories; user host configuration was not edited",
+  "trace_hashes": {
+    "native-mcp-debug.json": "9e0d1e996f2751faeaaee5a8fc8cdb710abf614f383522aa44ceaae4ad6a285c",
+    "explicit-dir-result.json": "20afa1f7fe72f931efa51411806aa6968678a2126adcd4ae9d42955f23af5a3f",
+    "in-process-result.json": "2c3d8fef1d374517cbb15e4c9d15a9760179914d1cba78cc88a4c07ad9d98106"
+  }
+}

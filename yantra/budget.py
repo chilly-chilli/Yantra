@@ -19,6 +19,7 @@ class RunBudget:
     def __init__(self, state, save, clock=time.time):
         self.state, self.save, self.clock = state, save, clock
         self.lock = threading.RLock()
+        self.cancellation_path = None
 
     def remaining(self, closing=False):
         deadline = datetime.fromisoformat(self.state["deadline"]).timestamp()
@@ -30,7 +31,7 @@ class RunBudget:
             raise BudgetExceeded("模型用量超过配置的费用预留上界，请核对计费配置")
         if self.remaining() <= 0:
             raise BudgetExceeded("研究墙钟截止时点已到，预留收尾时间")
-        if (self.state_path / "cancel.request").exists():
+        if (self.state_path / "cancel.request").exists() or (self.cancellation_path is not None and self.cancellation_path.exists()):
             raise BudgetExceeded("用户取消")
 
     def reserve(self, payload, instruction, output_limit, pricing=None, extra_input_tokens=0):

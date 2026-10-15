@@ -1,0 +1,874 @@
+{
+  "host_version": "0.162.0-alpha.17.2",
+  "package_version": "0.5.0",
+  "driver": "actual app-server, direct MCP calls; shell_tool=false; no turn/start",
+  "skill_discovery": "passed",
+  "model_calls": "none",
+  "local_trace": "/tmp/yantra-host-acceptance/codex-verified-delivery/trace.json",
+  "trace_sha256": "00991454c46c34e3b4419ae455ccc159a489e35608c134a33361289f5370b3d1",
+  "events": [
+    {
+      "command": "host schema",
+      "operations": {
+        "schema": {
+          "additionalProperties": false,
+          "properties": {},
+          "title": "EmptyInput",
+          "type": "object"
+        },
+        "doctor": {
+          "additionalProperties": false,
+          "properties": {
+            "command_tool": {
+              "default": "unknown",
+              "enum": [
+                "available",
+                "denied",
+                "missing",
+                "unknown"
+              ],
+              "title": "Command Tool",
+              "type": "string"
+            },
+            "mcp_available": {
+              "default": false,
+              "title": "Mcp Available",
+              "type": "boolean"
+            },
+            "materials": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Materials",
+              "type": "array"
+            }
+          },
+          "title": "DoctorInput",
+          "type": "object"
+        },
+        "submit": {
+          "$defs": {
+            "AutonomyAuthorization": {
+              "additionalProperties": false,
+              "properties": {
+                "status": {
+                  "enum": [
+                    "granted",
+                    "refused",
+                    "unspecified"
+                  ],
+                  "title": "Status",
+                  "type": "string"
+                },
+                "scope": {
+                  "items": {
+                    "enum": [
+                      "perspective",
+                      "models",
+                      "assumptions",
+                      "risk",
+                      "disconfirmation",
+                      "tracking",
+                      "expectations"
+                    ],
+                    "type": "string"
+                  },
+                  "title": "Scope",
+                  "type": "array"
+                }
+              },
+              "required": [
+                "status",
+                "scope"
+              ],
+              "title": "AutonomyAuthorization",
+              "type": "object"
+            },
+            "Pricing": {
+              "additionalProperties": false,
+              "properties": {
+                "input_per_million": {
+                  "minimum": 0,
+                  "title": "Input Per Million",
+                  "type": "number"
+                },
+                "output_per_million": {
+                  "minimum": 0,
+                  "title": "Output Per Million",
+                  "type": "number"
+                },
+                "currency": {
+                  "default": "CNY",
+                  "title": "Currency",
+                  "type": "string"
+                },
+                "cny_per_currency": {
+                  "default": 1,
+                  "exclusiveMinimum": 0,
+                  "title": "Cny Per Currency",
+                  "type": "number"
+                },
+                "source": {
+                  "minLength": 1,
+                  "title": "Source",
+                  "type": "string"
+                },
+                "as_of": {
+                  "minLength": 1,
+                  "title": "As Of",
+                  "type": "string"
+                },
+                "fx_source": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Fx Source"
+                },
+                "fx_as_of": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "title": "Fx As Of"
+                }
+              },
+              "required": [
+                "input_per_million",
+                "output_per_million",
+                "source",
+                "as_of"
+              ],
+              "title": "Pricing",
+              "type": "object"
+            }
+          },
+          "additionalProperties": false,
+          "properties": {
+            "idempotency_key": {
+              "maxLength": 128,
+              "minLength": 1,
+              "title": "Idempotency Key",
+              "type": "string"
+            },
+            "company": {
+              "minLength": 1,
+              "title": "Company",
+              "type": "string"
+            },
+            "mode": {
+              "default": "real-model",
+              "enum": [
+                "real-model",
+                "offline-demo"
+              ],
+              "title": "Mode",
+              "type": "string"
+            },
+            "materials": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Materials",
+              "type": "array"
+            },
+            "demo_materials_dir": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Demo Materials Dir"
+            },
+            "horizon": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Horizon"
+            },
+            "cutoff": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Cutoff"
+            },
+            "market": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "CN",
+                    "HK"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Market"
+            },
+            "security_code": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Security Code"
+            },
+            "exchange": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Exchange"
+            },
+            "trading_currency": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Trading Currency"
+            },
+            "company_id": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Company Id"
+            },
+            "share_class": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Share Class"
+            },
+            "questions": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Questions",
+              "type": "array"
+            },
+            "topics": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Topics",
+              "type": "array"
+            },
+            "reference_price": {
+              "anyOf": [
+                {
+                  "exclusiveMinimum": 0,
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Reference Price"
+            },
+            "price_time": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Price Time"
+            },
+            "price_source": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Price Source"
+            },
+            "confirmation_mode": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "autonomous",
+                    "manual"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Confirmation Mode"
+            },
+            "authorization": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/AutonomyAuthorization"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "limits": {
+              "additionalProperties": true,
+              "title": "Limits",
+              "type": "object"
+            },
+            "pricing": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Pricing"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "framework": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Framework"
+            },
+            "framework_file": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Framework File"
+            },
+            "llm": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Llm"
+            },
+            "ocr": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Ocr"
+            },
+            "embedding": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Embedding"
+            },
+            "parent_run_id": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Parent Run Id"
+            }
+          },
+          "required": [
+            "idempotency_key",
+            "company"
+          ],
+          "title": "SubmitInput",
+          "type": "object"
+        },
+        "list": {
+          "additionalProperties": false,
+          "properties": {
+            "after": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "After"
+            },
+            "limit": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          "title": "ListInput",
+          "type": "object"
+        },
+        "status": {
+          "additionalProperties": false,
+          "properties": {
+            "run_id": {
+              "pattern": "^run-[a-z0-9-]+$",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          "required": [
+            "run_id"
+          ],
+          "title": "RunInput",
+          "type": "object"
+        },
+        "read": {
+          "additionalProperties": false,
+          "properties": {
+            "run_id": {
+              "pattern": "^run-[a-z0-9-]+$",
+              "title": "Run Id",
+              "type": "string"
+            },
+            "artifact": {
+              "default": "report.md",
+              "title": "Artifact",
+              "type": "string"
+            },
+            "version": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "Immutable output version, distinct from assumptions_version",
+              "title": "Version"
+            },
+            "offset": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            },
+            "length": {
+              "default": 16384,
+              "maximum": 65536,
+              "minimum": 1,
+              "title": "Length",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "run_id"
+          ],
+          "title": "ReadInput",
+          "type": "object"
+        },
+        "respond": {
+          "additionalProperties": false,
+          "properties": {
+            "run_id": {
+              "pattern": "^run-[a-z0-9-]+$",
+              "title": "Run Id",
+              "type": "string"
+            },
+            "operation_id": {
+              "maxLength": 128,
+              "minLength": 1,
+              "title": "Operation Id",
+              "type": "string"
+            },
+            "expected_revision": {
+              "pattern": "^[a-f0-9]{64}$",
+              "title": "Expected Revision",
+              "type": "string"
+            },
+            "decision": {
+              "enum": [
+                "confirm",
+                "modify",
+                "reject",
+                "select_identity"
+              ],
+              "title": "Decision",
+              "type": "string"
+            },
+            "parameters": {
+              "anyOf": [
+                {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Parameters"
+            },
+            "selector": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Selector"
+            },
+            "pending_id": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Pending Id"
+            }
+          },
+          "required": [
+            "run_id",
+            "operation_id",
+            "expected_revision",
+            "decision"
+          ],
+          "title": "RespondInput",
+          "type": "object"
+        },
+        "cancel": {
+          "additionalProperties": false,
+          "properties": {
+            "run_id": {
+              "pattern": "^run-[a-z0-9-]+$",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          "required": [
+            "run_id"
+          ],
+          "title": "RunInput",
+          "type": "object"
+        },
+        "resume": {
+          "additionalProperties": false,
+          "properties": {
+            "run_id": {
+              "pattern": "^run-[a-z0-9-]+$",
+              "title": "Run Id",
+              "type": "string"
+            },
+            "operation_id": {
+              "maxLength": 128,
+              "minLength": 1,
+              "title": "Operation Id",
+              "type": "string"
+            },
+            "expected_revision": {
+              "pattern": "^[a-f0-9]{64}$",
+              "title": "Expected Revision",
+              "type": "string"
+            },
+            "continue_research": {
+              "default": false,
+              "title": "Continue Research",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "run_id",
+            "operation_id",
+            "expected_revision"
+          ],
+          "title": "ResumeInput",
+          "type": "object"
+        }
+      }
+    },
+    {
+      "command": "host doctor"
+    },
+    {
+      "command": "host submit",
+      "run_id": "run-e3a9d8a06d61",
+      "receipt": "persisted"
+    },
+    {
+      "command": "host status",
+      "run_id": "run-e3a9d8a06d61",
+      "status": "waiting",
+      "qualification": {
+        "research_status": "waiting",
+        "assumptions_version": 1,
+        "confirmed": false,
+        "authorization_source": "none",
+        "valuation_status": "unverified",
+        "verification_passed": false,
+        "gaps": []
+      },
+      "operations": []
+    },
+    {
+      "command": "host respond",
+      "run_id": "run-e3a9d8a06d61",
+      "receipt": "accepted"
+    },
+    {
+      "command": "host status",
+      "run_id": "run-e3a9d8a06d61",
+      "status": "partial",
+      "qualification": {
+        "research_status": "partial",
+        "assumptions_version": 1,
+        "confirmed": true,
+        "authorization_source": "user",
+        "valuation_status": "unverified",
+        "verification_passed": true,
+        "gaps": [
+          "增长与折现率缺少市场依据",
+          "没有真实价格",
+          "缺少客户、订单与竞争资料",
+          "缺少带来源和日期的市场共识基准"
+        ]
+      },
+      "operations": [
+        {
+          "operation_id": "confirm",
+          "assumptions_version": 1,
+          "outputs": [
+            1
+          ],
+          "parameter_changes": {},
+          "previous_assumptions_version": 1,
+          "previous_outputs": [],
+          "receipt": "applied",
+          "revision": "6a415688c4f21489a2d0fd826a9f33da6f10b5b7044ef2cc0c31943319e25e4a"
+        }
+      ]
+    },
+    {
+      "command": "host read",
+      "run_id": "run-e3a9d8a06d61",
+      "version": 1,
+      "qualification": {
+        "research_status": "partial",
+        "assumptions_version": 1,
+        "confirmed": true,
+        "authorization_source": "user",
+        "valuation_status": "unverified",
+        "verification_passed": true,
+        "gaps": [
+          "增长与折现率缺少市场依据",
+          "没有真实价格",
+          "缺少客户、订单与竞争资料",
+          "缺少带来源和日期的市场共识基准"
+        ]
+      },
+      "sha256": "d5eb0ceaa8eec1e88da8f0a5b3c269f55c430ace635fbd8572f5256c3d7b47f3",
+      "complete": false,
+      "bytes_returned": 2048
+    },
+    {
+      "command": "host respond",
+      "run_id": "run-e3a9d8a06d61",
+      "receipt": "accepted"
+    },
+    {
+      "command": "host status",
+      "run_id": "run-e3a9d8a06d61",
+      "status": "partial",
+      "qualification": {
+        "research_status": "partial",
+        "assumptions_version": 2,
+        "confirmed": true,
+        "authorization_source": "user",
+        "valuation_status": "unverified",
+        "verification_passed": true,
+        "gaps": [
+          "增长与折现率缺少市场依据",
+          "没有真实价格",
+          "缺少客户、订单与竞争资料",
+          "缺少带来源和日期的市场共识基准"
+        ]
+      },
+      "operations": [
+        {
+          "operation_id": "modify",
+          "assumptions_version": 2,
+          "outputs": [
+            1,
+            2
+          ],
+          "parameter_changes": {
+            "growth_rate": {
+              "after": 0.04,
+              "before": 0.05
+            }
+          },
+          "previous_assumptions_version": 1,
+          "previous_outputs": [
+            1
+          ],
+          "receipt": "applied",
+          "revision": "04f1323072a5aae73cf6b0d2630fcf600e431d28f6b8e1c5231b0c7ae3c544ba"
+        },
+        {
+          "operation_id": "confirm",
+          "assumptions_version": 1,
+          "outputs": [
+            1
+          ],
+          "parameter_changes": {},
+          "previous_assumptions_version": 1,
+          "previous_outputs": [],
+          "receipt": "applied",
+          "revision": "6a415688c4f21489a2d0fd826a9f33da6f10b5b7044ef2cc0c31943319e25e4a"
+        }
+      ]
+    },
+    {
+      "command": "host read",
+      "run_id": "run-e3a9d8a06d61",
+      "version": 2,
+      "qualification": {
+        "research_status": "partial",
+        "assumptions_version": 2,
+        "confirmed": true,
+        "authorization_source": "user",
+        "valuation_status": "unverified",
+        "verification_passed": true,
+        "gaps": [
+          "增长与折现率缺少市场依据",
+          "没有真实价格",
+          "缺少客户、订单与竞争资料",
+          "缺少带来源和日期的市场共识基准"
+        ]
+      },
+      "sha256": "f884d8ecb14120adb7767824636fcab1f1333a173bc7e29fa21a5bd81803d90c",
+      "complete": false,
+      "bytes_returned": 2048
+    },
+    {
+      "command": "host read",
+      "run_id": "run-e3a9d8a06d61",
+      "version": 1,
+      "qualification": {
+        "research_status": "partial",
+        "assumptions_version": 1,
+        "confirmed": true,
+        "authorization_source": "user",
+        "valuation_status": "unverified",
+        "verification_passed": true,
+        "gaps": [
+          "增长与折现率缺少市场依据",
+          "没有真实价格",
+          "缺少客户、订单与竞争资料",
+          "缺少带来源和日期的市场共识基准"
+        ]
+      },
+      "sha256": "d5eb0ceaa8eec1e88da8f0a5b3c269f55c430ace635fbd8572f5256c3d7b47f3",
+      "complete": false,
+      "bytes_returned": 2048
+    },
+    {
+      "command": "host list"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "host_version": "1.18.33",
+  "package_version": "0.5.0",
+  "mcp_connection": "passed",
+  "main_skill_load": "passed",
+  "bash_tool_denial": "passed",
+  "full_serve_flow": "not_retested; localhost socket.bind denied",
+  "paid_models": "not_called",
+  "trace_sha256": "05097c353611dc920d39a3a0d40f23bb02eb7698c1286efd40fefbe7e319f763"
+}

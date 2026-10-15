@@ -1,0 +1,17 @@
+{
+  "wheel": "yantra_research-0.5.0-py3-none-any.whl",
+  "sha256": "c80c1307d3365cd284e4d6efae351cdbbb42b770de21bac880c43587fcbb55f7",
+  "installation": "existing isolated 95-package environment, Yantra wheel reinstalled; no system-site-packages or source-tree PYTHONPATH",
+  "dependencies": "unchanged pinned dependencies; three original missing artifacts remain RECORD-verified installed snapshots as documented in the first delivery",
+  "network": "configured proxy unavailable; not a public-index fresh installation",
+  "paid_models_or_judge": "not executed",
+  "source_bytes_checked": [
+    "yantra/budget.py",
+    "yantra/cli.py",
+    "yantra/engine.py",
+    "yantra/host_service.py",
+    "yantra/host_worker.py",
+    "yantra/research.py",
+    "yantra/host_skill/yantra-research/SKILL.md"
+  ]
+}

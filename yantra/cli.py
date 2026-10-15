@@ -165,6 +165,19 @@ def parser():
         command=ext_actions.add_parser(action);command.add_argument("kind",choices=("skills","mcp","tools"));command.add_argument("name")
     from .knowledge.cli import add_commands
     add_commands(commands)
+    host = commands.add_parser("host", help="宿主共享契约、快速提交、主要 Skill 与本地 stdio MCP")
+    host_actions = host.add_subparsers(dest="host_action", required=True)
+    from .host_contract import INPUTS
+    for operation in (*INPUTS, "mcp", "skill"):
+        action = host_actions.add_parser(operation)
+        action.add_argument("--workspace", type=Path, required=True, help="共享本地工作区；推荐绝对路径，跨目录调用使用相同值")
+        action.add_argument("--runs-dir", type=Path, help="显式运行目录；默认 workspace/runs 或 YANTRA_RUNS_DIR")
+        action.add_argument("--knowledge-dir", type=Path, help="显式知识库；默认 workspace/.yantra/knowledge 或 YANTRA_KNOWLEDGE_DIR")
+        action.add_argument("--env-file", type=Path, help="仅 worker 明确加载的本地环境文件")
+        if operation in INPUTS:
+            add_json_input(action, "input", default={}, help="操作输入对象；实际 schema 见 host schema")
+        elif operation == "skill":
+            action.add_argument("--destination", type=Path, help="将主要 Skill 导出到新目录；不覆盖既有文件")
     def outputs(command, root=False):
         command.add_argument("--output", choices=("text", "json"),
                              default="text" if root else argparse.SUPPRESS,
@@ -209,6 +222,8 @@ def run_result(state, args, settings):
 
 
 def format_text(command, data):
+    if command.startswith("host "):
+        return None
     if data.get("operation") == "interactive_finished":
         return ""
     messages = {"models add": "模型配置已保存。", "models select": "模型选择已保存。",
@@ -264,6 +279,20 @@ async def execute(args):
         load_dotenv(args.env_file, override=True)
     from .configuration import ConfigStore
     settings=ConfigStore(args.config)
+    if args.command == "host":
+        from .host_service import HostService
+        service = HostService(args.workspace, config=args.config, runs_dir=args.runs_dir, knowledge_dir=args.knowledge_dir, env_file=args.env_file)
+        if args.host_action == "skill":
+            import shutil
+            source = Path(__file__).parent / "host_skill" / "yantra-research"
+            if args.destination:
+                if args.destination.exists():
+                    raise CLIError("destination_exists", "Skill 目标已存在；请选择新目录，不覆盖用户内容")
+                shutil.copytree(source, args.destination)
+            return {"skill": "yantra-research", "path": str((args.destination or source).resolve()),
+                    "content": (source / "SKILL.md").read_text()}
+        value = load_json_file(args.input_file, "--input-file") if args.input_file else args.input
+        return service.call(args.host_action, value)
     if args.command in {"knowledge","preferences"}:
         from .knowledge.cli import execute as knowledge_command
         return knowledge_command(args,settings)
@@ -468,6 +497,11 @@ def main(argv=None):
     try:
         args = parser().parse_args(argv)
         mode = args.output
+        if args.command == "host" and args.host_action == "mcp":
+            from .host_service import HostService
+            from .host_mcp import serve
+            asyncio.run(serve(HostService(args.workspace, config=args.config, runs_dir=args.runs_dir, knowledge_dir=args.knowledge_dir, env_file=args.env_file)))
+            return 0
         status.report("working", "正在执行 " + command_name(args))
         # Third-party progress/prints cannot contaminate the JSON response.
         if mode == "json":

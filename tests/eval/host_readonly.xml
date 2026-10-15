@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Controlled fixture: one DEMO run, confirmed at 0.05, then growth_rate modified
+     to 0.04. Two immutable output generations. Never use against user research.
+     Questions are read-only; live host/model/judge evaluation is NOT executed. -->
+<evaluation>
+  <qa_pair>
+    <question>Find the DEMO research in this isolated workspace. Read the original report and the latest report. What annual growth assumption was used before the user changed it?</question>
+    <answer>0.05</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Locate the DEMO research and check its applied modification receipt against the latest report. What growth assumption was actually applied?</question>
+    <answer>0.04</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Find the DEMO study and compare the immutable output index with its operation history. How many report output generations remain readable after the change?</question>
+    <answer>2</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Find the modified DEMO report and read its fixed qualification alongside the saved assumption basis. Who supplied the explicit authorization, according to the machine field?</question>
+    <answer>user</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Find the DEMO report, inspect its missing-evidence list, and check its research completion state. What is the final research state despite successful execution of the read operation?</question>
+    <answer>partial</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Find the DEMO report and read bytes 1 through 17 using the bounded artifact operation. Does the machine field say this returned the complete original report?</question>
+    <answer>false</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Find the DEMO study and read both report generations. Which terminal growth assumption remained unchanged while annual forecast growth was edited?</question>
+    <answer>0.02</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Find the DEMO study, inspect its modification receipt, and compare both fixed calculation reports. Which discount rate remained unchanged?</question>
+    <answer>0.1</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Find the DEMO study and compare the original report generation's indexed hash with a fresh read of that specific generation after the modification. Are the hashes equal?</question>
+    <answer>true</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Find the DEMO study and compare latest report qualification with its current status. What valuation qualification must still be shown even though the synthetic independent check passed?</question>
+    <answer>unverified</answer>
+  </qa_pair>
+</evaluation>

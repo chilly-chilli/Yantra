@@ -1,0 +1,8 @@
+/private/tmp/yantra-v05-install/env/lib/python3.12/site-packages/google/adk/features/_feature_decorator.py:71: UserWarning: [EXPERIMENTAL] feature FeatureName.PLUGGABLE_AUTH is enabled.
+  check_feature_enabled()
+baseline module: /private/tmp/yantra-v05-install/env/lib/python3.12/site-packages/yantra/__init__.py
+state status: partial
+immutable qualification: failed
+Traceback (most recent call last):
+  File "<stdin>", line 16, in <module>
+AssertionError

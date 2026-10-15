@@ -1,0 +1,83 @@
+{
+  "version": "0.5.0",
+  "module_path": "/private/tmp/yantra-v05-install/env/lib/python3.12/site-packages/yantra/__init__.py",
+  "working_directories": [
+    "/",
+    "/tmp"
+  ],
+  "schema_operations": [
+    "schema",
+    "doctor",
+    "submit",
+    "list",
+    "status",
+    "read",
+    "respond",
+    "cancel",
+    "resume"
+  ],
+  "mcp_tools": [
+    "yantra_schema",
+    "yantra_doctor",
+    "yantra_submit",
+    "yantra_list",
+    "yantra_status",
+    "yantra_read",
+    "yantra_respond",
+    "yantra_cancel",
+    "yantra_resume"
+  ],
+  "run_id": "run-bdab9228d0e4",
+  "initial_status": "waiting",
+  "final_status": "partial",
+  "final_qualification": {
+    "research_status": "partial",
+    "assumptions_version": 2,
+    "confirmed": true,
+    "authorization_source": "user",
+    "valuation_status": "unverified",
+    "verification_passed": true,
+    "gaps": [
+      "增长与折现率缺少市场依据",
+      "没有真实价格",
+      "缺少客户、订单与竞争资料",
+      "缺少带来源和日期的市场共识基准"
+    ]
+  },
+  "output_versions": [
+    1,
+    2
+  ],
+  "original_hash": "eb491c9d2353ba0be489ad480cb69b3b8611f86120485815bc22802a61525bd9",
+  "modified_hash": "027e475ac4fd7e8afbb36ccb4c1e0b09308ac53bb467c123308db7416933bb30",
+  "operation": {
+    "operation_id": "clean-modify",
+    "assumptions_version": 2,
+    "outputs": [
+      1,
+      2
+    ],
+    "parameter_changes": {
+      "growth_rate": {
+        "after": 0.04,
+        "before": 0.05
+      }
+    },
+    "previous_assumptions_version": 1,
+    "previous_outputs": [
+      1
+    ],
+    "receipt": "applied",
+    "revision": "9d046cbc807d96b46ef908bae3cc8cbb4f9b4fbd5093f8f0182b458df2ca6502"
+  },
+  "dependencies": {
+    "google-adk": "2.11.0",
+    "mcp": "1.30.0",
+    "pydantic": "2.13.4",
+    "litellm": "1.85.7",
+    "sqlalchemy": "2.1.4"
+  },
+  "skill_exported": true,
+  "external_network": "not_used",
+  "live_models": "not_used"
+}

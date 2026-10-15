@@ -4,6 +4,7 @@
 
 | 版本 | 验证记录 | 主要范围 |
 |---|---|---|
+| v0.5.0（Unreleased） | [宿主集成](v0.5.0/README.md) | 统一契约、幂等／进程恢复、不可变成果、安装及两宿主离线协议；真实服务／模型／judge未执行 |
 | v0.4.2（Unreleased） | [正式公开资料研究](v0.4.2/README.md) | 265项全量离线回归、末次45项定向检查、公司名获取／判断、恢复、来源及实际localhost轨迹；真实服务／模型／judge未执行 |
 | v0.4.0（Unreleased） | [ADK 原生接入](v0.4.0/README.md) | 持久轨迹／插件、Worker、MCP、Artifact、Skills试点、评估工程、全回归及测量限制 |
 | v0.3.3 | [更新与配置检查](v0.3.3/README.md) | OSC 7501 PTY、信息扩展、PaddleOCR API 离线回归及本地配置 |

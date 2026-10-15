@@ -1,6 +1,8 @@
 # 使用指南
 
-适用版本：0.4.2（Unreleased）。本文维护当前安装、启动、预算、恢复和复测操作。高级配置见[能力配置](CAPABILITIES.md)，估值契约见[估值说明](VALUATION.md)，知识与用户要求见[知识说明](KNOWLEDGE.md)。
+适用版本：0.5.0（Unreleased）。本文维护当前安装、启动、预算、恢复和复测操作。高级配置见[能力配置](CAPABILITIES.md)，估值契约见[估值说明](VALUATION.md)，知识与用户要求见[知识说明](KNOWLEDGE.md)。
+
+宿主调用的快速提交、分页定位、不可变成果读取、版本修改收据、主要 Skill 与 stdio MCP 统一见[宿主指南](HOSTS.md)。原直接 CLI 的同步行为及路径默认值保留。
 
 ## 安装
 
@@ -106,7 +108,7 @@ CLI 按 [OSC 7501 规范 revision 0.4](https://www.superlogical.com/rex/docs/bui
 
 文件必须存在、可读，并包含JSON对象；数组、标量、非法JSON、NaN／Infinity及溢出数值均报错。两种输入不能同时指定；required选项可由任一种满足。文件方式不改变参数的业务校验、预算或权限。limits只覆盖已有默认值：原始研究默认7200秒/49元，固定演示沿用旧Limits默认值（900秒）。
 
-本轮未提供机器schema导出、JSONL事件流或启动幂等键。启动失败或中断后，尤其已经创建运行时，应先检查运行记录，不能假定重试没有副作用。离线验证范围与证据见[CLI验收记录](validation/v0.3/cli-agent-2026-10-13/README.md)。
+原 `start/demo` 不提供启动幂等键；v0.5 的 `host schema/submit` 提供共享输入 schema 和持久幂等，见[宿主契约](HOSTS.md#能力诊断与统一输入)。本轮未增加 JSONL 事件流。启动失败或中断后，尤其已经创建运行时，应先检查运行记录，不能假定重试没有副作用。离线验证范围与证据见[CLI验收记录](validation/v0.3/cli-agent-2026-10-13/README.md)。
 
 ## 原始材料研究
 

@@ -1,0 +1,190 @@
+{
+  "host_version": "0.162.0-alpha.17.2",
+  "package_version": "0.5.0",
+  "transport": "real app-server and stdio MCP",
+  "shell_tool": false,
+  "turn_start": "not_called",
+  "trace_sha256": "7391d34c5f5f3f3aef806b38a3bd0d572b7bb77a32c0cbc924a0ddf6b4a0cd09",
+  "events": [
+    {
+      "command": "host schema"
+    },
+    {
+      "command": "host doctor"
+    },
+    {
+      "command": "host submit",
+      "run_id": "run-cf00f44d2b85",
+      "receipt": "persisted"
+    },
+    {
+      "command": "host status",
+      "run_id": "run-cf00f44d2b85",
+      "status": "waiting",
+      "progress": {
+        "phase": "waiting_confirmation",
+        "task_count": 3,
+        "result_count": 3,
+        "active_tasks": [],
+        "gaps": [
+          "增长与折现率缺少市场依据",
+          "没有真实价格",
+          "缺少客户、订单与竞争资料",
+          "缺少带来源和日期的市场共识基准"
+        ]
+      },
+      "qualification": {
+        "research_status": "waiting",
+        "assumptions_version": 1,
+        "confirmed": false,
+        "authorization_source": "none",
+        "valuation_status": "unverified",
+        "verification_passed": false,
+        "gaps": []
+      }
+    },
+    {
+      "command": "host respond",
+      "run_id": "run-cf00f44d2b85",
+      "receipt": "accepted"
+    },
+    {
+      "command": "host status",
+      "run_id": "run-cf00f44d2b85",
+      "status": "partial",
+      "progress": {
+        "phase": "partial",
+        "task_count": 5,
+        "result_count": 5,
+        "active_tasks": [],
+        "gaps": [
+          "增长与折现率缺少市场依据",
+          "没有真实价格",
+          "缺少客户、订单与竞争资料",
+          "缺少带来源和日期的市场共识基准"
+        ]
+      },
+      "qualification": {
+        "research_status": "partial",
+        "assumptions_version": 1,
+        "confirmed": true,
+        "authorization_source": "user",
+        "valuation_status": "unverified",
+        "verification_passed": true,
+        "gaps": [
+          "增长与折现率缺少市场依据",
+          "没有真实价格",
+          "缺少客户、订单与竞争资料",
+          "缺少带来源和日期的市场共识基准"
+        ]
+      }
+    },
+    {
+      "command": "host read",
+      "run_id": "run-cf00f44d2b85",
+      "version": 1,
+      "qualification": {
+        "research_status": "partial",
+        "assumptions_version": 1,
+        "confirmed": true,
+        "authorization_source": "user",
+        "valuation_status": "unverified",
+        "verification_passed": true,
+        "gaps": [
+          "增长与折现率缺少市场依据",
+          "没有真实价格",
+          "缺少客户、订单与竞争资料",
+          "缺少带来源和日期的市场共识基准"
+        ]
+      },
+      "sha256": "c972aac4742cf58b3afceec89df6e5f713cf3c3307561f19987bc4df9ac770ef",
+      "complete": false,
+      "bytes_returned": 2048
+    },
+    {
+      "command": "host respond",
+      "run_id": "run-cf00f44d2b85",
+      "receipt": "accepted"
+    },
+    {
+      "command": "host status",
+      "run_id": "run-cf00f44d2b85",
+      "status": "partial",
+      "progress": {
+        "phase": "partial",
+        "task_count": 8,
+        "result_count": 8,
+        "active_tasks": [],
+        "gaps": [
+          "增长与折现率缺少市场依据",
+          "没有真实价格",
+          "缺少客户、订单与竞争资料",
+          "缺少带来源和日期的市场共识基准"
+        ]
+      },
+      "qualification": {
+        "research_status": "partial",
+        "assumptions_version": 2,
+        "confirmed": true,
+        "authorization_source": "user",
+        "valuation_status": "unverified",
+        "verification_passed": true,
+        "gaps": [
+          "增长与折现率缺少市场依据",
+          "没有真实价格",
+          "缺少客户、订单与竞争资料",
+          "缺少带来源和日期的市场共识基准"
+        ]
+      }
+    },
+    {
+      "command": "host read",
+      "run_id": "run-cf00f44d2b85",
+      "version": 2,
+      "qualification": {
+        "research_status": "partial",
+        "assumptions_version": 2,
+        "confirmed": true,
+        "authorization_source": "user",
+        "valuation_status": "unverified",
+        "verification_passed": true,
+        "gaps": [
+          "增长与折现率缺少市场依据",
+          "没有真实价格",
+          "缺少客户、订单与竞争资料",
+          "缺少带来源和日期的市场共识基准"
+        ]
+      },
+      "sha256": "5a97903e9b4a30002749466f1745afbcc7ec02041d4bf19a84e99e0f0f76cdf4",
+      "complete": false,
+      "bytes_returned": 2048
+    },
+    {
+      "command": "host read",
+      "run_id": "run-cf00f44d2b85",
+      "version": 1,
+      "qualification": {
+        "research_status": "partial",
+        "assumptions_version": 1,
+        "confirmed": true,
+        "authorization_source": "user",
+        "valuation_status": "unverified",
+        "verification_passed": true,
+        "gaps": [
+          "增长与折现率缺少市场依据",
+          "没有真实价格",
+          "缺少客户、订单与竞争资料",
+          "缺少带来源和日期的市场共识基准"
+        ]
+      },
+      "sha256": "c972aac4742cf58b3afceec89df6e5f713cf3c3307561f19987bc4df9ac770ef",
+      "complete": false,
+      "bytes_returned": 2048
+    },
+    {
+      "command": "host list"
+    }
+  ],
+  "historical_bytes_preserved": true,
+  "live_models": "not_used"
+}

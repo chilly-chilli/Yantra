@@ -1,0 +1,17 @@
+{
+  "time_utc": "2026-10-15T02:26:07.366819+00:00",
+  "checks": {
+    "localhost_tcp_bind": {
+      "available": false,
+      "exception": "PermissionError",
+      "errno": 1,
+      "message": "[Errno 1] Operation not permitted"
+    },
+    "configured_local_proxy": {
+      "available": false,
+      "exception": "PermissionError",
+      "errno": 1,
+      "message": "[Errno 1] Operation not permitted"
+    }
+  }
+}

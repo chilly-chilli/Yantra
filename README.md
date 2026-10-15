@@ -1,10 +1,12 @@
 # Yantra
 
-实证研策：Google ADK 驱动的证据核验型买方投研原型。当前工作区版本为 **0.4.2（Unreleased）**；发布与变更状态见[更新记录](CHANGELOG.md)。
+实证研策：Google ADK 驱动的证据核验型买方投研原型。当前工作区版本为 **0.5.0（Unreleased）**；发布与变更状态见[更新记录](CHANGELOG.md)。
 
 研究可从公司名称开始，自动查找证券与公开资料，也接受明确证券身份及原始文件、目录或网页链接。沿用 `finance → thesis → valuation → verification → report`，输出买入判断、备忘录、结构化结果、计算凭证与来源快照。支持 DCF、PE、PB、EV/EBITDA、单阶段 DDM，以及跨 session 共享知识与混合检索。
 
 ## 快速开始
+
+v0.5 提供直接 CLI、一个主要 Skill 和本地 stdio MCP。`host submit/list/status/read/respond/cancel/resume` 复用原研究引擎，支持持久幂等提交、独立本地执行、不可变成果及带版本的修改收据。安装、Codex／OpenCode接入和权限说明见[宿主指南](docs/HOSTS.md)；[本轮验证](docs/validation/v0.5.0/README.md)区分真实本机协议与离线模型替身，没有执行收费研究或 judge。
 
 需要 Python 3.11+；Google ADK 固定为 2.11.0。
 
@@ -31,6 +33,7 @@ test -f .env || cp .env.example .env
 | 需要了解 | 主要文档 |
 |---|---|
 | 安装、启动、预算、取消、恢复与复测 | [使用指南](docs/USAGE.md) |
+| Codex／OpenCode、Skill、快速提交与本地 MCP | [宿主集成](docs/HOSTS.md) |
 | LLM、OCR、embedding、skills、MCP与工具配置 | [能力配置](docs/CAPABILITIES.md) |
 | 信息工具、Tushare、Tavily 与 Yahoo Finance 接入 | [信息来源配置](docs/INFORMATION_SOURCES.md) |
 | 估值参数、来源、授权与数学复算 | [估值说明](docs/VALUATION.md) |

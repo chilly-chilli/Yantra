@@ -58,7 +58,7 @@ class Engine:
         return OfflineDemoBackend()
 
     @classmethod
-    def create(cls, storage: Path, research: dict, mode="offline-demo", limits=None, materials_dir=None, backend=None):
+    def create(cls, storage: Path, research: dict, mode="offline-demo", limits=None, materials_dir=None, backend=None, *, run_id=None):
         if mode not in ("offline-demo", "real-model", "test"):
             raise ValueError("mode must be offline-demo, real-model or test")
         r = Research.model_validate(research).model_dump()
@@ -75,9 +75,9 @@ class Engine:
             raise FileNotFoundError("materials directory must contain manifest.json")
         # Resolve configuration errors before creating a run directory.
         selected_backend = backend or cls._backend(mode)
-        run_id = "run-" + uuid4().hex[:12]
+        run_id = run_id or "run-" + uuid4().hex[:12]
         directory = Path(storage).resolve() / run_id
-        directory.mkdir(parents=True)
+        directory.mkdir(parents=True, exist_ok=False)
         shutil.copytree(source, directory / "materials")
         registry = ToolRegistry(directory / "materials")
         state = {
@@ -117,6 +117,13 @@ class Engine:
             except BlockingIOError as exc:
                 raise ValueError("run is being executed by another process") from exc
             self.state = json.loads((self.directory / "state.json").read_text())
+            expected = getattr(self, "expected_host_revision", None)
+            if expected is not None:
+                from .host_service import state_revision
+                from .cli_contract import CLIError
+                if state_revision(self.state) != expected:
+                    raise CLIError("revision_conflict", "研究已被另一入口修改；重新查询后提交", field="expected_revision")
+                self.expected_host_revision = None
             self.tools.calculations.update(self.state["calculations"])
             try:
                 yield
@@ -575,7 +582,9 @@ class Engine:
     def _finish(self, cancelled=False):
         report = self._report()
         checks = self._hard_checks(report)
-        status = "cancelled" if cancelled else "completed" if all(checks.values()) else "partial" if self.state["artifacts"].get("finance", {}).get("data", {}).get("financials") else "failed"
+        finance = self.state["artifacts"].get("finance", {}).get("data", {})
+        usable = finance.get("financials") or (self.state.get("raw_materials") and finance.get("evidence"))
+        status = "cancelled" if cancelled else "completed" if all(checks.values()) else "partial" if usable else "failed"
         self.state.update(status=status, pending_user=None, report=report, hard_checks=checks)
         self._log("finalize_check", {"hard_checks": checks, "status": status,
                                      "business_review": "核验 Agent 的逻辑判断仍需业务判断；程序不能证明全部投资论证正确", "issues": self.state["issues"]})
@@ -589,6 +598,8 @@ class Engine:
         self._save()
         from .adk_artifacts import publish_outputs
         publish_outputs(self)
+        from .host_outputs import publish
+        publish(self)
 
 
 def create_adk_engine(company="DEMO", run_id=None):

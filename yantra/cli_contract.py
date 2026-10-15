@@ -100,14 +100,14 @@ def load_json_inputs(args):
 def command_name(args=None, argv=()):
     if args is not None:
         action = next((getattr(args, name, None) for name in
-                       ("model_action", "extension_action", "knowledge_action", "preference_action")
+                       ("model_action", "extension_action", "knowledge_action", "preference_action", "host_action")
                        if getattr(args, name, None)), None)
         return " ".join(filter(None, (args.command, action)))
     if "--version" in argv:
         return "version"
     # Only known command tokens are copied into the error envelope.
     commands = {"start", "demo", "resume", "status", "compare", "replay", "cancel", "configure",
-                "models", "extensions", "knowledge", "preferences"}
+                "models", "extensions", "knowledge", "preferences", "host"}
     return next((value for value in argv if value in commands), "yantra")
 
 
@@ -122,6 +122,8 @@ def output_mode(argv):
 
 
 def exception_error(exc):
+    if isinstance(exc, ModuleNotFoundError):
+        return CLIError("dependency_missing", "运行依赖缺失；请使用安装环境的 Python 并安装项目固定依赖", field=exc.name, exit_code=1)
     if getattr(exc, "code", None) == "research_setup_required":
         return CLIError("research_setup_required", "首次研究前请完成 preferences setup，明确偏好并选择授权或拒绝授权", field="preferences")
     from pydantic import ValidationError
