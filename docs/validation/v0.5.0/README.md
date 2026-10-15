@@ -2,6 +2,8 @@
 
 日期：2026-10-15（Asia/Shanghai）。范围：CLI＋主要 Skill＋本地 stdio MCP，固定 ADK 2.11.0／MCP SDK 1.30.0。版本为 0.5.0 Unreleased，没有 push、合并、部署或发布。操作契约见[宿主指南](../../HOSTS.md)，设计取舍见[ADR 0003](../../decisions/0003-local-host-lifecycle.md)。
 
+最终安装包的OpenCode原生run闭环现已补充通过，见[后续宿主验收](final-host-2026-10-15/README.md)；下文首次阶段的serve限制仍保留为历史记录。
+
 后续逐项契约审计及修正另见[2026-10-15补充记录](contract-audit-2026-10-15/README.md)。下表保留首次交付阶段的原始数量和限制，不把后续结果覆盖成此前全绿。
 
 ## 结果与验收边界

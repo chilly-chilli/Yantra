@@ -113,3 +113,5 @@ OpenCode 在项目 opencode.json 合并：
 仅支持共享本地工作区的可信客户端，不是远程多租户服务；user/session 字符串不构成认证。宿主只操作自身提交的研究；旧 CLI 的未绑定记录可只读定位，ADK 已绑定研究没有宿主提交映射时拒绝，仍从原 Session 访问。旧 CLI 保留本机操作者入口，不能把它视为跨用户安全沙箱。
 
 MCP 传输错误遵循 SDK；业务错误同时返回 isError=true 和既有安全错误包装；partial/failed 研究读取返回 isError=false，资格留在 data。服务不暴露任意文件、远程 OAuth、GUI 或自动继承宿主全部工具权限。扩展仍由原角色授权、冻结快照和父权限约束。
+
+最终安装包的 OpenCode 原生 run＋stdio 闭环及命令权限两路径检查，见[补充验收](validation/v0.5.0/final-host-2026-10-15/README.md)。该记录使用本地 SDK 确定性替身，不要求监听 TCP 端口；HTTP 测试及真实服务限制单独列明。

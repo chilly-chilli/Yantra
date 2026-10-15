@@ -1,0 +1,215 @@
+{
+  "host_version": "1.18.33",
+  "package_version": "0.5.0",
+  "base_code_commit": "119a69bb72a3554c528b1e155622b3b27a7671db",
+  "transport": "actual OpenCode native run and installed Yantra stdio MCP",
+  "model": "in-process deterministic LanguageModelV3 SDK fixture; no TCP listener or inference service",
+  "exit_code": 0,
+  "main_provider_requests": 50,
+  "actual_host_tool_calls": 49,
+  "skill_loaded": true,
+  "skill_sha256": "9b308e8f75f9de14d19b61ff2e03437540ecda29d607b3843165ad6bf8200ae2",
+  "permissions": {
+    "mcp_flow_bash": "deny",
+    "mcp_flow_edit": "deny",
+    "cli_probe": "only the exact installed local doctor command explicitly allowed"
+  },
+  "cli_probe": {
+    "host_exit_code": 0,
+    "tool_exit_code": 0,
+    "route": "skill_cli",
+    "network": "not_probed",
+    "research": "not_executed"
+  },
+  "events": [
+    {
+      "command": "host doctor",
+      "route": "skill_mcp"
+    },
+    {
+      "command": "host submit",
+      "run_id": "run-61707d1d3b2a",
+      "receipt": "persisted"
+    },
+    {
+      "command": "host status",
+      "run_id": "run-61707d1d3b2a",
+      "status": "waiting",
+      "progress": {
+        "phase": "waiting_confirmation",
+        "task_count": 3,
+        "result_count": 3,
+        "active_tasks": [],
+        "gaps": [
+          "增长与折现率缺少市场依据",
+          "没有真实价格",
+          "缺少客户、订单与竞争资料",
+          "缺少带来源和日期的市场共识基准"
+        ]
+      },
+      "qualification": {
+        "research_status": "waiting",
+        "assumptions_version": 1,
+        "confirmed": false,
+        "authorization_source": "none",
+        "valuation_status": "unverified",
+        "verification_passed": false,
+        "gaps": []
+      }
+    },
+    {
+      "command": "host respond",
+      "run_id": "run-61707d1d3b2a",
+      "receipt": "accepted"
+    },
+    {
+      "command": "host status",
+      "run_id": "run-61707d1d3b2a",
+      "status": "partial",
+      "progress": {
+        "phase": "partial",
+        "task_count": 5,
+        "result_count": 5,
+        "active_tasks": [],
+        "gaps": [
+          "增长与折现率缺少市场依据",
+          "没有真实价格",
+          "缺少客户、订单与竞争资料",
+          "缺少带来源和日期的市场共识基准"
+        ]
+      },
+      "qualification": {
+        "research_status": "partial",
+        "assumptions_version": 1,
+        "confirmed": true,
+        "authorization_source": "user",
+        "valuation_status": "unverified",
+        "verification_passed": true,
+        "gaps": [
+          "增长与折现率缺少市场依据",
+          "没有真实价格",
+          "缺少客户、订单与竞争资料",
+          "缺少带来源和日期的市场共识基准"
+        ]
+      }
+    },
+    {
+      "command": "host read",
+      "run_id": "run-61707d1d3b2a",
+      "qualification": {
+        "research_status": "partial",
+        "assumptions_version": 1,
+        "confirmed": true,
+        "authorization_source": "user",
+        "valuation_status": "unverified",
+        "verification_passed": true,
+        "gaps": [
+          "增长与折现率缺少市场依据",
+          "没有真实价格",
+          "缺少客户、订单与竞争资料",
+          "缺少带来源和日期的市场共识基准"
+        ]
+      },
+      "version": 1,
+      "sha256": "505d7907c2facc221a36ea51b37ce15164b729c4eae875bae65b865e73c3a348",
+      "complete": false,
+      "bytes_returned": 2048
+    },
+    {
+      "command": "host respond",
+      "run_id": "run-61707d1d3b2a",
+      "receipt": "accepted"
+    },
+    {
+      "command": "host status",
+      "run_id": "run-61707d1d3b2a",
+      "status": "partial",
+      "progress": {
+        "phase": "partial",
+        "task_count": 8,
+        "result_count": 8,
+        "active_tasks": [],
+        "gaps": [
+          "增长与折现率缺少市场依据",
+          "没有真实价格",
+          "缺少客户、订单与竞争资料",
+          "缺少带来源和日期的市场共识基准"
+        ]
+      },
+      "qualification": {
+        "research_status": "partial",
+        "assumptions_version": 2,
+        "confirmed": true,
+        "authorization_source": "user",
+        "valuation_status": "unverified",
+        "verification_passed": true,
+        "gaps": [
+          "增长与折现率缺少市场依据",
+          "没有真实价格",
+          "缺少客户、订单与竞争资料",
+          "缺少带来源和日期的市场共识基准"
+        ]
+      }
+    },
+    {
+      "command": "host read",
+      "run_id": "run-61707d1d3b2a",
+      "qualification": {
+        "research_status": "partial",
+        "assumptions_version": 2,
+        "confirmed": true,
+        "authorization_source": "user",
+        "valuation_status": "unverified",
+        "verification_passed": true,
+        "gaps": [
+          "增长与折现率缺少市场依据",
+          "没有真实价格",
+          "缺少客户、订单与竞争资料",
+          "缺少带来源和日期的市场共识基准"
+        ]
+      },
+      "version": 2,
+      "sha256": "15a91691d7c8184e8ec99bdb820029f62aafb60822365241674d593fa64637fc",
+      "complete": false,
+      "bytes_returned": 2048
+    },
+    {
+      "command": "host read",
+      "run_id": "run-61707d1d3b2a",
+      "qualification": {
+        "research_status": "partial",
+        "assumptions_version": 1,
+        "confirmed": true,
+        "authorization_source": "user",
+        "valuation_status": "unverified",
+        "verification_passed": true,
+        "gaps": [
+          "增长与折现率缺少市场依据",
+          "没有真实价格",
+          "缺少客户、订单与竞争资料",
+          "缺少带来源和日期的市场共识基准"
+        ]
+      },
+      "version": 1,
+      "sha256": "505d7907c2facc221a36ea51b37ce15164b729c4eae875bae65b865e73c3a348",
+      "complete": false,
+      "bytes_returned": 2048
+    },
+    {
+      "command": "host list"
+    }
+  ],
+  "historical_bytes_preserved": true,
+  "final_fixture_text": "Offline host fixture complete. Research run-61707d1d3b2a; report versions 1 and 2; partial, valuation unverified. Synthetic evidence gaps remain; no real research/model quality claim.",
+  "live_models": "not_called",
+  "live_research_services": "not_called",
+  "judge": "not_called",
+  "user_host_config": "not_modified",
+  "trace_sha256": {
+    "result.json": "a678c8338086b8b839051cb92ab06657a93bd9da836acc198155a180fce043cb",
+    "business-results.jsonl": "8ef39f01f8c15a60489d4d29167e868b670edb7b4fa7d750a5241f82a8bf7535",
+    "requests.jsonl": "c69c44b024fb0aefcbbd6c7bbe6f14b059b4bbede9dd580e8351b8d2c2c553ff",
+    "provider.mjs": "1f89e73989b1559cea8cc90ddecc291134457a31b1eeb22896fc591a11e23761",
+    "cli-route.json": "ca09aad2e61ffda245538699893813fea2ec663b374270427718f852ff43d18d"
+  }
+}
