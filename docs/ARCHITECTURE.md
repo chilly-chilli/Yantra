@@ -38,7 +38,7 @@ flowchart TD
 
 ## 宿主入口与执行者
 
-`host_contract.py` 的 Pydantic 输入同时供 CLI、schema 发现和 `host_mcp.py` 的固定 SDK stdio 服务使用；`host_service.py` 持久化提交／操作意图并提供统一访问、查询及幂等入口，`host_worker.py` 启动脱离 stdio 的单任务本机执行者，仍调用现有 `run_engine`、控制器及共享原生 App／插件。`.host/requests.sqlite` 不保存预算或结算；执行锁只提供存活观察，状态与账本仍由原 Engine／RawEngine 写入。启动失败／中断明确投影，查询不自动恢复。取舍见[ADR 0003](decisions/0003-local-host-lifecycle.md)。
+`host_contract.py` 的 Pydantic 输入同时供 CLI、schema 发现和 `host_mcp.py` 的固定 SDK stdio 服务使用；`host_service.py` 持久化提交／操作意图并提供统一访问、查询及幂等入口，`host_worker.py` 启动脱离 stdio 的单任务本机执行者，仍调用现有 `run_engine`、控制器及共享原生 App／插件。准备阶段的取消意图也进入原 RunBudget 的预留前检查；状态中的 progress 与 next_actions 是只读投影。`.host/requests.sqlite` 不保存预算或结算；执行锁只提供存活观察，状态与账本仍由原 Engine／RawEngine 写入。启动失败／中断明确投影，查询不自动恢复。取舍见[ADR 0003](decisions/0003-local-host-lifecycle.md)。
 
 新宿主研究由控制器在交付时通过 `host_outputs.py` 保存不可变内容寻址成果代次和证据字节，原 `report-vN` 路径继续兼容旧入口。成果代次、假设版本和状态 CAS 分开；旧版缺失／篡改明确失败。原只读 ADK Artifact 指针和所属 Session 检查保留，宿主没有提交映射的已绑定研究仍被拒绝。完整契约见[宿主指南](HOSTS.md)。
 

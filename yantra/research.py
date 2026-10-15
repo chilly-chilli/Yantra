@@ -158,7 +158,7 @@ class RawEngine(Engine):
     @classmethod
     def create_raw(cls, storage, research, inputs, limits=None, pricing=None, backend=None, framework="auto", framework_file=None,
                    settings=None, llm_profile=None, ocr_profile=None, embedding_profile=None, knowledge_dir=None, explicit_parameters=None,
-                   authorization_override=None, *, run_id=None, started_at=None):
+                   authorization_override=None, *, run_id=None, started_at=None, cancellation_path=None):
         from .knowledge.preferences import Preferences
         from .knowledge.store import KnowledgeStore
         from .schemas import AutonomyAuthorization
@@ -229,6 +229,7 @@ class RawEngine(Engine):
             "budget": {"tool_calls": 0, "model_calls": 0, "main_loops": 0, "repair_rounds": 0, "cost_reserved_usd": 0,
                        "active_seconds": 0, "model_cost_cny": 0, "external_service_cost_cny": 0}}
         engine = cls(directory, state, selected)
+        engine.run_budget.cancellation_path = cancellation_path
         engine.knowledge.initialize()
         from .knowledge.preferences import Preferences
         defaults, applications = Preferences(engine.knowledge.store).resolve(state["knowledge"]["company_id"], state["explicit_parameters"],
@@ -1592,9 +1593,6 @@ class RawEngine(Engine):
         self.state["budget"]["active_seconds"] = time.time() - datetime.fromisoformat(self.state["created_at"]).timestamp()
         cancelled = cancelled or (self.directory / "cancel.request").exists()
         super()._finish(cancelled)
-        if self.state["artifacts"].get("finance", {}).get("data", {}).get("evidence") and self.state["status"] == "failed":
-            self.state["status"] = "partial"
-            self._save()
         if self.knowledge:
             self.knowledge.finish()
             self._save()

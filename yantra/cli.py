@@ -172,6 +172,7 @@ def parser():
         action = host_actions.add_parser(operation)
         action.add_argument("--workspace", type=Path, required=True, help="共享本地工作区；推荐绝对路径，跨目录调用使用相同值")
         action.add_argument("--runs-dir", type=Path, help="显式运行目录；默认 workspace/runs 或 YANTRA_RUNS_DIR")
+        action.add_argument("--knowledge-dir", type=Path, help="显式知识库；默认 workspace/.yantra/knowledge 或 YANTRA_KNOWLEDGE_DIR")
         action.add_argument("--env-file", type=Path, help="仅 worker 明确加载的本地环境文件")
         if operation in INPUTS:
             add_json_input(action, "input", default={}, help="操作输入对象；实际 schema 见 host schema")
@@ -280,7 +281,7 @@ async def execute(args):
     settings=ConfigStore(args.config)
     if args.command == "host":
         from .host_service import HostService
-        service = HostService(args.workspace, config=args.config, runs_dir=args.runs_dir, env_file=args.env_file)
+        service = HostService(args.workspace, config=args.config, runs_dir=args.runs_dir, knowledge_dir=args.knowledge_dir, env_file=args.env_file)
         if args.host_action == "skill":
             import shutil
             source = Path(__file__).parent / "host_skill" / "yantra-research"
@@ -499,7 +500,7 @@ def main(argv=None):
         if args.command == "host" and args.host_action == "mcp":
             from .host_service import HostService
             from .host_mcp import serve
-            asyncio.run(serve(HostService(args.workspace, config=args.config, runs_dir=args.runs_dir, env_file=args.env_file)))
+            asyncio.run(serve(HostService(args.workspace, config=args.config, runs_dir=args.runs_dir, knowledge_dir=args.knowledge_dir, env_file=args.env_file)))
             return 0
         status.report("working", "正在执行 " + command_name(args))
         # Third-party progress/prints cannot contaminate the JSON response.

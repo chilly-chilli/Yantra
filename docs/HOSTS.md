@@ -14,7 +14,7 @@ python3 -m venv .venv
 
 宿主必须使用安装环境内的 Python／yantra。下文 `/absolute/...` 均为待替换路径。源码目录能够运行不等于安装完成。干净安装、资源检查和跨目录离线示例见[安装证据](validation/v0.5.0/README.md#安装验收)。
 
-每个调用显式传 `--workspace /absolute/workspace`，配置默认该目录的 `.yantra/config.json`，知识库默认 `.yantra/knowledge`，研究默认 `runs`。全局 `--config` 位于 `host` 前；`--runs-dir` 位于具体操作后，仍支持 `YANTRA_RUNS_DIR`。跨工作目录使用相同绝对路径即可找回记录。原 `start/status/resume` 的相对目录默认值保留，没有自动扫描、搬迁或合并旧配置。
+每个调用显式传 `--workspace /absolute/workspace`，配置默认该目录的 `.yantra/config.json`，知识库默认 `.yantra/knowledge`，研究默认 `runs`。全局 `--config` 位于 `host` 前，优先于 `YANTRA_CONFIG`；`--runs-dir`、`--knowledge-dir` 位于具体操作后，分别优先于 `YANTRA_RUNS_DIR`、`YANTRA_KNOWLEDGE_DIR`。未指定参数或环境变量时才使用工作区默认目录。跨工作目录使用相同绝对路径即可找回记录。原 `start/status/resume` 的相对目录默认值保留，没有自动扫描、搬迁或合并旧配置。
 
 `--env-file` 只明确加载一个本地文件，值由执行者读取；不自动寻找凭据。结构化配置复用 `models add/select`、`extensions add/enable` 等[既有命令](CAPABILITIES.md)，非 TTY 不进入菜单。模型、资料服务与费用配置继续使用已有规则。
 
@@ -53,7 +53,7 @@ python3 -m venv .venv
 
 `execution.state` 为 accepted、starting、active、idle、interrupted、failed 或 cancelled；请求接受、执行者启动及业务运行是不同事实。idle 表示执行者已结束当前推进，研究可能 waiting/partial/failed。存活按执行锁观测，不凭旧 PID 宣称仍运行。异常退出／启动失败时，若原状态 running，宿主 `status` 返回 interrupted/failed，原业务状态保留为 `saved_research_status`；不会让观察层改写账本。旧入口未管理进程显示 unmanaged。查询不恢复、不调用模型；成功读取 failed/partial 仍是成功操作。
 
-列表使用稳定 run ID cursor；传上页 `next_cursor` 为 `after`。状态返回实际预算、缺口、授权／核验资格、等待事项、状态修订号及产物索引。`next_actions` 只是接口提示。明确拒绝、撤销和 manual 未回复的暂定语义沿用[原授权规则](KNOWLEDGE.md#首次设置与自主选择授权)。
+列表使用稳定 run ID cursor；传上页 `next_cursor` 为 `after`。即使执行者在首次状态保存前失败，列表也保留请求的公司／问题；尚未建立的账本为 null，不把未知费用写成零。状态返回实际预算、缺口、授权／核验资格、等待事项、状态修订号及产物索引。`progress` 根据已持久化任务、结果及执行观察给出 phase、task_count、result_count、active_tasks 和 gaps，不生成完成百分比。身份等待和参数等待分别标记。`next_actions` 给出取消、回应或恢复的约束，以及当前 revision/pending_id；调用者仍须提供稳定 operation_id 和明确决策，它不是授权，费用与截止在执行时再次检查。明确拒绝、撤销和 manual 未回复的暂定语义沿用[原授权规则](KNOWLEDGE.md#首次设置与自主选择授权)。
 
 ## 成果、依据与修改
 
@@ -61,7 +61,7 @@ python3 -m venv .venv
 {"run_id":"run-REPLACE","artifact":"report.md","version":1,"offset":0,"length":16384}
 ```
 
-`host read`／`yantra_read` 只读取 `status.outputs` 已索引的 report.md、report.json、calculations.json、evidence/材料ID 或 anchors/材料ID。`version` 是从1开始的不可变成果代次，和 `assumptions_version` 不同；省略时明确取最新。每次控制器交付保留内容寻址字节，同一假设版本再次交付也可形成新代次。资格和证据定位固定在该代次中，不能用当前状态替换旧版限制。旧运行未产生宿主索引时明确 `output_not_found`，不伪造历史字节。
+`host read`／`yantra_read` 只读取 `status.outputs` 已索引的 report.md、report.json、calculations.json、evidence/材料ID 或 anchors/材料ID。`version` 是从1开始的不可变成果代次，和 `assumptions_version` 不同；省略时明确取最新。每次控制器交付保留内容寻址字节，同一假设版本再次交付也可形成新代次。资格和证据定位固定在该代次中，不能用当前状态替换旧版限制。仅有定性原文而缺少财务关键数据的正式研究，以 partial 及缺口写入同一份状态、报告与资格，不在写报告后另行改状态。旧运行未产生宿主索引时明确 `output_not_found`，不伪造历史字节。
 
 返回原始 sha256、总字节数、offset、bytes_returned、complete、next_offset、mime_type、locator 和 qualification。`content` 的 base64 保存精确切片；文本额外给 `text`，跨 UTF-8 字符边界可能显示替换字符，核对精确内容用 base64。单次至多65536字节。原文 bytes 与解析 anchors 明确分开，资料正文不能成为新授权；哈希验证不证明财务语义正确。缺失、篡改、未索引标识及路径越界明确失败。
 
@@ -77,7 +77,7 @@ python3 -m venv .venv
 
 ## 取消、恢复与新增资料
 
-`cancel` 输入仅 run_id，返回 request_accepted、already_terminal 或 cancelled；请求接受不代表已停止，需查询实际状态。取消在控制器边界收束，不重置费用。`resume` 需要 run_id、operation_id、expected_revision；partial/failed 正式研究明确指定 `continue_research=true`。预算已耗尽／截止已过即拒绝，不因继续而重新计时；旧取消任务仍不能恢复。in_flight/in_flight_tool 中断结果未知时禁止隐式重放，即使重新连接也是如此。
+`cancel` 输入仅 run_id，返回 request_accepted、already_terminal 或 cancelled；请求接受不代表已停止，需查询实际状态。取消在控制器边界收束，不重置费用。准备阶段即写入独立取消意图标记，原预算检查在费用预留前检查该标记；尚未启动且没有业务状态的请求可直接返回 cancelled，不永久等待一个不存在的执行者。`resume` 需要 run_id、operation_id、expected_revision；partial/failed 正式研究明确指定 `continue_research=true`。预算已耗尽／截止已过即拒绝，不因继续而重新计时；旧取消任务仍不能恢复。in_flight/in_flight_tool 中断结果未知时禁止隐式重放，即使重新连接也是如此。
 
 新财报使用新提交、不同幂等键、`parent_run_id` 指向原研究，并明确新预算、截止和资料；首版以关联后续研究表达，不在 resume 中接受材料，也不自动把单次偏好变为永久要求。
 

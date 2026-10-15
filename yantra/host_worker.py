@@ -33,9 +33,9 @@ def create_engine(service, row):
         pricing=request.pricing.model_dump() if request.pricing else None, framework=request.framework or "auto",
         framework_file=request.framework_file, settings=service.settings, llm_profile=request.llm,
         ocr_profile=request.ocr, embedding_profile=request.embedding,
-        knowledge_dir=service.workspace / ".yantra/knowledge", explicit_parameters=explicit,
+        knowledge_dir=service.knowledge, explicit_parameters=explicit,
         authorization_override=request.authorization.model_dump() if request.authorization else None,
-        run_id=row["run_id"], started_at=row["created_at"])
+        run_id=row["run_id"], started_at=row["created_at"], cancellation_path=service.control / (row["run_id"] + ".cancel"))
 
 
 async def execute_job(service, row):
@@ -76,7 +76,8 @@ async def execute_job(service, row):
             engine.state["parent_run_id"] = json.loads(row["payload"]).get("parent_run_id")
             engine._save()
         if service.row(row["run_id"])["cancel_requested"] or row["job"] == "cancel":
-            await engine.respond("cancel")
+            if engine.state["status"] != "cancelled":
+                await engine.respond("cancel")
         elif operation:
             payload = json.loads(operation["payload"])
             if exists:
@@ -117,6 +118,10 @@ async def execute_job(service, row):
                        "parameter_changes": changes,
                        "outputs": [item["version"] for item in index(engine.directory)]}
     except Exception as exc:
+        from .budget import BudgetExceeded
+        if isinstance(exc, BudgetExceeded) and service.row(row["run_id"])["cancel_requested"] and not (directory / "state.json").exists():
+            service.finish_job(row["run_id"], "cancelled")
+            return
         error = exception_error(exc).error
         if operation:
             receipt = {"receipt": "rejected", "error": error}
@@ -135,8 +140,9 @@ def main():
     for name in ("workspace", "config", "runs-dir", "run-id"):
         parser.add_argument("--" + name, required=True)
     parser.add_argument("--env-file")
+    parser.add_argument("--knowledge-dir")
     args = parser.parse_args()
-    service = HostService(args.workspace, config=args.config, runs_dir=args.runs_dir, env_file=args.env_file)
+    service = HostService(args.workspace, config=args.config, runs_dir=args.runs_dir, knowledge_dir=args.knowledge_dir, env_file=args.env_file)
     # An executor cannot coexist with another host executor for this run.
     with service.gate(args.run_id, blocking=True):
         row = service.row(args.run_id)

@@ -1,0 +1,34 @@
+{
+  "base_commit": "e2f3868c28e30e51301a4b684be70baa84bbe4e6",
+  "prompt_path": "docs/prompts/v0.5-host-integration.md",
+  "prompt_sha256": "5674954dab5c96fdaeab5639b68d1fdcfe5b4937bd260156a92e54c1e6e1baf3",
+  "full_regression": {
+    "run": 286,
+    "passed": 282,
+    "errors": [
+      "test_http_redirect_cannot_forward_declared_credentials (test_adk_mcp.NativeMCPTests.test_http_redirect_cannot_forward_declared_credentials)",
+      "test_http_reuses_session_and_closes_client_without_stopping_service (test_adk_mcp.NativeMCPTests.test_http_reuses_session_and_closes_client_without_stopping_service)",
+      "test_streamable_http_mcp (test_capabilities.ExtensionTests.test_streamable_http_mcp)",
+      "test_model_list_probe_has_no_inference_call (test_capabilities.ModelTests.test_model_list_probe_has_no_inference_call)"
+    ],
+    "seconds": 220.478
+  },
+  "final_targeted_host": {
+    "run": 22,
+    "passed": 22
+  },
+  "formal_research": {
+    "run": 7,
+    "passed": 7
+  },
+  "investment_logic": {
+    "run": 23,
+    "passed": 23
+  },
+  "remaining_acceptance": [
+    "localhost HTTP fixtures/full regression",
+    "public-index clean dependency download",
+    "final OpenCode installed-package serve flow"
+  ],
+  "goal_complete": false
+}

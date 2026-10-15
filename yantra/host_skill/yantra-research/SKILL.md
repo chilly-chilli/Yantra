@@ -9,7 +9,7 @@ Use one Yantra research engine for the complete research workflow. The host inte
 
 Use the configured absolute workspace, Python executable, configuration, runs directory and optional local environment-file paths. Do not infer that a remote host/container can see paths on the user's laptop. First inspect available tools:
 
-- With an authorized command tool, run `PYTHON -m yantra --output json host schema --workspace WORKSPACE`, then `host doctor` with `--input '{"command_tool":"available"}'` and the same paths. `PYTHON` and `WORKSPACE` are placeholders to replace with configured absolute paths. Put global `--config CONFIG` before `host`; put `--runs-dir RUNS` and `--env-file ENV` after the operation.
+- With an authorized command tool, run `PYTHON -m yantra --output json host schema --workspace WORKSPACE`, then `host doctor` with `--input '{"command_tool":"available"}'` and the same paths. `PYTHON` and `WORKSPACE` are placeholders to replace with configured absolute paths. Put global `--config CONFIG` before `host`; put `--runs-dir RUNS`, `--knowledge-dir KNOWLEDGE` when distinct, and `--env-file ENV` after the operation. Explicit paths override YANTRA_CONFIG/YANTRA_RUNS_DIR/YANTRA_KNOWLEDGE_DIR; use absolute values for cross-directory calls.
 - Without command access, use `yantra_schema` and `yantra_doctor` through the configured MCP server. Tools take `{"request": {...}}`. Report command-tool absence/denial accurately through `command_tool`; set `mcp_available=true`. Host-specific tool prefixes may apply.
 - If neither is available, explain the missing command permission or MCP configuration and point to Yantra's host installation guide. Do not claim a submission happened.
 

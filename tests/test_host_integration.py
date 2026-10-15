@@ -33,7 +33,7 @@ class HostIntegrationTests(unittest.TestCase):
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name).resolve()
         self.materials = test_materials(self.root / "fictional")
-        self.service = HostService(self.root, runs_dir=self.root / "runs")
+        self.service = HostService(self.root, config=self.root / ".yantra/config.json", runs_dir=self.root / "runs", knowledge_dir=self.root / ".yantra/knowledge")
         self.request = {"company": "DEMO", "mode": "offline-demo", "demo_materials_dir": str(self.materials), "idempotency_key": "synthetic-first"}
         guard = self.root / "guard"
         guard.mkdir()
@@ -50,6 +50,8 @@ def connect(self, address):
 socket.socket.connect = connect
 ''')
         self.environment = patch.dict(os.environ, {"PYTHONPATH": str(guard) + os.pathsep + str(ROOT), "YANTRA_RUNS_DIR": str(self.root / "runs"),
+            "YANTRA_CONFIG": str(self.root / ".yantra/config.json"),
+            "YANTRA_KNOWLEDGE_DIR": str(self.root / ".yantra/knowledge"),
             "YANTRA_TEST_NETWORK_LOG": str(self.root / "network-attempts"), "LITELLM_LOCAL_MODEL_COST_MAP": "True"})
         self.environment.start()
         self.addCleanup(self.environment.stop)
@@ -97,14 +99,102 @@ socket.socket.connect = connect
         self.assertEqual(len(list(self.service.runs.glob("run-*/state.json"))), 1)
 
     def test_actual_cli_exit_does_not_terminate_executor_and_cross_directory(self):
+        marker, release = self.root / "executor-ready", self.root / "executor-release"
+        self.addCleanup(release.touch)
+        with (self.root / "guard/sitecustomize.py").open("a") as handle:
+            handle.write(f'''
+from yantra import adk_app
+original_run = adk_app.run_engine
+async def held_run(engine):
+    __import__("pathlib").Path({str(marker)!r}).touch()
+    for _ in range(100):
+        if __import__("pathlib").Path({str(release)!r}).exists(): break
+        await __import__("asyncio").sleep(.05)
+    return await original_run(engine)
+adk_app.run_engine = held_run
+''')
         process = subprocess.run([sys.executable, "-m", "yantra", "--output", "json", "host", "submit", "--workspace", str(self.root),
             "--input", json.dumps(self.request)], cwd="/", text=True, capture_output=True, timeout=15)
         self.assertEqual(process.returncode, 0, process.stderr)
         receipt = json.loads(process.stdout)["data"]
+        deadline = time.monotonic() + 15
+        while not marker.exists() and time.monotonic() < deadline:
+            time.sleep(.03)
+        self.assertTrue(marker.exists())
+        os.kill(self.service.row(receipt["run_id"])["pid"], 0)
+        self.assertEqual(self.service.call("status", {"run_id": receipt["run_id"]})["execution"]["state"], "active")
+        release.touch()
         result = self.wait(receipt["run_id"])
         self.assertEqual(result["status"], "waiting")
         self.assertEqual(result["execution"]["state"], "idle")
         self.assertEqual(len(self.service.call("list", {})["runs"]), 1)
+
+    def test_status_exposes_observed_progress_and_action_constraints(self):
+        initial = self.submit()
+        self.assertEqual(initial["progress"]["phase"], "waiting_confirmation")
+        self.assertGreater(initial["progress"]["result_count"], 0)
+        self.assertEqual(initial["progress"]["active_tasks"], [])
+        response = next(action for action in initial["next_actions"] if action["action"] == "respond")
+        self.assertEqual(response["expected_revision"], initial["revision"])
+        self.assertEqual(response["pending_id"], initial["pending_id"])
+        self.assertIn("confirm", response["decisions"])
+        self.assertIn("operation_id", response["required_input"])
+        from yantra.host_service import progress
+        observed = self.service.state(initial["run_id"])
+        observed.update(status="running", in_flight=None)
+        observed["tasks"].append({"task_id": "task-unfinished", "target": "finance", "purpose": "collect", "depth": 2})
+        self.assertEqual(progress(observed, {"state": "active"})["active_tasks"], [])
+        observed["in_flight_tool"] = {"task_id": "task-unfinished"}
+        self.assertEqual(progress(observed, {"state": "active"})["phase"], "finance")
+        engine = Engine.load(self.service.runs, initial["run_id"])
+        engine.state["assumptions"]["parameters"] = {}
+        engine._save()
+        no_parameters = self.service.call("status", {"run_id": initial["run_id"]})
+        response = next(action for action in no_parameters["next_actions"] if action["action"] == "respond")
+        self.assertEqual(response["decisions"], ["reject"])
+
+    def test_qualitative_partial_report_matches_fixed_output_qualification(self):
+        from test_formal_entry import UnusedBackend, PRICING
+        from yantra.research import RawEngine
+        from yantra.host_outputs import index
+        engine = RawEngine.create_raw(self.service.runs, {"company": "SYNTHETIC", "horizon": "12个月", "cutoff": "2025-12-31"}, [],
+            backend=UnusedBackend(), pricing=PRICING)
+        engine.state["host_contract_version"] = 1
+        engine.state["artifacts"]["finance"] = {"task_id": "task-qualitative", "data": {"financials": [], "evidence": [{"kind": "fact", "statement": "SYNTHETIC qualitative disclosure", "source_ref": "synthetic:L1"}]},
+            "evidence_refs": [], "calculation_refs": [], "unresolved": ["SYNTHETIC financial data missing"], "conflicts": [], "assumptions_version": 1}
+        engine._save()
+        with engine._lock():
+            engine._finish()
+        self.assertEqual(engine.state["status"], "partial")
+        self.assertEqual(index(engine.directory)[-1]["qualification"]["research_status"], "partial")
+        self.assertIn("**partial**", Path(engine.state["report_path"]).read_text())
+
+    def test_cancel_before_first_state_blocks_preparation_fee_reservation(self):
+        from test_formal_entry import UnusedBackend, PRICING
+        from yantra.knowledge.runtime import ResearchKnowledge
+        from yantra.research import RawEngine
+        formal = {"company": "SYNTHETIC", "idempotency_key": "preparation-cancel"}
+        with patch.object(self.service, "launch"):
+            receipt = self.service.call("submit", formal)
+        with self.service.database() as db:
+            db.execute("UPDATE submissions SET job='initial',execution='active' WHERE run_id=?", (receipt["run_id"],))
+            db.commit()
+        original_initialize = ResearchKnowledge.initialize
+        def cancel_before_initialization(knowledge):
+            if knowledge.engine.state["run_id"] == receipt["run_id"]:
+                self.assertEqual(self.service.call("cancel", {"run_id": receipt["run_id"]})["cancellation"], "request_accepted")
+                knowledge.engine.run_budget.reserve_fixed(.25, "synthetic-preparation", {"source": "controlled-fixture"})
+            return original_initialize(knowledge)
+        original_create = RawEngine.create_raw
+        def create_with_fixture(*args, **kwargs):
+            return original_create(*args, **(kwargs | {"backend": UnusedBackend(), "pricing": PRICING}))
+        with self.service.gate(receipt["run_id"]), patch.object(ResearchKnowledge, "initialize", cancel_before_initialization), patch.object(RawEngine, "create_raw", create_with_fixture):
+            asyncio.run(execute_job(self.service, self.service.row(receipt["run_id"])))
+        result = self.service.call("status", {"run_id": receipt["run_id"]})
+        self.assertEqual(result["status"], "cancelled")
+        path = self.service.runs / receipt["run_id"] / "state.json"
+        if path.exists():
+            self.assertEqual(json.loads(path.read_text())["model_ledger"], [])
 
     def test_versions_duplicate_modification_receipts_hashes_and_bounded_read(self):
         initial = self.submit()
@@ -148,6 +238,14 @@ socket.socket.connect = connect
         self.assertEqual(result["status"], "cancelled")
         with self.assertRaises(CLIError):
             self.service.call("resume", {"run_id": initial["run_id"], "operation_id": "resume", "expected_revision": result["revision"]})
+
+    def test_cancel_persisted_intent_without_executor_does_not_wait_forever(self):
+        with patch.object(self.service, "launch"):
+            receipt = self.service.call("submit", self.request)
+        result = self.service.call("cancel", {"run_id": receipt["run_id"]})
+        self.assertEqual(result["cancellation"], "cancelled")
+        self.assertEqual(self.service.call("status", {"run_id": receipt["run_id"]})["status"], "cancelled")
+        self.assertFalse((self.service.runs / receipt["run_id"] / "state.json").exists())
 
     def test_active_cancellation_settles_when_engine_reaches_waiting(self):
         with patch.object(self.service, "launch"):
@@ -193,11 +291,27 @@ socket.socket.connect = connect
             receipt = self.service.call("submit", self.request)
         status = self.service.call("status", {"run_id": receipt["run_id"]})
         self.assertEqual(status["status"], "failed")
+        self.assertEqual(status["research"]["company"], "DEMO")
+        self.assertIsNone(status["budget"])
+        self.assertEqual(self.service.call("list", {})["runs"][0]["research"]["company"], "DEMO")
         self.assertEqual(status["execution"]["error"]["code"], "execution_permission_denied")
         self.assertNotIn("PRIVATE_SECRET", json.dumps(status))
         self.service.call("resume", {"run_id": receipt["run_id"], "operation_id": "retry", "expected_revision": status["revision"]})
         result = self.wait(receipt["run_id"])
         self.assertEqual(result["status"], "waiting", result)
+
+    def test_executor_death_before_start_acknowledgement_can_resume(self):
+        with patch.object(self.service, "launch"):
+            receipt = self.service.call("submit", self.request)
+        child = subprocess.Popen([sys.executable, "-c", "pass"])
+        child.wait(timeout=10)
+        with self.service.database() as db:
+            db.execute("UPDATE submissions SET execution='starting',pid=? WHERE run_id=?", (child.pid, receipt["run_id"]))
+            db.commit()
+        result = self.service.call("status", {"run_id": receipt["run_id"]})
+        self.assertEqual(result["status"], "interrupted")
+        self.service.call("resume", {"run_id": receipt["run_id"], "operation_id": "restart-before-ack", "expected_revision": result["revision"]})
+        self.assertEqual(self.wait(receipt["run_id"])["status"], "waiting")
 
     def test_interrupted_executor_and_unknown_operation_do_not_reset_budget(self):
         initial = self.submit()
@@ -294,6 +408,38 @@ if __import__("pathlib").Path({str(once)!r}).exists():
             RawEngine.create_raw(self.service.runs, {"company": "SYNTHETIC", "horizon": "12个月", "cutoff": "2025-12-31"}, [],
                 backend=UnusedBackend(), pricing=PRICING, started_at=1000.0)
 
+    def test_host_identity_response_uses_current_pending_and_original_budget(self):
+        from test_formal_entry import UnusedBackend, PRICING, CANDIDATES
+        from yantra.research import RawEngine
+        with patch.object(self.service, "launch"):
+            receipt = self.service.call("submit", {"company": "SYNTHETIC", "idempotency_key": "identity-response"})
+        raw = RawEngine.create_raw(self.service.runs, {"company": "SYNTHETIC", "horizon": "12个月", "cutoff": "2025-12-31"}, [],
+            backend=UnusedBackend(), pricing=PRICING, run_id=receipt["run_id"], knowledge_dir=self.service.knowledge)
+        raw.state.update(host_contract_version=1, status="waiting", pending_user={"kind": "identity", "question": "SYNTHETIC choice", "candidates": CANDIDATES})
+        raw._save()
+        self.service.finish_job(receipt["run_id"], "idle")
+        initial = self.service.call("status", {"run_id": receipt["run_id"]})
+        self.assertEqual(initial["progress"]["phase"], "waiting_identity")
+        async def finish_without_model(engine):
+            with engine._lock():
+                engine._finish()
+            return engine.state
+        with patch.object(self.service, "launch"):
+            self.service.call("respond", {"run_id": receipt["run_id"], "operation_id": "select", "decision": "select_identity",
+                "selector": "security-2", "expected_revision": initial["revision"], "pending_id": initial["pending_id"]})
+        with self.service.database() as db:
+            db.execute("UPDATE submissions SET job='op:select' WHERE run_id=?", (receipt["run_id"],))
+            db.commit()
+        with patch.object(RawEngine, "advance", finish_without_model):
+            asyncio.run(execute_job(self.service, self.service.row(receipt["run_id"])))
+        result = self.service.call("status", {"run_id": receipt["run_id"]})
+        self.assertEqual(result["operations"][0]["receipt"], "applied")
+        self.assertEqual(result["research"]["security_code"], "00001")
+        self.assertEqual(result["deadline"], raw.state["deadline"])
+        self.assertEqual(result["budget"]["model_cost_cny"], 0)
+        self.assertEqual(result["budget"]["model_calls"], 0)
+        self.assertIsNone(result["pending_user"])
+
     def test_engine_lock_rechecks_revision_after_acceptance(self):
         initial = self.submit()
         engine = Engine.load(self.service.runs, initial["run_id"])
@@ -327,6 +473,13 @@ if __import__("pathlib").Path({str(once)!r}).exists():
         self.assertEqual(unknown.exception.error["code"], "operation_outcome_unknown")
 
     def test_doctor_sanitized_local_only_non_tty_and_paths(self):
+        configured = self.root / "selected/config.json"
+        with patch.dict(os.environ, {"YANTRA_CONFIG": str(configured)}):
+            self.assertEqual(HostService(self.root).settings.path, configured)
+            self.assertEqual(HostService(self.root, config=self.service.settings.path).settings.path, self.service.settings.path)
+        with patch.dict(os.environ, {"YANTRA_KNOWLEDGE_DIR": str(self.root / "selected/knowledge")}):
+            self.assertEqual(HostService(self.root).knowledge, self.root / "selected/knowledge")
+            self.assertEqual(HostService(self.root, knowledge_dir=self.service.knowledge).knowledge, self.service.knowledge)
         from yantra.cli_contract import exception_error
         missing = exception_error(ModuleNotFoundError("PRIVATE_SECRET", name="mcp"))
         self.assertEqual(missing.error["code"], "dependency_missing")
@@ -377,6 +530,13 @@ if __import__("pathlib").Path({str(once)!r}).exists():
                     self.assertEqual(error.structuredContent["error"]["code"], "artifact_not_found")
                     unknown = await session.call_tool("yantra_status", {"request": {"run_id": "run-missing"}})
                     self.assertTrue(unknown.isError)
+                    failed = await session.call_tool("yantra_submit", {"request": self.request | {"idempotency_key": "failed-research",
+                        "limits": {"total_tools": 0, "max_models": 1, "max_main_loops": 1}}})
+                    failed_id = failed.structuredContent["data"]["run_id"]
+                    await asyncio.to_thread(self.wait, failed_id)
+                    queried = await session.call_tool("yantra_status", {"request": {"run_id": failed_id}})
+                    self.assertFalse(queried.isError)
+                    self.assertEqual(queried.structuredContent["data"]["status"], "failed")
                     invalid = await session.call_tool("yantra_submit", {"request": {"company": "PRIVATE_SECRET"}})
                     self.assertTrue(invalid.isError)
                     self.assertNotIn("PRIVATE_SECRET", json.dumps(invalid.structuredContent))

@@ -582,7 +582,9 @@ class Engine:
     def _finish(self, cancelled=False):
         report = self._report()
         checks = self._hard_checks(report)
-        status = "cancelled" if cancelled else "completed" if all(checks.values()) else "partial" if self.state["artifacts"].get("finance", {}).get("data", {}).get("financials") else "failed"
+        finance = self.state["artifacts"].get("finance", {}).get("data", {})
+        usable = finance.get("financials") or (self.state.get("raw_materials") and finance.get("evidence"))
+        status = "cancelled" if cancelled else "completed" if all(checks.values()) else "partial" if usable else "failed"
         self.state.update(status=status, pending_user=None, report=report, hard_checks=checks)
         self._log("finalize_check", {"hard_checks": checks, "status": status,
                                      "business_review": "核验 Agent 的逻辑判断仍需业务判断；程序不能证明全部投资论证正确", "issues": self.state["issues"]})

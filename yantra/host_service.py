@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+from datetime import datetime
 import fcntl
 import hashlib
 import json
@@ -33,11 +34,59 @@ def pending_id(state):
     return state_revision(state["pending_user"]) if state.get("pending_user") else None
 
 
+def process_exists(pid):
+    if not pid:
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def progress(state, execution):
+    """Project persisted controller observations, never a completion percentage."""
+    if state is None:
+        return {"phase": "preparing" if execution["state"] == "active" else execution["state"],
+                "task_count": 0, "result_count": 0, "active_tasks": [], "gaps": []}
+    tasks, results = state.get("tasks", []), state.get("results", [])
+    finished = {item["task_id"] for item in results}
+    pending = state.get("pending_user") or {}
+    phase = state["status"]
+    active = []
+    if phase == "waiting":
+        phase = "waiting_identity" if pending.get("kind") == "identity" else "waiting_confirmation"
+    elif phase == "running":
+        phase = "preparing" if state.get("raw_materials") and not state.get("prepared") else "coordinator"
+        flight = state.get("in_flight") or {}
+        task_id = (state.get("in_flight_tool") or {}).get("task_id")
+        if flight.get("reservation"):
+            receipt = next((item for item in state.get("model_ledger", []) if item["id"] == flight["reservation"]), {})
+            task_id = receipt.get("task_id", task_id)
+        elif flight.get("method") == "worker" and tasks:
+            task_id = tasks[-1]["task_id"]
+        task = next((item for item in tasks if item["task_id"] == task_id), None)
+        if task and task_id not in finished and execution["state"] == "active":
+            active = [{key: task.get(key) for key in ("task_id", "target", "purpose", "depth")}]
+            phase = task["target"]
+    if execution["state"] in {"interrupted", "failed"} and state["status"] == "running":
+        phase = execution["state"]
+    gaps = list((state.get("report") or {}).get("投资结论摘要", {}).get("gaps", []))
+    gaps += state.get("stop_reasons", []) + state.get("input_snapshot", {}).get("manifest", {}).get("gaps", [])
+    for artifact in state.get("artifacts", {}).values():
+        gaps += artifact.get("unresolved", []) + artifact.get("data", {}).get("gaps", [])
+    return {"phase": phase, "task_count": len(tasks), "result_count": len(results),
+            "active_tasks": active, "gaps": sorted(set(gaps))}
+
+
 class HostService:
-    def __init__(self, workspace, *, config=None, runs_dir=None, env_file=None):
+    def __init__(self, workspace, *, config=None, runs_dir=None, knowledge_dir=None, env_file=None):
         self.workspace = Path(workspace).expanduser().resolve()
-        self.settings = ConfigStore(config or self.workspace / ".yantra/config.json")
+        self.settings = ConfigStore(config or os.getenv("YANTRA_CONFIG") or self.workspace / ".yantra/config.json")
         self.runs = Path(runs_dir or os.getenv("YANTRA_RUNS_DIR") or self.workspace / "runs").expanduser().resolve()
+        self.knowledge = Path(knowledge_dir or os.getenv("YANTRA_KNOWLEDGE_DIR") or self.workspace / ".yantra/knowledge").expanduser().resolve()
         self.env_file = Path(env_file).expanduser().resolve() if env_file else None
         self.control = self.runs / ".host"
 
@@ -105,13 +154,8 @@ class HostService:
                     phase = row["execution"]
                     if phase == "active":
                         phase = "interrupted"
-                    elif phase == "starting":
-                        try:
-                            if not row["pid"]:
-                                raise ProcessLookupError()
-                            os.kill(row["pid"], 0)
-                        except (ProcessLookupError, PermissionError):
-                            phase = "interrupted"
+                    elif phase == "starting" and not process_exists(row["pid"]):
+                        phase = "interrupted"
             except CLIError:
                 phase = "starting" if phase == "starting" else "active"
         return {"state": phase, "error": json.loads(row["error"]) if row["error"] else None,
@@ -121,10 +165,14 @@ class HostService:
         from .cli import run_result
         row = self.row(request.run_id)
         directory = self.directory(request.run_id)
+        state = None
         if not (directory / "state.json").exists():
             if row is None:
                 raise CLIError("run_not_found", "研究不存在；请检查 workspace、runs-dir 和 run_id")
-            result = {"run_id": request.run_id, "status": "accepted", "revision": row["request_hash"], "outputs": []}
+            intent = json.loads(row["payload"])
+            result = {"run_id": request.run_id, "status": "accepted", "revision": row["request_hash"], "outputs": [],
+                      "mode": intent["mode"], "research": {key: intent[key] for key in ("company", "questions", "topics")},
+                      "budget": None, "limits": None, "requested_limits": intent["limits"]}
         else:
             state = self.state(request.run_id)
             args = SimpleNamespace(runs_dir=self.runs, env_file=self.env_file)
@@ -133,6 +181,7 @@ class HostService:
                           assumptions=state["assumptions"], qualification=host_outputs.qualification(state),
                           outputs=host_outputs.public_index(directory))
         result["execution"] = self.execution(row)
+        result["progress"] = progress(state, result["execution"])
         # Preserve the durable business state separately when no worker can advance it.
         if result["execution"]["state"] in {"interrupted", "failed", "cancelled"} and result["status"] in {"running", "accepted"}:
             result["saved_research_status"] = result["status"]
@@ -145,6 +194,24 @@ class HostService:
             result["next_actions"] = [{"action": "status", "input": {"run_id": request.run_id}},
                 *[{"action": "read", "input": {"run_id": request.run_id, "version": item["version"], "artifact": "report.md"}}
                   for item in result["outputs"][-1:]]]
+            if not row["cancel_requested"] and result["status"] in {"accepted", "running", "waiting", "interrupted"}:
+                result["next_actions"].append({"action": "cancel", "input": {"run_id": request.run_id}})
+            idle = result["execution"]["state"] not in {"starting", "active"}
+            uncertain = any(item["receipt"] == "accepted" for item in result["operations"]) or bool(state and (state.get("in_flight") or state.get("in_flight_tool")))
+            within_deadline = not state or not state.get("deadline") or datetime.fromisoformat(state["deadline"]).timestamp() > time.time() + state["limits"]["close_seconds"]
+            if idle and not uncertain and not row["cancel_requested"] and within_deadline:
+                common = {"run_id": request.run_id, "expected_revision": result["revision"], "required_input": ["operation_id"]}
+                if state and state["status"] != "cancelled" and state.get("artifacts", {}).get("proposal"):
+                    parameters_available = bool(state["assumptions"]["parameters"])
+                    decisions = ["modify"] if parameters_available else []
+                    if state["status"] == "waiting" or state.get("investment_logic_version"):
+                        decisions += (["confirm"] if parameters_available else []) + ["reject"]
+                    if decisions:
+                        result["next_actions"].append({"action": "respond", **common, "pending_id": pending_id(state), "decisions": decisions})
+                if state and state["status"] == "waiting" and (state.get("pending_user") or {}).get("kind") == "identity":
+                    result["next_actions"].append({"action": "respond", **common, "pending_id": pending_id(state), "decisions": ["select_identity"]})
+                if state is None or result["status"] == "interrupted" or (state.get("raw_materials") and state["status"] in {"partial", "failed"}):
+                    result["next_actions"].append({"action": "resume", **common, "continue_research": bool(state and state["status"] in {"partial", "failed"})})
         result["follow_up"] = "新增材料使用 submit + 新幂等键 + parent_run_id，重新确定预算和截止；resume 保留原限制"
         return result
 
@@ -170,11 +237,10 @@ class HostService:
                 raise CLIError("material_permission_denied", "材料存在但不可读；请授予该路径读取权限", field="materials")
 
     def submit(self, request):
-        from .host_contract import RunInput
         data = self.normalize(request)
         request_hash = state_revision({"request": data, "config": str(self.settings.path),
                                       "env_file": str(self.env_file) if self.env_file else None,
-                                      "knowledge": str(self.workspace / ".yantra/knowledge")})
+                                      "knowledge": str(self.knowledge)})
         with self.database() as db:
             db.execute("BEGIN IMMEDIATE")
             row = db.execute("SELECT * FROM submissions WHERE idem=?", (request.idempotency_key,)).fetchone()
@@ -192,14 +258,17 @@ class HostService:
             db.commit()
         if not reused:
             with self.gate(run_id):
-                self.launch(run_id, "initial")
+                if self.row(run_id)["cancel_requested"]:
+                    self.finish_job(run_id, "cancelled")
+                else:
+                    self.launch(run_id, "initial")
         return {"run_id": run_id, "receipt": "persisted", "reused": reused,
                 "request_sha256": request_hash, "execution": self.execution(self.row(run_id)),
                 "next_actions": [{"action": "status", "input": {"run_id": run_id}}]}
 
     def launch(self, run_id, job):
         command = [sys.executable, "-m", "yantra.host_worker", "--workspace", str(self.workspace),
-                   "--config", str(self.settings.path), "--runs-dir", str(self.runs), "--run-id", run_id]
+                   "--config", str(self.settings.path), "--runs-dir", str(self.runs), "--knowledge-dir", str(self.knowledge), "--run-id", run_id]
         if self.env_file:
             command += ["--env-file", str(self.env_file)]
         with self.database() as db:
@@ -249,7 +318,7 @@ class HostService:
                 if exc.error["code"] in {"session_scope_required", "access_denied"}:
                     continue
                 raise
-            rows.append({key: item.get(key) for key in ("run_id", "status", "research", "execution", "revision", "qualification")})
+            rows.append({key: item.get(key) for key in ("run_id", "status", "research", "execution", "revision", "qualification", "progress")})
             if len(rows) > request.limit:
                 break
         return {"runs": rows[:request.limit], "next_cursor": rows[request.limit-1]["run_id"] if len(rows) > request.limit else None}
@@ -268,7 +337,7 @@ class HostService:
             row = self.row(request.run_id)
             if row is None:
                 raise CLIError("host_submission_required", "修改／恢复旧运行请使用原 CLI 或所属 ADK Session；宿主入口只执行自己提交的研究")
-            if row["execution"] == "starting":
+            if row["execution"] == "starting" and process_exists(row["pid"]):
                 raise CLIError("run_busy", "执行者正在启动；请先查询", retryable=True, exit_code=1)
             with self.database() as db:
                 unresolved = db.execute("SELECT result FROM operations WHERE run_id=?", (request.run_id,)).fetchall()
@@ -309,16 +378,21 @@ class HostService:
         with self.database() as db:
             db.execute("UPDATE submissions SET cancel_requested=1 WHERE run_id=?", (request.run_id,))
             db.commit()
-        if state:
+        (self.control / (request.run_id + ".cancel")).touch()
+        if directory.is_dir():
             (directory / "cancel.request").touch()
+        stopped = False
         try:
             with self.gate(request.run_id):
-                if row["execution"] not in {"starting", "accepted"}:
+                if state is None:
+                    self.finish_job(request.run_id, "cancelled")
+                    stopped = True
+                else:
                     self.launch(request.run_id, "cancel")
         except CLIError as exc:
             if exc.error["code"] != "run_busy":
                 raise
-        return {"run_id": request.run_id, "cancellation": "request_accepted",
+        return {"run_id": request.run_id, "cancellation": "cancelled" if stopped else "request_accepted",
                 "notice": "查询 status 确认实际停止；请求接受不代表研究已取消"}
 
     def doctor(self, request):
@@ -359,7 +433,7 @@ class HostService:
             checks.append({"code": exception_error(exc).error["code"], "ready": False, "fix": "检查本地配置格式与环境文件路径"})
         return {"interface_version": "1", "checks": checks, "network": "not_probed", "research": "not_executed",
                 "paths": {"workspace": str(self.workspace), "config": str(self.settings.path), "runs": str(self.runs),
-                          "knowledge": str(self.workspace / ".yantra/knowledge")},
+                          "knowledge": str(self.knowledge)},
                 "route": "skill_cli" if request.command_tool == "available" else "skill_mcp" if request.mcp_available else "setup_required",
                 "lifecycle": "detached local process; requires host OS to retain it; no reboot auto-resume",
                 "host_billing": "宿主费用独立；Yantra 不能读取或控制宿主账单"}

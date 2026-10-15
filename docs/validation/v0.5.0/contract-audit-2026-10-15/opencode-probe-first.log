@@ -1,0 +1,8 @@
+mcp-list 0
+skill-load 0
+bash-denied 1
+Traceback (most recent call last):
+  File "/tmp/yantra-v05-opencode-audit.py", line 18, in <module>
+    assert records[0]['exit_code']==0 and 'Connected' in records[0]['stdout'],records[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: {'check': 'mcp-list', 'exit_code': 0, 'stdout': '┌  MCP Servers\n│\n●  ✓ yantra \x1b[90mconnected\n│      \x1b[90m/tmp/yantra-v05-install/env/bin/python -m yantra host mcp --workspace /tmp/yantra-host-acceptance/opencode-contract-audit/workspace\n│\n└  1 server(s)\n\n', 'stderr': '\x1b[0m\n'}
