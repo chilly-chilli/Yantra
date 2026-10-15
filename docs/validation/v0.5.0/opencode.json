@@ -1,0 +1,215 @@
+{
+  "host_version": "1.18.33",
+  "stage_package_version": "0.4.2 (v0.5 implementation before version bump)",
+  "driver": "actual isolated serve with localhost deterministic model; bash/edit denied",
+  "model_requests": 30,
+  "model_kind": "offline fixture, no real model/judge",
+  "skill_discovery_and_load": "passed",
+  "local_trace": "/tmp/yantra-host-acceptance/opencode-actual-flow-v2/trace.json",
+  "trace_sha256": "70cacaf28821d91fabd984ae086af2bc46b827baf4246188017b1710093e68e9",
+  "events": [
+    {
+      "tool": "yantra_yantra_status",
+      "status": "waiting",
+      "error": null,
+      "command": "host status",
+      "run_id": "run-dc73e2d63548",
+      "receipt": null,
+      "version": null,
+      "revision": "561345405917067574f4ccf75e7b0455380a81df2b3155bbdb8e90a430a3ac3a",
+      "qualification": {
+        "research_status": "waiting",
+        "assumptions_version": 1,
+        "confirmed": false,
+        "authorization_source": "none",
+        "valuation_status": "unverified",
+        "verification_passed": false,
+        "gaps": []
+      },
+      "execution": {
+        "state": "idle",
+        "error": null,
+        "cancellation_requested": false
+      },
+      "growth_rate": 0.05,
+      "assumptions_version": 1,
+      "operations": []
+    },
+    {
+      "tool": "yantra_yantra_respond",
+      "status": null,
+      "error": null,
+      "command": "host respond",
+      "run_id": "run-dc73e2d63548",
+      "receipt": "accepted",
+      "version": null,
+      "revision": null,
+      "qualification": null
+    },
+    {
+      "tool": "yantra_yantra_status",
+      "status": "partial",
+      "error": null,
+      "command": "host status",
+      "run_id": "run-dc73e2d63548",
+      "receipt": null,
+      "version": null,
+      "revision": "555f50d99764ef23e41fb2712d465213088239683c7b004ae31878e40398b238",
+      "qualification": {
+        "research_status": "partial",
+        "assumptions_version": 1,
+        "confirmed": true,
+        "authorization_source": "user",
+        "valuation_status": "unverified",
+        "verification_passed": true,
+        "gaps": [
+          "增长与折现率缺少市场依据",
+          "没有真实价格",
+          "缺少客户、订单与竞争资料",
+          "缺少带来源和日期的市场共识基准"
+        ]
+      },
+      "execution": {
+        "state": "idle",
+        "error": null,
+        "cancellation_requested": false
+      },
+      "growth_rate": 0.05,
+      "assumptions_version": 1,
+      "operations": [
+        {
+          "operation_id": "confirm-1",
+          "assumptions_version": 1,
+          "outputs": [
+            1
+          ],
+          "receipt": "applied",
+          "revision": "555f50d99764ef23e41fb2712d465213088239683c7b004ae31878e40398b238"
+        }
+      ]
+    },
+    {
+      "tool": "yantra_yantra_read",
+      "status": null,
+      "error": null,
+      "command": "host read",
+      "run_id": "run-dc73e2d63548",
+      "receipt": null,
+      "version": 1,
+      "revision": null,
+      "qualification": {
+        "research_status": "partial",
+        "assumptions_version": 1,
+        "confirmed": true,
+        "authorization_source": "user",
+        "valuation_status": "unverified",
+        "verification_passed": true,
+        "gaps": [
+          "增长与折现率缺少市场依据",
+          "没有真实价格",
+          "缺少客户、订单与竞争资料",
+          "缺少带来源和日期的市场共识基准"
+        ]
+      },
+      "sha256": "5af325cd2bd94b236569132739d4f003a01cdacec0ed3c69b9ee12bbf3da8f18",
+      "complete": false,
+      "bytes_returned": 2048
+    },
+    {
+      "tool": "yantra_yantra_respond",
+      "status": null,
+      "error": null,
+      "command": "host respond",
+      "run_id": "run-dc73e2d63548",
+      "receipt": "accepted",
+      "version": null,
+      "revision": null,
+      "qualification": null
+    },
+    {
+      "tool": "yantra_yantra_status",
+      "status": "partial",
+      "error": null,
+      "command": "host status",
+      "run_id": "run-dc73e2d63548",
+      "receipt": null,
+      "version": null,
+      "revision": "d63dab01f23ac7c6eb1429fc1fb710490204911c343f46367ba7b22eaf64e730",
+      "qualification": {
+        "research_status": "partial",
+        "assumptions_version": 2,
+        "confirmed": true,
+        "authorization_source": "user",
+        "valuation_status": "unverified",
+        "verification_passed": true,
+        "gaps": [
+          "增长与折现率缺少市场依据",
+          "没有真实价格",
+          "缺少客户、订单与竞争资料",
+          "缺少带来源和日期的市场共识基准"
+        ]
+      },
+      "execution": {
+        "state": "idle",
+        "error": null,
+        "cancellation_requested": false
+      },
+      "growth_rate": 0.04,
+      "assumptions_version": 2,
+      "operations": [
+        {
+          "operation_id": "modify-1",
+          "assumptions_version": 2,
+          "outputs": [
+            1,
+            2
+          ],
+          "receipt": "applied",
+          "revision": "d63dab01f23ac7c6eb1429fc1fb710490204911c343f46367ba7b22eaf64e730"
+        },
+        {
+          "operation_id": "confirm-1",
+          "assumptions_version": 1,
+          "outputs": [
+            1
+          ],
+          "receipt": "applied",
+          "revision": "555f50d99764ef23e41fb2712d465213088239683c7b004ae31878e40398b238"
+        }
+      ]
+    },
+    {
+      "tool": "yantra_yantra_read",
+      "status": null,
+      "error": null,
+      "command": "host read",
+      "run_id": "run-dc73e2d63548",
+      "receipt": null,
+      "version": 2,
+      "revision": null,
+      "qualification": {
+        "research_status": "partial",
+        "assumptions_version": 2,
+        "confirmed": true,
+        "authorization_source": "user",
+        "valuation_status": "unverified",
+        "verification_passed": true,
+        "gaps": [
+          "增长与折现率缺少市场依据",
+          "没有真实价格",
+          "缺少客户、订单与竞争资料",
+          "缺少带来源和日期的市场共识基准"
+        ]
+      },
+      "sha256": "85332f66631518fca11b33e544f7ab82e19f5cfe5b8bd9715f239ce9be511a7f",
+      "complete": false,
+      "bytes_returned": 2048
+    },
+    {
+      "tool": "yantra_yantra_list",
+      "status": "completed",
+      "error": null,
+      "command": "host list"
+    }
+  ]
+}

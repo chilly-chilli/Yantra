@@ -4,3 +4,4 @@
 
 - [0001：文档组织与版本维护](0001-documentation.md)
 - [0002：ADK 原生机制与研究业务边界](0002-adk-native-boundaries.md)
+- [0003：本地宿主入口与研究进程生命周期](0003-local-host-lifecycle.md)

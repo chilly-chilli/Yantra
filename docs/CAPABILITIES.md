@@ -1,8 +1,10 @@
 # 模型与扩展配置
 
-适用版本：0.4.2（Unreleased）。研究启动见[使用指南](USAGE.md)，embedding计费、索引与降级见[知识模块](KNOWLEDGE.md#模型费用和重建)。
+适用版本：0.5.0（Unreleased）。研究启动见[使用指南](USAGE.md)，embedding计费、索引与降级见[知识模块](KNOWLEDGE.md#模型费用和重建)。
 
 这两个模块通过CLI配置能力，并把已选择的能力接入 `RawEngine` 正式研究；初始材料可为空。运行配置位于 `.yantra/config.json`，可用环境变量 `YANTRA_CONFIG` 或命令前的 `--config /绝对路径/config.json` 指定另一个配置文件。正式start缺模型、凭据或有依据的定价时返回可操作错误，不回退虚构演示。
+
+Yantra 供宿主调用的主要 Skill 与本地 MCP 服务见[宿主集成](HOSTS.md)。本文的 skills/MCP/tools 指 Yantra 内部消费的扩展，两种调用方向及授权不能混同。
 
 ## 交互与命令
 

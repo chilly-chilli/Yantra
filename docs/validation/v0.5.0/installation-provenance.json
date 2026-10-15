@@ -1,0 +1,8 @@
+{
+  "wheel": "yantra_research-0.5.0-py3-none-any.whl",
+  "sha256": "513d64123177fda563f196d1b49bb79c160c3a6f4148d2e9ef891affe6423925",
+  "dependency_install": "95 packages; fixed versions, offline local wheelhouse",
+  "original_distribution_limit": "3 exact artifacts unavailable; RECORD-verified installed dependency snapshots repackaged; public-index fresh download unverified",
+  "external_network": "blocked by unavailable configured proxy",
+  "research_models_and_judge": "not executed"
+}

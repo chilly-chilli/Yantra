@@ -158,7 +158,7 @@ class RawEngine(Engine):
     @classmethod
     def create_raw(cls, storage, research, inputs, limits=None, pricing=None, backend=None, framework="auto", framework_file=None,
                    settings=None, llm_profile=None, ocr_profile=None, embedding_profile=None, knowledge_dir=None, explicit_parameters=None,
-                   authorization_override=None):
+                   authorization_override=None, *, run_id=None, started_at=None):
         from .knowledge.preferences import Preferences
         from .knowledge.store import KnowledgeStore
         from .schemas import AutonomyAuthorization
@@ -185,7 +185,7 @@ class RawEngine(Engine):
             raise ValueError("price is after research cutoff")
         config = Limits.model_validate({"total_tools": 100, "task_tools": 16, "max_models": 160, "max_main_loops": 40,
             "run_seconds": MAX_RUN_SECONDS, "task_seconds": 240, "repair_rounds": 4, **(limits or {})})
-        started = time.time()
+        started = time.time() if started_at is None else started_at
         end = deadline(started, config.run_seconds)
         from .models import ModelCatalog,create_backend
         catalog=ModelCatalog(settings) if settings is not None else None
@@ -194,9 +194,9 @@ class RawEngine(Engine):
         chosen_embedding=catalog.resolve("embedding",embedding_profile) if catalog else None
         selected = backend or (create_backend(chosen_llm,RawBackend) if chosen_llm else RawBackend.from_env(timeout_seconds=90))
         price = Pricing.model_validate(pricing or (chosen_llm or {}).get("pricing") or pricing_from_env()).model_dump()
-        run_id = "run-" + uuid4().hex[:12]
+        run_id = run_id or "run-" + uuid4().hex[:12]
         directory = Path(storage).resolve() / run_id
-        directory.mkdir(parents=True)
+        directory.mkdir(parents=True, exist_ok=False)
         RawMaterialAdapter.create(directory / "materials",r["company"],[])
         registry = RawToolRegistry(directory / "materials")
         from .extensions import ExtensionCatalog
@@ -1459,8 +1459,9 @@ class RawEngine(Engine):
         try:
             self.run_budget.check()
         except BudgetExceeded as exc:
-            self._stop(str(exc))
-            self._finish()
+            with self._lock():
+                self._stop(str(exc))
+                self._finish()
             return self.state
         if self.state.get("investment_logic_version") and decision in {"modify", "confirm", "reject"}:
             with self._lock():
